@@ -5,10 +5,10 @@ import { verifyAuth } from "@/lib/auth";
 // GET /api/admin/employees/[id]
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const authResult = await verifyAuth(request, ['ADMIN', 'SALES_MANAGER']);
     if (!authResult.isAuthenticated) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
