@@ -170,10 +170,10 @@ export async function GET(
 // DELETE /api/admin/employees/[id]
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = params;
     const authResult = await verifyAuth(request, ["ADMIN"]);
     if (!authResult.isAuthenticated) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
