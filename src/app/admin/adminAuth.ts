@@ -89,17 +89,14 @@ export function clearAdminAuthState() {
  */
 export async function loginAsAdmin(email: string, password: string) {
   try {
-    // Ensure admin auth is configured
     configureAdminAuth();
     
-    // First sign out any existing user
     try {
       await signOut();
     } catch (signOutError) {
-      // Ignore sign out errors and continue
+      // Ignore sign out errors
     }
     
-    // Attempt to sign in
     const signInResult = await signIn({
       username: email,
       password,
@@ -113,63 +110,24 @@ export async function loginAsAdmin(email: string, password: string) {
       };
     }
     
-    // Verify admin role
-    const session = await awsFetchAuthSession();
-    const userRole = session.tokens?.idToken?.payload?.['custom:role'] as string;
-    const userEmail = session.tokens?.idToken?.payload?.email as string;
-    
-    // Check if user is admin
-    const isAdmin = userRole === 'admin' || 
-                   (userEmail && userEmail.toLowerCase() === 'admin@student24.co.za');
-    
-    if (!isAdmin) {
-      // Not an admin, sign out and return error
-      await signOut();
-      return {
-        success: false,
-        message: "You don't have admin privileges",
-        data: null
-      };
+    const { isAuthenticated, adminData } = await checkAdminAuth();
+
+    if (isAuthenticated && adminData) {
+        return {
+            success: true,
+            message: "Admin login successful",
+            data: adminData
+        };
+    } else {
+        // If checkAdminAuth fails, it means the user is not a valid admin.
+        await signOut(); // Sign out the non-admin user.
+        return {
+            success: false,
+            message: "You don't have admin privileges",
+            data: null
+        };
     }
-    
-    // Fetch complete admin details
-    const user = await getCurrentUser();
-    
-    // Get username from Cognito
-    const username = user.username;
-    
-    // Create a friendly display name
-    // If username follows admin_timestamp pattern, use email or 'Administrator'
-    let displayName = session.tokens?.idToken?.payload?.name as string;
-    if (!displayName || displayName.startsWith('Admin_')) {
-      if (userEmail) {
-        // Use email without domain and properly capitalized
-        displayName = userEmail.split('@')[0]
-          .replace(/\./g, ' ')
-          .replace(/\b\w/g, c => c.toUpperCase());
-      } else {
-        displayName = 'Administrator';
-      }
-    }
-    
-    const adminDetails = {
-      id: 0,
-      cognitoId: user.userId,
-      name: displayName,
-      email: userEmail,
-      role: 'admin',
-      tokenExpires: session.tokens?.idToken?.payload?.exp as number || 0
-    };
-    
-    // Store admin authentication state
-    setAdminAuthState(adminDetails);
-    
-    // Return success
-    return {
-      success: true,
-      message: "Admin login successful",
-      data: adminDetails
-    };
+
   } catch (error: any) {
     console.error("❌ Admin login error:", error);
     return {
@@ -193,6 +151,7 @@ export async function logoutAdmin() {
     };
   } catch (error) {
     console.error("❌ Admin logout error:", error);
+    clearAdminAuthState(); // Also clear state on error
     return {
       success: false,
       message: error instanceof Error ? error.message : "Logout failed"
@@ -205,22 +164,18 @@ export async function logoutAdmin() {
  */
 export async function checkAdminAuth() {
   try {
-    // First check local storage for stored admin state
-    const storedAdminData = getAdminAuthState();
-    
-    // If token is expired, clear auth state and return false
-    if (storedAdminData?.tokenExpires) {
-      const now = Math.floor(Date.now() / 1000);
-      if (storedAdminData.tokenExpires < now) {
-        console.log("❌ Admin token expired");
-        clearAdminAuthState();
-        return { isAuthenticated: false, adminData: null };
-      }
-    }
-    
-    // Try to get the current session from Cognito
+    // Always check the session from Cognito first
     const session = await awsFetchAuthSession();
     if (!session?.tokens?.idToken) {
+      clearAdminAuthState();
+      return { isAuthenticated: false, adminData: null };
+    }
+
+    // Check token expiration
+    const expiration = session.tokens.idToken.payload.exp;
+    const now = Math.floor(Date.now() / 1000);
+    if (expiration && expiration < now) {
+      console.log("❌ Admin token expired");
       clearAdminAuthState();
       return { isAuthenticated: false, adminData: null };
     }
@@ -238,42 +193,49 @@ export async function checkAdminAuth() {
       return { isAuthenticated: false, adminData: null };
     }
     
-    // User is authenticated as admin
-    // If we didn't have stored admin data, create it now
-    if (!storedAdminData) {
-      const user = await getCurrentUser();
-      
-      // Create a friendly display name
-      // If username follows admin_timestamp pattern, use email or 'Administrator'
-      let displayName = session.tokens.idToken.payload?.name as string;
-      if (!displayName || displayName.startsWith('Admin_')) {
-        if (userEmail) {
-          // Use email without domain and properly capitalized
-          displayName = userEmail.split('@')[0]
-            .replace(/\./g, ' ')
-            .replace(/\b\w/g, (c: string) => c.toUpperCase());
-        } else {
-          displayName = 'Administrator';
+    // User is authenticated as admin, now get/create the user details
+    const storedAdminData = getAdminAuthState();
+
+    // If we have stored data and the cognitoId matches, we can use it.
+    const user = await getCurrentUser();
+    if (storedAdminData && storedAdminData.cognitoId === user.userId) {
+        // Optionally update expiration time and return
+        if (storedAdminData.tokenExpires !== expiration) {
+            const updatedAdminData = { ...storedAdminData, tokenExpires: expiration };
+            setAdminAuthState(updatedAdminData);
+            return { isAuthenticated: true, adminData: updatedAdminData };
         }
+        return { isAuthenticated: true, adminData: storedAdminData };
+    }
+
+    // If no stored data or mismatch, create it now
+    let displayName = session.tokens.idToken.payload?.name as string;
+    if (!displayName || displayName.startsWith('Admin_')) {
+      if (userEmail) {
+        displayName = userEmail.split('@')[0]
+          .replace(/\./g, ' ')
+          .replace(/\b\w/g, (c: string) => c.toUpperCase());
+      } else {
+        displayName = 'Administrator';
       }
-      
-      const adminDetails = {
-        id: 0,
-        cognitoId: user.userId,
-        name: displayName,
-        email: userEmail,
-        role: 'admin',
-        tokenExpires: session.tokens.idToken.payload?.exp as number || 0
-      };
-      
-      setAdminAuthState(adminDetails);
-      return { isAuthenticated: true, adminData: adminDetails };
     }
     
-    // Return stored admin data
-    return { isAuthenticated: true, adminData: storedAdminData };
+    const adminDetails = {
+      id: 0,
+      cognitoId: user.userId,
+      name: displayName,
+      email: userEmail,
+      role: 'admin',
+      tokenExpires: expiration || 0
+    };
+    
+    setAdminAuthState(adminDetails);
+    return { isAuthenticated: true, adminData: adminDetails };
+
   } catch (error) {
-    console.error("❌ Admin auth check error:", error);
+    // This error is often thrown when there's no session, which is a valid state.
+    console.log("Admin auth check: No active session or error.", error);
+    clearAdminAuthState();
     return { isAuthenticated: false, adminData: null };
   }
 }

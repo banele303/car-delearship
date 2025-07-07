@@ -194,3 +194,5 @@ export async function DELETE(
     return NextResponse.json({ success: false, message: "Failed to delete employee" }, { status: 500 });
   }
 }
+
+ 

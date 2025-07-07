@@ -183,11 +183,7 @@ const AdminNavbar = () => {
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-3 px-3 py-2 h-auto rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-0 transition-all duration-300"
-                >
+                <div className="flex items-center gap-3 cursor-pointer">
                   <Avatar className="h-8 w-8 ring-2 ring-blue-200 dark:ring-blue-800 ring-offset-2 ring-offset-white dark:ring-offset-slate-950">
                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
                       {getUserInitial()}
@@ -202,7 +198,7 @@ const AdminNavbar = () => {
                     </span>
                   </div>
                   <ChevronDown className="h-4 w-4 text-slate-500 dark:text-slate-400 transition-transform duration-300" />
-                </Button>
+                </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-200/50 dark:border-slate-800/50 mt-2 p-2 min-w-[220px] animate-in fade-in-0 zoom-in-95 duration-300"
