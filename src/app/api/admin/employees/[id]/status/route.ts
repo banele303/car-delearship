@@ -5,10 +5,10 @@ import { verifyAuth } from "@/lib/auth";
 // PATCH /api/admin/employees/[id]/status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = context.params;
     const authResult = await verifyAuth(request, ["ADMIN", "SALES_MANAGER"]);
     if (!authResult.isAuthenticated) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
