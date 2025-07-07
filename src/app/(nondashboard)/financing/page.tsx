@@ -555,7 +555,7 @@ export default function FinancingPage() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Have Questions? We're Here to Help
+              Have Questions? We&apos;re Here to Help
             </h2>
             <p className="text-gray-600 mb-8">
               Our financing specialists are available to answer any questions you may have.
