@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 
+interface IParams {
+  params: { id: string };
+}
+
 // PATCH /api/admin/employees/[id]/status
-export async function PATCH(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, { params }: IParams) {
   try {
-    const { id } = context.params;
+    const { id } = params;
     const authResult = await verifyAuth(request, ["ADMIN", "SALES_MANAGER"]);
     if (!authResult.isAuthenticated) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
