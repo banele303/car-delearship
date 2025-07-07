@@ -5,7 +5,7 @@ import { verifyAuth } from "@/lib/auth";
 // GET /api/admin/employees/[id]
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Record<string, string> }
 ) {
   try {
     const { id } = context.params;
@@ -170,7 +170,7 @@ export async function GET(
 // DELETE /api/admin/employees/[id]
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Record<string, string> }
 ) {
   try {
     const { id } = context.params;
