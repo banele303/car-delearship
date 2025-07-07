@@ -768,7 +768,7 @@ export const api = createApi({
     updateEmployeeStatus: build.mutation<Employee, { id: string; status: string }>({
       query: ({ id, status }) => ({
         url: `admin/employees/${id}/status`,
-        method: "PUT",
+        method: "PATCH",
         body: { status },
       }),
       invalidatesTags: (result, error, { id }) => [

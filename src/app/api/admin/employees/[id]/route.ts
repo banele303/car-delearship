@@ -166,3 +166,31 @@ export async function GET(
     );
   }
 }
+
+// DELETE /api/admin/employees/[id]
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    const authResult = await verifyAuth(request, ["ADMIN"]);
+    if (!authResult.isAuthenticated) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!id) {
+      return NextResponse.json({ message: "Invalid employee ID" }, { status: 400 });
+    }
+
+    // Delete the employee
+    await prisma.employee.delete({
+      where: { cognitoId: id },
+    });
+
+    return NextResponse.json({ success: true, message: "Employee deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    return NextResponse.json({ success: false, message: "Failed to delete employee" }, { status: 500 });
+  }
+}
