@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { writeFile } from "fs/promises";
-import { join } from "path";
+import { uploadToS3 } from "@/lib/s3";
 
 // Add a GET handler to retrieve all cars
 export async function GET(req: NextRequest) {
@@ -61,22 +60,34 @@ export async function POST(req: NextRequest) {
 
     const photos = formData.getAll("photos") as File[];
     const photoUrls: string[] = [];
-
     for (const photo of photos) {
-      const bytes = await photo.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const path = join(process.cwd(), "public", photo.name);
-      await writeFile(path, buffer);
-      photoUrls.push(`/${photo.name}`);
+      try {
+        const url = await uploadToS3(photo, "cars");
+        photoUrls.push(url);
+      } catch (err) {
+        console.error("S3 upload error:", err);
+      }
     }
-
     carData.photoUrls = photoUrls;
 
-    const newCar = await prisma.car.create({
-      data: carData as any,
-    });
-
-    return NextResponse.json(newCar, { status: 201 });
+    try {
+      const newCar = await prisma.car.create({
+        data: carData as any,
+      });
+      return NextResponse.json(newCar, { status: 201 });
+    } catch (prismaError: any) {
+      if (prismaError.code === 'P2002' && prismaError.meta?.target?.includes('vin')) {
+        return NextResponse.json(
+          { message: "A car with this VIN already exists. Please use a unique VIN." },
+          { status: 409 }
+        );
+      }
+      console.error(prismaError);
+      return NextResponse.json(
+        { message: "Failed to create car.", error: prismaError.message },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error(error);
     return NextResponse.json(
