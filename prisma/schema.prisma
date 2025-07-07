@@ -136,7 +136,8 @@ model Dealership {
   phoneNumber     String
   email           String
   website         String?
-  coordinates     Unsupported("geography(Point, 4326)")
+  latitude        Float?
+  longitude       Float?
   createdAt       DateTime                              @default(now())
   updatedAt       DateTime                              @updatedAt
 
