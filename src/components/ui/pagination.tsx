@@ -64,7 +64,7 @@ export function Pagination({
                 variant={currentPage === pageNum ? "default" : "outline"}
                 size="sm"
                 onClick={() => onPageChange(pageNum)}
-                className={`h-8 w-8 p-0 mx-1 ${currentPage === pageNum ? &quot;bg-blue-600 text-white&quot; : &quot;&quot;}`}
+                className={`h-8 w-8 p-0 mx-1 ${currentPage === pageNum ? "bg-blue-600 text-white" : ""}`}
               >
                 {pageNum}
               </Button>
