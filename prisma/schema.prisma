@@ -1,0 +1,289 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+}
+
+enum CarCondition {
+  NEW
+  USED
+  CERTIFIED_PRE_OWNED
+  DEALER_DEMO
+}
+
+enum CarType {
+  SEDAN
+  SUV
+  HATCHBACK
+  COUPE
+  CONVERTIBLE
+  WAGON
+  PICKUP_TRUCK
+  VAN
+  MINIVAN
+  CROSSOVER
+  SPORTS_CAR
+  LUXURY
+  HYBRID
+  ELECTRIC
+}
+
+enum FuelType {
+  GASOLINE
+  DIESEL
+  HYBRID
+  ELECTRIC
+  PLUG_IN_HYBRID
+  HYDROGEN
+}
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+  CVT
+  DUAL_CLUTCH
+}
+
+enum CarStatus {
+  AVAILABLE
+  SOLD
+  RESERVED
+  PENDING
+  MAINTENANCE
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum FinancingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum EmployeeRole {
+  SALES_MANAGER
+  SALES_ASSOCIATE
+  FINANCE_MANAGER
+  SERVICE_ADVISOR
+  ADMIN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Car {
+  id                Int           @id @default(autoincrement())
+  vin               String        @unique
+  make              String
+  model             String
+  year              Int
+  price             Float
+  mileage           Int
+  condition         CarCondition
+  carType           CarType
+  fuelType          FuelType
+  transmission      Transmission
+  engine            String
+  exteriorColor     String
+  interiorColor     String
+  description       String        @db.Text
+  features          String[]      @default([])
+  photoUrls         String[]      @default([])
+  status            CarStatus     @default(AVAILABLE)
+  postedDate        DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  averageRating     Float?        @default(0)
+  numberOfReviews   Int?          @default(0)
+  dealershipId      Int
+  employeeId        String?
+
+  // Relations
+  dealership        Dealership    @relation(fields: [dealershipId], references: [id])
+  employee          Employee?     @relation(fields: [employeeId], references: [cognitoId])
+  inquiries         Inquiry[]
+  testDrives        TestDrive[]
+  sales             Sale[]
+  reviews           Review[]
+  favoritedBy       Customer[]    @relation("CustomerFavorites")
+
+  @@index([make, model, year])
+  @@index([price])
+  @@index([status])
+}
+
+model Dealership {
+  id              Int                                   @id @default(autoincrement())
+  name            String
+  address         String
+  city            String
+  state           String
+  country         String
+  postalCode      String
+  phoneNumber     String
+  email           String
+  website         String?
+  coordinates     Unsupported("geography(Point, 4326)")
+  createdAt       DateTime                              @default(now())
+  updatedAt       DateTime                              @updatedAt
+
+  cars            Car[]
+  employees       Employee[]
+  inquiries       Inquiry[]
+  testDrives      TestDrive[]
+  sales           Sale[]
+}
+
+model Employee {
+  id              Int             @id @default(autoincrement())
+  cognitoId       String          @unique
+  name            String
+  email           String
+  phoneNumber     String
+  role            EmployeeRole
+  status          EmployeeStatus  @default(ACTIVE)
+  hireDate        DateTime        @default(now())
+  commission      Float           @default(0)
+  dealershipId    Int
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  dealership      Dealership      @relation(fields: [dealershipId], references: [id])
+  managedCars     Car[]
+  inquiries       Inquiry[]
+  testDrives      TestDrive[]
+  sales           Sale[]
+}
+
+model Customer {
+  id              Int             @id @default(autoincrement())
+  cognitoId       String          @unique
+  name            String
+  email           String
+  phoneNumber     String
+  address         String?
+  city            String?
+  state           String?
+  postalCode      String?
+  dateOfBirth     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  favorites       Car[]           @relation("CustomerFavorites")
+  inquiries       Inquiry[]
+  testDrives      TestDrive[]
+  sales           Sale[]
+  reviews         Review[]
+  financingApps   FinancingApplication[]
+}
+
+model Admin {
+  id              Int             @id @default(autoincrement())
+  cognitoId       String          @unique
+  name            String
+  email           String
+  phoneNumber     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Inquiry {
+  id              Int             @id @default(autoincrement())
+  message         String          @db.Text
+  status          InquiryStatus   @default(NEW)
+  inquiryDate     DateTime        @default(now())
+  followUpDate    DateTime?
+  carId           Int
+  customerId      String
+  employeeId      String?
+  dealershipId    Int
+
+  car             Car             @relation(fields: [carId], references: [id])
+  customer        Customer        @relation(fields: [customerId], references: [cognitoId])
+  employee        Employee?       @relation(fields: [employeeId], references: [cognitoId])
+  dealership      Dealership      @relation(fields: [dealershipId], references: [id])
+}
+
+model TestDrive {
+  id              Int             @id @default(autoincrement())
+  scheduledDate   DateTime
+  actualDate      DateTime?
+  duration        Int?            // minutes
+  notes           String?         @db.Text
+  completed       Boolean         @default(false)
+  carId           Int
+  customerId      String
+  employeeId      String?
+  dealershipId    Int
+  createdAt       DateTime        @default(now())
+
+  car             Car             @relation(fields: [carId], references: [id])
+  customer        Customer        @relation(fields: [customerId], references: [cognitoId])
+  employee        Employee?       @relation(fields: [employeeId], references: [cognitoId])
+  dealership      Dealership      @relation(fields: [dealershipId], references: [id])
+}
+
+model Sale {
+  id              Int             @id @default(autoincrement())
+  salePrice       Float
+  downPayment     Float           @default(0)
+  tradeInValue    Float           @default(0)
+  saleDate        DateTime        @default(now())
+  deliveryDate    DateTime?
+  carId           Int             @unique
+  customerId      String
+  employeeId      String
+  dealershipId    Int
+  financingId     Int?            @unique
+
+  car             Car             @relation(fields: [carId], references: [id])
+  customer        Customer        @relation(fields: [customerId], references: [cognitoId])
+  employee        Employee        @relation(fields: [employeeId], references: [cognitoId])
+  dealership      Dealership      @relation(fields: [dealershipId], references: [id])
+  financing       FinancingApplication? @relation(fields: [financingId], references: [id])
+}
+
+model FinancingApplication {
+  id              Int             @id @default(autoincrement())
+  loanAmount      Float
+  interestRate    Float
+  termMonths      Int
+  monthlyPayment  Float
+  status          FinancingStatus @default(PENDING)
+  applicationDate DateTime        @default(now())
+  approvalDate    DateTime?
+  customerId      String
+  creditScore     Int?
+  annualIncome    Float?
+
+  customer        Customer        @relation(fields: [customerId], references: [cognitoId])
+  sale            Sale?
+}
+
+model Review {
+  id              Int             @id @default(autoincrement())
+  rating          Int             // 1-5
+  title           String
+  comment         String          @db.Text
+  reviewDate      DateTime        @default(now())
+  carId           Int
+  customerId      String
+
+  car             Car             @relation(fields: [carId], references: [id])
+  customer        Customer        @relation(fields: [customerId], references: [cognitoId])
+
+  @@unique([carId, customerId])
+}
