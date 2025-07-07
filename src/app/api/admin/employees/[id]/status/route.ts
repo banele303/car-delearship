@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 
-interface IParams {
-  params: { id: string };
-}
-
 // PATCH /api/admin/employees/[id]/status
-export async function PATCH(request: NextRequest, { params }: IParams) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { id } = params;
     const authResult = await verifyAuth(request, ["ADMIN", "SALES_MANAGER"]);
