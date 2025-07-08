@@ -149,7 +149,7 @@ const HomeHeroSection = () => {
   };
 
   return (
-    <div className="relative h-[90vh] md:h-[90vh] pt-16 md:pt-0">
+    <div className="relative h-[100vh] md:h-[100vh] pt-16 md:pt-0">
       
       <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/80 to-black/60 z-[1]"></div>
 
@@ -270,7 +270,7 @@ const HomeHeroSection = () => {
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.3, type: "spring", stiffness: 100 }}
-            className="relative pt-[3rem]"
+            className="relative pt-[4.5rem]"
           >
             
             <div className="relative max-w-6xl mx-auto group">
