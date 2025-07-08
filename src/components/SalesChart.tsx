@@ -165,7 +165,7 @@ const SalesChart = () => {
               />
               <YAxis 
                 tick={{ fill: isDarkTheme ? "#ccc" : "#666" }}
-                tickFormatter={(value) => `$${value/1000}k`}
+                tickFormatter={(value) => `R${value/1000}k`}
                 axisLine={{ stroke: isDarkTheme ? "#555" : "#ddd" }}
                 tickLine={{ stroke: isDarkTheme ? "#555" : "#ddd" }}
               />
@@ -211,7 +211,7 @@ const SalesChart = () => {
               />
               <YAxis 
                 tick={{ fill: isDarkTheme ? "#ccc" : "#666" }}
-                tickFormatter={(value) => `$${value/1000}k`}
+                tickFormatter={(value) => `R${value/1000}k`}
                 axisLine={{ stroke: isDarkTheme ? "#555" : "#ddd" }}
                 tickLine={{ stroke: isDarkTheme ? "#555" : "#ddd" }}
               />
@@ -241,7 +241,7 @@ const SalesChart = () => {
               />
               <YAxis 
                 tick={{ fill: isDarkTheme ? "#ccc" : "#666" }}
-                tickFormatter={(value) => `$${value/1000}k`}
+                tickFormatter={(value) => `R${value/1000}k`}
                 axisLine={{ stroke: isDarkTheme ? "#555" : "#ddd" }}
                 tickLine={{ stroke: isDarkTheme ? "#555" : "#ddd" }}
               />
