@@ -778,7 +778,7 @@ export default function AdminCarsPage() {
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
         <Card className="border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 hover:shadow-lg group">
-          <CardContent className="p-6 mx-5 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20 group-hover:from-blue-100 group-hover:to-blue-200 dark:group-hover:from-blue-900/30 dark:group-hover:to-blue-800/30 transition-all duration-200">
+          <CardContent className="p-6 mx-3 rounded-md bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20 group-hover:from-blue-100 group-hover:to-blue-200 dark:group-hover:from-blue-900/30 dark:group-hover:to-blue-800/30 transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Cars</p> 
@@ -792,7 +792,7 @@ export default function AdminCarsPage() {
         </Card>
         
         <Card className="border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 hover:shadow-lg group">
-          <CardContent className="p-6 mx-5 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/20 group-hover:from-purple-100 group-hover:to-purple-200 dark:group-hover:from-purple-900/30 dark:group-hover:to-purple-800/30 transition-all duration-200">
+          <CardContent className="p-6 mx-3 rounded-md bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/20 group-hover:from-purple-100 group-hover:to-purple-200 dark:group-hover:from-purple-900/30 dark:group-hover:to-purple-800/30 transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Employees</p> 
@@ -808,7 +808,7 @@ export default function AdminCarsPage() {
         </Card>
         
         <Card className="border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 hover:shadow-lg group">
-          <CardContent className="p-6 mx-5 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20 group-hover:from-green-100 group-hover:to-green-200 dark:group-hover:from-green-900/30 dark:group-hover:to-green-800/30 transition-all duration-200">
+          <CardContent className="p-6 mx-3 rounded-md bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20 group-hover:from-green-100 group-hover:to-green-200 dark:group-hover:from-green-900/30 dark:group-hover:to-green-800/30 transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Price</p> 
