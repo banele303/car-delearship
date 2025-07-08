@@ -142,11 +142,12 @@ const FeaturedCars = () => {
               className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >
               
-              <div className="relative h-68 overflow-hidden">
+              <div className="relative h-72 overflow-hidden">
                 <Image
                   src={car.photoUrls && car.photoUrls.length > 0 ? car.photoUrls[0] : "/placeholder.jpg"}
                   alt={`${car.make} ${car.model}`}
                   fill
+                  sizes="100vw"
                   className="object-cover"
                   onError={(e) => {
                     console.log("Image failed to load:", car.photoUrls?.[0]);
