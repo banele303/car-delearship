@@ -46,12 +46,35 @@ async function deleteFileFromS3(fileUrl: string): Promise<void> {
   if (!process.env.AWS_BUCKET_NAME) {
     throw new Error("S3 bucket name is not configured.");
   }
+  
   try {
-    const key = new URL(fileUrl).pathname.substring(1);
-    await s3Client.send(new DeleteObjectCommand({ Bucket: process.env.AWS_BUCKET_NAME, Key: key }));
+    let key: string;
+    
+    // Check if the URL is a full URL or just a path
+    if (fileUrl.startsWith('http')) {
+      // For full URLs, extract the key from the path
+      const url = new URL(fileUrl);
+      key = url.pathname.substring(1); // Remove leading slash
+    } else {
+      // For relative paths, remove any leading slash and use as-is
+      key = fileUrl.startsWith('/') ? fileUrl.substring(1) : fileUrl;
+    }
+    
+    // Skip empty keys
+    if (!key) {
+      console.warn('Skipping empty file URL');
+      return;
+    }
+    
+    console.log(`Deleting S3 object with key: ${key}`);
+    await s3Client.send(new DeleteObjectCommand({ 
+      Bucket: process.env.AWS_BUCKET_NAME, 
+      Key: key 
+    }));
   } catch (error) {
-    console.error('S3 Deletion Error:', error);
-    throw new Error(`Failed to delete file from S3: ${error instanceof Error ? error.message : String(error)}`);
+    // Log the error but don't fail the entire operation
+    console.error('S3 Deletion Error for URL:', fileUrl, error);
+    // Continue with the operation even if one file fails to delete
   }
 }
 

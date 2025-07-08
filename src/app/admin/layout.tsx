@@ -153,7 +153,7 @@ const AdminDashboardContent = ({ children }: { children: React.ReactNode }) => {
     )}>
       <AdminNavbar />
       <div style={{ paddingTop: `${NAVBAR_HEIGHT}px` }}>
-        <div className="flex relative">
+        <div className="flex">
           
           {isMobile && open && (
             <div 
@@ -163,14 +163,14 @@ const AdminDashboardContent = ({ children }: { children: React.ReactNode }) => {
           )}
           
           
-          <div className="sticky top-0 h-[calc(100vh-var(--navbar-height))] z-40">
+          <div className="top-0 h-[calc(100vh-var(--navbar-height))]">
             <AppSidebar userType="admin" />
           </div>
           
           
           <div 
             className={cn(
-              "flex-grow transition-all duration-300 ease-in-out p-3 sm:p-4 md:p-6 overflow-x-hidden",
+              "flex-grow p-3 sm:p-4 md:p-6",
               isDark ? "text-slate-50" : "text-slate-900"
             )}
             style={{

@@ -52,14 +52,18 @@ interface Employee {
   name: string;
 }
 
-export default function EditCarPage({ params }: { params: Promise<{ id: string }> }) {
+interface PageProps {
+  params: { id: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default function EditCarPage({ params }: PageProps) {
   const router = useRouter();
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [car, setCar] = useState<Car | null>(null);
-  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+  const carId = params.id;
 
-  
   const [formData, setFormData] = useState({
     make: "",
     model: "",
@@ -85,12 +89,6 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
-  
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
-
-  
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -111,8 +109,7 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
     initAuth();
   }, [router]);
 
-  
-  const fetchCarData = useCallback(async (carId: string) => {
+  const fetchCarData = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/cars/${carId}`);
@@ -122,7 +119,6 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
       const carData = await response.json();
       setCar(carData);
       setExistingPhotos(carData.photoUrls || []);
-      
       
       setFormData({
         make: carData.make,
@@ -150,21 +146,18 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, [carId, router]);
 
-  
   useEffect(() => {
-    if (authInitialized && resolvedParams) {
-      fetchCarData(resolvedParams.id);
+    if (authInitialized) {
+      fetchCarData();
       fetchDealerships();
       fetchEmployees();
     }
-  }, [authInitialized, resolvedParams, fetchCarData]);
+  }, [authInitialized, fetchCarData]);
 
-  
   const fetchDealerships = async () => {
     try {
-      
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
       
@@ -187,10 +180,8 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  
   const fetchEmployees = async () => {
     try {
-      
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
       
@@ -213,39 +204,32 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setPhotoFiles(Array.from(e.target.files));
     }
   };
 
-  
   const removeExistingPhoto = (photoUrl: string) => {
     setExistingPhotos(prev => prev.filter(url => url !== photoUrl));
   };
 
-  
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!resolvedParams) return;
     
     setIsLoading(true);
 
     try {
       const submitFormData = new FormData();
-      
       
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -253,15 +237,12 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
         }
       });
 
-      
       submitFormData.append('photoUrls', JSON.stringify(existingPhotos));
 
-      
       photoFiles.forEach(file => {
         submitFormData.append('photos', file);
       });
 
-      
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
       
@@ -270,7 +251,7 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
         return;
       }
 
-      const response = await fetch(`/api/cars/${resolvedParams.id}`, {
+      const response = await fetch(`/api/cars/${carId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`

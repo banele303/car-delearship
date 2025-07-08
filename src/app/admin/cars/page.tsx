@@ -54,7 +54,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
+  DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import {
   Select,
@@ -92,8 +93,24 @@ export default function AdminCarsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
-  
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -263,8 +280,8 @@ export default function AdminCarsPage() {
         
         <Skeleton className="h-12 w-full rounded-lg" />
         
-        <Card className="border-slate-200 dark:border-slate-700 shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-md overflow-visible">
+          <div className="overflow-visible">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -592,8 +609,8 @@ export default function AdminCarsPage() {
       </div>
       
       
-      <Card className="border-slate-200 dark:border-slate-700 shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-md overflow-visible">
+        <div className="overflow-visible">
           <Table>
             <TableHeader>
               <TableRow>
@@ -675,28 +692,55 @@ export default function AdminCarsPage() {
                         {car.status || "AVAILABLE"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(`/admin/cars/edit/${car.id}`)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => openDeleteDialog(car)}
-                            className="text-red-600 focus:text-red-600"
+                    <TableCell className="relative">
+                      <div className="dropdown-container" style={{ position: 'relative' }}>
+                        <Button 
+                          variant="ghost" 
+                          className="h-8 w-8 p-0 hover:bg-transparent"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenDropdownId(openDropdownId === car.id ? null : car.id);
+                          }}
+                        >
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                        
+                        {openDropdownId === car.id && (
+                          <div 
+                            className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50"
+                            style={{
+                              position: 'absolute',
+                              top: '100%',
+                              right: 0,
+                              zIndex: 50,
+                            }}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <div 
+                              className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDropdownId(null);
+                                router.push(`/admin/cars/edit/${car.id}`);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </div>
+                            <div 
+                              className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDropdownId(null);
+                                openDeleteDialog(car);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Delete</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -705,7 +749,7 @@ export default function AdminCarsPage() {
                   <TableCell colSpan={7} className="text-center py-8 text-slate-500 dark:text-slate-400">
                     {searchTerm || filterCity ? (
                       <div className="flex flex-col items-center gap-2">
-                        <Search className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                        <Search className="h-8 w-8 text-slate-300 dark:text-slateon-600" />
                         <p>No cars match your search criteria</p>
                         <Button 
                           variant="link" 
