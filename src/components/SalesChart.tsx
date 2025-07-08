@@ -87,13 +87,15 @@ const SalesChart = () => {
     return data.slice(-months);
   };
 
-  const chartData = sales?.map((sale: any) => ({
-    name: new Date(sale.saleDate).toLocaleDateString(),
-    shortName: format(new Date(sale.saleDate), 'MMM'),
-    sales: sale.salePrice,
-    profit: Math.round(sale.salePrice * 0.15), // Assuming 15% profit margin
-    units: 1
-  })) || filterDataByPeriod(generateSampleData());
+  const chartData = (sales && sales.length > 0)
+    ? sales.map((sale: any) => ({
+        name: new Date(sale.saleDate).toLocaleDateString(),
+        shortName: format(new Date(sale.saleDate), 'MMM'),
+        sales: sale.salePrice,
+        profit: Math.round(sale.salePrice * 0.15), // Assuming 15% profit margin
+        units: 1,
+      }))
+    : filterDataByPeriod(generateSampleData());
   
   
   const totalSales = chartData.reduce((sum, item) => sum + item.sales, 0);
@@ -103,8 +105,6 @@ const SalesChart = () => {
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(value);

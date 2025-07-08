@@ -28,6 +28,9 @@ const CarsContent = () => {
   const [selectedFuelType, setSelectedFuelType] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [favorites, setFavorites] = useState<number[]>([]);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 9;
 
   
   const { data: carsData, isLoading, error } = useGetCarsQuery({});
@@ -53,42 +56,29 @@ const CarsContent = () => {
   
   const filteredCars = React.useMemo(() => {
     if (!carsData) return [];
-    
     let filtered = carsData.filter((car) => {
-      
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        if (!car.make.toLowerCase().includes(query) && 
+        if (!car.make.toLowerCase().includes(query) &&
             !car.model.toLowerCase().includes(query) &&
             !`${car.make} ${car.model}`.toLowerCase().includes(query)) {
           return false;
         }
       }
-
-      
       if (selectedMake !== "all" && car.make !== selectedMake) {
         return false;
       }
-
-      
       if (car.price < priceRange[0] || car.price > priceRange[1]) {
         return false;
       }
-
-      
       if (selectedCondition !== "all" && car.status !== selectedCondition) {
         return false;
       }
-
-      
       if (selectedFuelType !== "all" && car.fuelType !== selectedFuelType) {
         return false;
       }
-
       return true;
     });
-
-    
     filtered = filtered.sort((a, b) => {
       switch (sortBy) {
         case "newest":
@@ -107,9 +97,15 @@ const CarsContent = () => {
           return 0;
       }
     });
-
     return filtered;
   }, [carsData, searchQuery, selectedMake, priceRange, selectedCondition, selectedFuelType, sortBy]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredCars.length / pageSize);
+  const paginatedCars = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredCars.slice(start, start + pageSize);
+  }, [filteredCars, currentPage, pageSize]);
 
   
   const carMakes = React.useMemo(() => {
@@ -363,7 +359,7 @@ const CarsContent = () => {
           </div>
         </div>
 
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-2">
           <p className="text-gray-600 dark:text-gray-400">
             Showing {filteredCars.length} of {carsData?.length || 0} vehicles
           </p>
@@ -401,91 +397,164 @@ const CarsContent = () => {
             </Button>
           </div>
         ) : viewMode === "grid" ? (
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {filteredCars.map((car, index) => (
-              <motion.div
-                key={car.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <CarCard
-                  id={car.id}
-                  make={car.make}
-                  model={car.model}
-                  year={car.year}
-                  price={car.price}
-                  mileage={car.mileage || 0}
-                  fuelType={car.fuelType}
-                  condition={car.status}
-                  transmission={car.transmission}
-                  photoUrls={car.photoUrls || ["/placeholder.jpg"]}
-                  features={car.features || []}
-                  averageRating={car.averageRating || undefined}
-                  isFavorited={favorites.includes(car.id)}
-                  onFavoriteToggle={handleFavoriteToggle}
-                  onViewDetails={handleViewDetails}
-                  onScheduleTestDrive={handleScheduleTestDrive}
-                />
-              </motion.div>
-            ))}
-          </motion.div>
+          <>
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              {paginatedCars.map((car, index) => (
+                <motion.div
+                  key={car.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <CarCard
+                    id={car.id}
+                    make={car.make}
+                    model={car.model}
+                    year={car.year}
+                    price={car.price}
+                    mileage={car.mileage || 0}
+                    fuelType={car.fuelType}
+                    condition={car.status}
+                    transmission={car.transmission}
+                    photoUrls={car.photoUrls || ["/placeholder.jpg"]}
+                    features={car.features || []}
+                    averageRating={car.averageRating || undefined}
+                    isFavorited={favorites.includes(car.id)}
+                    onFavoriteToggle={handleFavoriteToggle}
+                    onViewDetails={handleViewDetails}
+                    onScheduleTestDrive={handleScheduleTestDrive}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                {[...Array(totalPages)].map((_, i) => (
+                  <Button
+                    key={i}
+                    variant={currentPage === i + 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
-          <motion.div 
-            className="space-y-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {filteredCars.map((car, index) => (
-              <motion.div
-                key={car.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex gap-6">
-                      <div className="w-32 h-24 bg-gray-200 rounded-lg overflow-hidden">
-                        <Image 
-                          src={car.photoUrls?.[0] || "/placeholder.jpg"} 
-                          alt={`${car.make} ${car.model}`}
-                          width={128}
-                          height={96}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
+          <>
+            <motion.div 
+              className="space-y-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              {paginatedCars.map((car, index) => (
+                <motion.div
+                  key={car.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Card className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                        <div className="w-full sm:w-36 h-44 sm:h-40 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 mx-auto sm:mx-0">
+                          <Image 
+                            src={car.photoUrls?.[0] || "/placeholder.jpg"} 
+                            alt={`${car.make} ${car.model}`}
+                            width={144}
+                            height={176}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 flex flex-col justify-between">
                           <div>
-                            <h3 className="text-lg font-bold">{car.year} {car.make} {car.model}</h3>
-                            <p className="text-2xl font-bold text-[#00acee]">{formatPrice(car.price)}</p>
+                            <h3 className="text-lg font-bold text-center sm:text-left">{car.year} {car.make} {car.model}</h3>
+                            <p className="text-2xl font-bold text-[#00acee] text-center sm:text-left">{formatPrice(car.price)}</p>
+                            <div className="mt-2 text-sm text-gray-600 text-center sm:text-left">
+                              {car.mileage?.toLocaleString() || 0} km • {car.fuelType} • {car.transmission}
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => handleViewDetails(car.id)}>
+                          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-2 w-full">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleViewDetails(car.id)}
+                              className="w-full sm:w-auto"
+                            >
                               View Details
                             </Button>
-                            <Button size="sm" className="bg-[#00acee]" onClick={() => handleScheduleTestDrive(car.id)}>
+                            <Button 
+                              size="sm" 
+                              className="bg-[#00acee] w-full sm:w-auto" 
+                              onClick={() => handleScheduleTestDrive(car.id)}
+                            >
                               Test Drive
                             </Button>
                           </div>
                         </div>
-                        <div className="mt-2 text-sm text-gray-600">
-                          {car.mileage?.toLocaleString() || 0} km • {car.fuelType} • {car.transmission}
-                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                {[...Array(totalPages)].map((_, i) => (
+                  <Button
+                    key={i}
+                    variant={currentPage === i + 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
