@@ -99,24 +99,35 @@ export default function ContactUsPage() {
                   <MapPin className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-medium text-slate-800 text-lg">Head Office</h3> 
-                  <p className="text-slate-600 mt-1">123 Car Avenue</p> 
-                  <p className="text-slate-600">Johannesburg, Gauteng, South Africa</p> 
+                  <h3 className="font-medium text-slate-800 text-lg">Our Location</h3>
+                  <p className="text-slate-600 mt-1">2A Amanda Ave, Gleneagles</p>
+                  <p className="text-slate-600">Johannesburg South, 2091, South Africa</p>
+                  <a
+                    href="https://www.google.com/maps/dir//2A+Amanda+Ave,+Gleneagles,+Johannesburg+South,+2091" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                    aria-label="Get directions to our only dealership location"
+                  >
+                    Get Directions
+                  </a>
                 </div>
               </div>
             </div>
             
             
-            <div className="h-[300px] rounded-xl overflow-hidden shadow-md mt-8">
-              <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3579.8000000000007!2d28.0473!3d-26.2041!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1e950c6a9d0a0a01%3A0x1234567890abcdef!2sJohannesburg%2C%20South%20Africa!5e0!3m2!1sen!2sza!4v1717392435450!5m2!1sen!2sza" 
-                width="100%" 
-                height="100%" 
-                style={{ border: 0 }} 
-                allowFullScreen 
-                loading="lazy" 
+            <div className="h-[300px] rounded-xl overflow-hidden shadow-md mt-8 relative group">
+              <iframe
+                title="SaCar Dealership Location Map"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3579.502550063525!2d28.00395!3d-26.29845!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1ef6f7f5c9c2b5b1%3A0x0000000000000000!2s2A%20Amanda%20Ave%2C%20Gleneagles%2C%20Johannesburg%20South%2C%202091%2C%20South%20Africa!5e0!3m2!1sen!2sza!4v1724544000000!5m2!1sen!2sza"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
+              <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-tr from-blue-600/10 to-transparent" />
             </div>
           </div>
           

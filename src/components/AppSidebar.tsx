@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import React, { useEffect } from "react";
+import Image from "next/image";
 import {
   Sidebar,
   SidebarContent,
@@ -148,13 +149,32 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
                 open ? "justify-between px-4" : "justify-center"
               )}
             >
-              {open && (
-                <span className={cn(
-                  "font-medium text-base capitalize",
-                  isDark ? "text-white/90" : "text-slate-800"
-                )}>
-                  {userType} Portal
-                </span>
+              {open ? (
+                <div className="flex items-center gap-2">
+                  <Image
+                    src="/Advanced_Auto_logoo.png"
+                    alt="SaCar Logo"
+                    width={34}
+                    height={34}
+                    className="h-9 w-auto object-contain drop-shadow-sm"
+                    priority
+                  />
+                  <span className={cn(
+                    "font-semibold text-base tracking-tight",
+                    isDark ? "text-white" : "text-slate-900"
+                  )}>
+                    {userType.charAt(0).toUpperCase() + userType.slice(1)} Portal
+                  </span>
+                </div>
+              ) : (
+                <Image
+                  src="/Advanced_Auto_logoo.png"
+                  alt="SaCar Logo"
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 object-contain rounded-md"
+                  priority
+                />
               )}
               <button
                 className={cn(

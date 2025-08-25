@@ -250,10 +250,12 @@ model spatial_ref_sys {
   proj4text String? @db.VarChar(2048)
 }
 
+// NOTE: Aligning with existing Postgres enum created in earlier migration which still uses CERTIFIED_PRE_OWNED.
+// Using CERTIFIED here previously caused runtime enum mismatch (500 errors on /api/cars) because DB stores CERTIFIED_PRE_OWNED.
 enum CarCondition {
   NEW
   USED
-  CERTIFIED
+  CERTIFIED_PRE_OWNED
   DEALER_DEMO
 }
 
@@ -274,12 +276,14 @@ enum CarType {
   ELECTRIC
 }
 
+// Re-introduced HYDROGEN to mirror existing DB enum values. Removing it while rows still referenced it triggers runtime errors.
 enum FuelType {
   GASOLINE
   DIESEL
   HYBRID
   ELECTRIC
   PLUG_IN_HYBRID
+  HYDROGEN
 }
 
 enum Transmission {

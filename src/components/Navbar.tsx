@@ -55,8 +55,15 @@ export default function Navbar() {
   <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-6" style={{ height: NAVBAR_HEIGHT }}>
         {/* Left: Logo */}
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/Advance Auto logo.jpg" alt="Advanced Auto Trader" width={300} height={150} priority className="h-20 w-auto object-contain" />
+          <Link href="/" className="flex items-center gap-2" aria-label="SaCar Home">
+            <Image
+              src="/Advanced_Auto_logoo.png"
+              alt="SaCar Dealership Logo"
+              width={220}
+              height={80}
+              priority
+              className="h-16 w-auto object-contain drop-shadow-sm"
+            />
           </Link>
         </div>
 
