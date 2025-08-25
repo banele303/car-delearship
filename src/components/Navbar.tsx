@@ -13,7 +13,7 @@ import { NAVBAR_HEIGHT } from "@/lib/constants";
 const links = [
   { href: "/", label: "Home" },
   { href: "/gallery", label: "Gallery" },
-  { href: "/Showroom", label: "Showroom" },
+  { href: "/inventory", label: "Showroom" },
   { href: "/financing", label: "Financing Application" },
   { href: "/contact-us", label: "Contact" },
 ];
