@@ -488,7 +488,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fuelType">Fuel Type</Label>
+                <Label htmlFor="fuelType">Fuel</Label>
                 <Select 
                   value={formData.fuelType}
                   onValueChange={(value) => handleSelectChange("fuelType", value)}
@@ -497,7 +497,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="GASOLINE">Petrol</SelectItem>
+                    <SelectItem value="GASOLINE">Fuel</SelectItem>
                     <SelectItem value="DIESEL">Diesel</SelectItem>
                     <SelectItem value="HYBRID">Hybrid</SelectItem>
                     <SelectItem value="ELECTRIC">Electric</SelectItem>

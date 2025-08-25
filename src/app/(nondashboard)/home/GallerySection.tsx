@@ -98,7 +98,7 @@ export default function GallerySection({ compact=false, initialCategory='all' }:
               </span>
               {compact ? 'Gallery' : 'Explore Our Gallery'}
             </h2>
-            {!compact && <p className="text-gray-600 dark:text-slate-400 max-w-2xl">Curated highlights from our showroom, promotions and brand visuals. Filter, search & open fullscreen.</p>}
+            {!compact && <p className="text-gray-600 dark:text-slate-400 max-w-2xl"></p>}
           </div>
           {!compact && (
             <div className="flex w-full flex-col sm:flex-row gap-3 sm:items-center">

@@ -42,7 +42,7 @@ export default function AboutUsSection() {
             viewport={{ once: true }}
             className="space-y-6"
           >
-            <h2 id="about-heading" className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(90deg,hsl(var(--primary))_0%,hsl(var(--primary))_100%)]">About Advance Auto</h2>
+            <h2 id="about-heading" className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(90deg,hsl(var(--primary))_0%,hsl(var(--primary))_100%)]">About Us</h2>
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
               We began with a simple idea: buying a car should feel confident, transparent and personal. Today, we curate a focused selection of quality vehicles—each inspected and presented with integrity—serving drivers across Johannesburg South and beyond.
             </p>
