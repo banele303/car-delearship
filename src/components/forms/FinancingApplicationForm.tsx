@@ -51,13 +51,13 @@ const schema = z.object({
   // consent & terms checkboxes removed per latest request
   consentCreditCheck: z.boolean().optional(),
   agreeTerms: z.boolean().optional(),
-  // Extended (all optional)
-  vehicleCondition: z.string().optional(),
-  cashPrice: z.string().optional(),
-  vehicleMake: z.string().optional(),
-  vehicleModel: z.string().optional(),
+  // Vehicle core fields now required
+  vehicleCondition: z.string().min(1, 'Vehicle condition required'),
+  cashPrice: z.string().min(1, 'Cash price required'),
+  vehicleMake: z.string().min(1, 'Make required'),
+  vehicleModel: z.string().min(1, 'Model required'),
   vehicleMMCode: z.string().optional(),
-  vehicleKM: z.string().optional(),
+  vehicleKM: z.string().optional(), // conditionally required if Used
   vehicleFuelType: z.string().optional(),
   vehicleTransmission: z.string().optional(),
   vehicleType: z.string().optional(),
@@ -137,6 +137,14 @@ const schema = z.object({
   legalCapacityConfirm: z.boolean().refine(v => v, { message: 'Required' }),
   creditRecordDeclaration: z.boolean().refine(v => v, { message: 'Required' }),
   marketingCommunicationConsent: z.boolean().refine(v => v, { message: 'Required' }),
+}).superRefine((data, ctx) => {
+  if (/used/i.test(data.vehicleCondition || '') && !data.vehicleKM) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['vehicleKM'],
+      message: 'KM required for used vehicles'
+    });
+  }
 });
 
 export type FinancingPublicForm = z.infer<typeof schema>;
@@ -167,7 +175,10 @@ const defaultValues: FinancingPublicForm = {
 interface FieldProps { label: string; name: keyof FinancingPublicForm; type?: string; placeholder?: string; colSpan?: string; uncontrolled?: boolean; defaultValue?: string; value?: string; onChange?: (v: string)=>void; }
 
 // Required field names (excluding declaration checkboxes handled elsewhere)
-const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>(['loanAmount','termMonths','firstName','lastName']);
+const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
+  'loanAmount','termMonths','firstName','lastName',
+  'vehicleCondition','cashPrice','vehicleMake','vehicleModel'
+]);
 
 const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholder, colSpan, uncontrolled = true, defaultValue = '', value, onChange }) => {
   const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -242,8 +253,13 @@ export default function FinancingApplicationForm() {
           vehicleModel: carDetails.model || prev.vehicleModel,
           loanAmount: carDetails.price?.toString() || prev.loanAmount,
           cashPrice: carDetails.price?.toString() || prev.cashPrice,
-          vehicleCondition: carDetails.condition ? (carDetails.condition === 'NEW' ? 'New' : 'Used') : prev.vehicleCondition,
-          vehicleKM: carDetails.mileage != null ? String(carDetails.mileage) : prev.vehicleKM,
+          // Prefer explicit condition; if absent infer by mileage / year
+          vehicleCondition: carDetails.condition
+            ? (carDetails.condition === 'NEW' ? 'New' : 'Used')
+            : (carDetails.mileage > 0 ? 'Used' : prev.vehicleCondition || 'New'),
+          vehicleKM: (carDetails.mileage != null && carDetails.mileage !== undefined)
+            ? String(carDetails.mileage)
+            : prev.vehicleKM,
           vehicleFuelType: carDetails.fuelType || prev.vehicleFuelType,
           vehicleTransmission: carDetails.transmission || prev.vehicleTransmission,
           vehicleType: carDetails.carType || prev.vehicleType
@@ -301,10 +317,14 @@ export default function FinancingApplicationForm() {
     interestRate: (v: string) => handleFieldUpdate('interestRate', v),
     monthlyPayment: (v: string) => handleFieldUpdate('monthlyPayment', v),
     downPaymentAmount: (v: string) => handleFieldUpdate('downPaymentAmount', v),
-    tradeInDetails: (v: string) => handleFieldUpdate('tradeInDetails', v),
-    vehicleMake: (v: string) => handleFieldUpdate('vehicleMake', v),
-    vehicleModel: (v: string) => handleFieldUpdate('vehicleModel', v),
-    cashPrice: (v: string) => handleFieldUpdate('cashPrice', v),
+  tradeInDetails: (v: string) => handleFieldUpdate('tradeInDetails', v),
+  vehicleKM: (v: string) => handleFieldUpdate('vehicleKM', v),
+  vehicleMMCode: (v: string) => handleFieldUpdate('vehicleMMCode', v),
+  serviceAndDelivery: (v: string) => handleFieldUpdate('serviceAndDelivery', v),
+  licenseFee: (v: string) => handleFieldUpdate('licenseFee', v),
+  vehicleMake: (v: string) => handleFieldUpdate('vehicleMake', v),
+  vehicleModel: (v: string) => handleFieldUpdate('vehicleModel', v),
+  cashPrice: (v: string) => handleFieldUpdate('cashPrice', v),
   vehicleFuelType: (v: string) => handleFieldUpdate('vehicleFuelType', v),
   vehicleTransmission: (v: string) => handleFieldUpdate('vehicleTransmission', v),
   vehicleType: (v: string) => handleFieldUpdate('vehicleType', v),
@@ -338,12 +358,8 @@ export default function FinancingApplicationForm() {
     propertyPurchasePrice: (v: string) => handleFieldUpdate('propertyPurchasePrice', v),
     propertyPurchaseDate: (v: string) => handleFieldUpdate('propertyPurchaseDate', v),
     propertyRegisteredInName: (v: string) => handleFieldUpdate('propertyRegisteredInName', v),
-    // Additional missing fields from the form
-    vehicleCondition: (v: string) => handleFieldUpdate('vehicleCondition', v),
-    vehicleKM: (v: string) => handleFieldUpdate('vehicleKM', v),
-    vehicleMMCode: (v: string) => handleFieldUpdate('vehicleMMCode', v),
-    serviceAndDelivery: (v: string) => handleFieldUpdate('serviceAndDelivery', v),
-    licenseFee: (v: string) => handleFieldUpdate('licenseFee', v),
+  // Vehicle detail field (condition)
+  vehicleCondition: (v: string) => handleFieldUpdate('vehicleCondition', v),
     // Additional employment/income fields that might be missing
     employerAddress: (v: string) => handleFieldUpdate('employerAddress', v),
     occupation: (v: string) => handleFieldUpdate('occupation', v),
@@ -413,6 +429,14 @@ export default function FinancingApplicationForm() {
     const parsed = schema.safeParse(collected);
     if (!parsed.success) {
       toast.error('Please complete required required declarations & loan amount');
+      return;
+    }
+    // Ensure required documents uploaded
+    const missingDocs = typeof missingRequiredDocs === 'function' ? (missingRequiredDocs() as any) : [];
+    if (missingDocs.length) {
+      toast.error(`Missing required documents: ${missingDocs.map((d:any)=>d.label).join(', ')}`);
+      const docSection = document.getElementById('docs-section');
+      if (docSection) docSection.scrollIntoView({behavior:'smooth'});
       return;
     }
     setSubmitting(true);
@@ -512,15 +536,16 @@ export default function FinancingApplicationForm() {
     return () => document.removeEventListener('blur', blurListener, true);
   }, []);
 
-  // Separate uploads per required document type
-  const requiredDocs = [
-    { key: 'id_doc', label: 'ID (Front & Back)' },
-    { key: 'drivers_license', label: "Driver's License (Front & Back)" },
-    { key: 'payslips', label: 'Latest 3 Months Payslips' },
-    { key: 'bank_statements', label: 'Latest Bank Statements (3 months / 6 if self‑employed)' },
-    { key: 'proof_of_residence', label: 'Proof of Residence' },
-    { key: 'self_employed_docs', label: 'Self‑Employed: Business / Registration Docs' },
-  ];
+  // Document metadata & upload helpers (compact zones)
+  const docMeta = [
+    { key: 'id_doc', label: 'ID (Front & Back)', required: true, max: 2, hint: 'Clear photos or PDF of both sides.' },
+    { key: 'drivers_license', label: "Driver's License (Front & Back)", required: true, max: 2, hint: 'Valid & not expired.' },
+    { key: 'payslips', label: 'Payslips (3 Months)', required: true, max: 6, hint: 'Last 3 months (6 if variable income).' },
+    { key: 'bank_statements', label: 'Bank Statements', required: true, max: 6, hint: 'Latest 3 months (6 if self‑employed). PDF preferred.' },
+    { key: 'proof_of_residence', label: 'Proof of Residence', required: true, max: 2, hint: 'Utility bill < 3 months old.' },
+    { key: 'self_employed_docs', label: 'Business Docs (If Self‑Employed)', required: false, max: 6, hint: 'CK docs, tax clearance, financials.' },
+  ] as const;
+  const requiredDocs = docMeta; // backward compatibility variable name
   const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
   const createServerConfig = (docType: string) => ({
     process: {
@@ -545,6 +570,7 @@ export default function FinancingApplicationForm() {
     },
     revert: null,
   }) as any;
+  const missingRequiredDocs = () => docMeta.filter(d => d.required && !(uploadedByType[d.key]?.length));
 
   return (
   <form ref={formRef} onSubmit={handleSubmit} className='mt-12 space-y-6'>
@@ -552,10 +578,10 @@ export default function FinancingApplicationForm() {
 
   <Section id='applicant' title='Applicant Details' desc='Primary applicant profile and supporting details'>
         <div className='grid md:grid-cols-4 gap-4'>
-          <TextField label='First Name' name='firstName' defaultValue={form.firstName} />
-          <TextField label='Last Name' name='lastName' defaultValue={form.lastName} />
-          <TextField label='Email' name='email' defaultValue={form.email || ''} />
-          <TextField label='Phone' name='phone' defaultValue={form.phone || ''} />
+          <TextField label='First Name' name='firstName' uncontrolled={false} value={form.firstName} onChange={onChangeHandlers.firstName} />
+          <TextField label='Last Name' name='lastName' uncontrolled={false} value={form.lastName} onChange={onChangeHandlers.lastName} />
+          <TextField label='Email' name='email' uncontrolled={false} value={form.email || ''} onChange={onChangeHandlers.email} />
+          <TextField label='Phone' name='phone' uncontrolled={false} value={form.phone || ''} onChange={onChangeHandlers.phone} />
           <TextField label='Date of Birth' name='dateOfBirth' defaultValue={form.dateOfBirth||''} placeholder='YYYY-MM-DD' />
           <TextField label='ID Number' name='idNumber' defaultValue={form.idNumber||''} />
           <TextField label='Address' name='address' defaultValue={form.address||''} colSpan='md:col-span-2' />
@@ -641,9 +667,9 @@ export default function FinancingApplicationForm() {
       <Section id='vehicle' title='Vehicle & Financing' desc='Structure & trade / vehicle details'>
         <div className='grid md:grid-cols-4 gap-4'>
           {/* Required financing fields moved from removed Loan Snapshot section */}
-          <TextField label='Desired Loan Amount (R)' name='loanAmount' defaultValue={form.loanAmount||''} />
-          <TextField label='Term (Months)' name='termMonths' defaultValue={form.termMonths||''} />
-          <TextField label='Planned Down Payment (R)' name='downPaymentAmount' defaultValue={form.downPaymentAmount||''} />
+          <TextField label='Desired Loan Amount (R)' name='loanAmount' uncontrolled={false} value={form.loanAmount||''} onChange={onChangeHandlers.loanAmount} />
+          <TextField label='Term (Months)' name='termMonths' uncontrolled={false} value={form.termMonths||''} onChange={onChangeHandlers.termMonths} />
+          <TextField label='Planned Down Payment (R)' name='downPaymentAmount' uncontrolled={false} value={form.downPaymentAmount||''} onChange={onChangeHandlers.downPaymentAmount} />
           {/* Preferred Contact Method removed */}
           <div className='flex items-center gap-3 pt-6'>
             <Checkbox id='hasTradeIn' checked={form.hasTradeIn} onCheckedChange={onChangeHandlers.hasTradeInChecked} />
@@ -659,17 +685,17 @@ export default function FinancingApplicationForm() {
         <div className='mt-6 border-t pt-6'>
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Vehicle / Goods Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
-            <TextField label='New or Used' name='vehicleCondition' defaultValue={form.vehicleCondition||''} />
-            <TextField label='Cash Price' name='cashPrice' defaultValue={form.cashPrice||''} />
-            <TextField label='Make' name='vehicleMake' defaultValue={form.vehicleMake||''} />
-            <TextField label='Model' name='vehicleModel' defaultValue={form.vehicleModel||''} />
-            <TextField label='KM (if used)' name='vehicleKM' defaultValue={form.vehicleKM||''} />
-            <TextField label='M & M' name='vehicleMMCode' defaultValue={form.vehicleMMCode||''} />
-            <TextField label='Fuel Type' name='vehicleFuelType' defaultValue={form.vehicleFuelType||''} />
-            <TextField label='Transmission' name='vehicleTransmission' defaultValue={form.vehicleTransmission||''} />
-            <TextField label='Body / Type' name='vehicleType' defaultValue={form.vehicleType||''} />
-            <TextField label='Service & Delivery' name='serviceAndDelivery' defaultValue={form.serviceAndDelivery||''} />
-            <TextField label='License Fee' name='licenseFee' defaultValue={form.licenseFee||''} />
+            <TextField label='New or Used' name='vehicleCondition' uncontrolled={false} value={form.vehicleCondition||''} onChange={onChangeHandlers.vehicleCondition} />
+            <TextField label='Cash Price' name='cashPrice' uncontrolled={false} value={form.cashPrice||''} onChange={onChangeHandlers.cashPrice} />
+            <TextField label='Make' name='vehicleMake' uncontrolled={false} value={form.vehicleMake||''} onChange={onChangeHandlers.vehicleMake} />
+            <TextField label='Model' name='vehicleModel' uncontrolled={false} value={form.vehicleModel||''} onChange={onChangeHandlers.vehicleModel} />
+            <TextField label='KM (if used)' name='vehicleKM' uncontrolled={false} value={form.vehicleKM||''} onChange={onChangeHandlers.vehicleKM} />
+            <TextField label='M & M' name='vehicleMMCode' uncontrolled={false} value={form.vehicleMMCode||''} onChange={onChangeHandlers.vehicleMMCode} />
+            <TextField label='Fuel Type' name='vehicleFuelType' uncontrolled={false} value={form.vehicleFuelType||''} onChange={onChangeHandlers.vehicleFuelType} />
+            <TextField label='Transmission' name='vehicleTransmission' uncontrolled={false} value={form.vehicleTransmission||''} onChange={onChangeHandlers.vehicleTransmission} />
+            <TextField label='Body / Type' name='vehicleType' uncontrolled={false} value={form.vehicleType||''} onChange={onChangeHandlers.vehicleType} />
+            <TextField label='Service & Delivery' name='serviceAndDelivery' uncontrolled={false} value={form.serviceAndDelivery||''} onChange={onChangeHandlers.serviceAndDelivery} />
+            <TextField label='License Fee' name='licenseFee' uncontrolled={false} value={form.licenseFee||''} onChange={onChangeHandlers.licenseFee} />
             {/* Balloon / Residual and Extras removed */}
           </div>
         </div>
@@ -679,48 +705,62 @@ export default function FinancingApplicationForm() {
 
   {/* Consent & terms section removed per request */}
 
-      <div className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-5'>
-        <div className='mb-6'>
-          <h3 className='font-semibold text-base md:text-lg'>Required Supporting Documents</h3>
-          <p className='text-xs text-slate-500 mt-1'>Upload each document type separately.</p>
+      <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-5'>
+        <div className='mb-5'>
+          <h3 className='font-semibold text-base md:text-lg'>Supporting Documents</h3>
+          <p className='text-xs text-slate-500 mt-1'>Required documents marked with <span className="text-red-500 font-semibold">*</span>. Upload clear PDFs or images. Smaller zones below.</p>
+          <div className='mt-3 grid md:grid-cols-3 gap-2 text-[11px]'>
+            {docMeta.map(m => {
+              const uploaded = uploadedByType[m.key]?.length || 0;
+              const ok = uploaded > 0 || !m.required;
+              return (
+                <div key={m.key} className='flex items-center gap-2'>
+                  <span className={`h-2 w-2 rounded-full ${ok ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                  <span className='truncate'>{m.label}{m.required && <span className='text-red-500'>*</span>} {uploaded>0 && <span className='text-emerald-600'>({uploaded})</span>}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
-          {requiredDocs.map(d => {
+        <div className='grid gap-4 md:grid-cols-3'>
+          {docMeta.map(d => {
             const uploaded = uploadedByType[d.key]?.length || 0;
             return (
-              <div key={d.key} className='group relative rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col'>
-                <div className='flex items-start justify-between mb-3'>
-                  <Label className='text-sm font-semibold leading-snug pr-2'>{d.label}</Label>
-                  <span className='text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'>{uploaded} / {d.key === 'payslips' || d.key === 'bank_statements' ? 6 : 2}</span>
+              <div key={d.key} className='group relative rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow p-3 flex flex-col'>
+                <div className='flex items-start justify-between mb-2'>
+                  <Label className='text-[12px] font-semibold leading-snug pr-2'>
+                    {d.label}{d.required && <span className='text-red-500'>*</span>}
+                  </Label>
+                  <span className='text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'>{uploaded} / {d.max}</span>
                 </div>
                 <div className='flex-1'>
                   <FilePond
                     name={`files_${d.key}`}
                     allowMultiple
-                    maxFiles={ d.key === 'payslips' || d.key === 'bank_statements' ? 6 : 2 }
+                    maxFiles={d.max}
                     server={createServerConfig(d.key)}
                     acceptedFileTypes={['application/pdf','image/jpeg','image/png']}
-                    className='filepond--financing'
-                    labelIdle='<span class="text-xs font-medium">Drag & Drop</span> <span class="filepond--label-action text-blue-600">Browse</span>'
-                    imagePreviewHeight={72}
-                    stylePanelAspectRatio='1:1'
+                    className='filepond--financing-compact'
+                    labelIdle='<span class="text-[10px] font-medium">Drop / Browse</span>'
+                    imagePreviewHeight={56}
+                    stylePanelAspectRatio='1:0.75'
                   />
                 </div>
+                <p className='mt-2 text-[10px] text-slate-500 leading-snug line-clamp-3'>{d.hint}</p>
                 {!!uploaded && (
-                  <div className='mt-3 grid grid-cols-2 gap-2 overflow-auto max-h-28 pr-1'>
+                  <div className='mt-2 grid grid-cols-2 gap-1 overflow-auto max-h-20 pr-1'>
                     {uploadedByType[d.key].map(f => {
                       const isImage = /\.(jpe?g|png|gif|webp)$/i.test(f.originalName);
                       const isPdf = /\.pdf$/i.test(f.originalName);
                       return (
-                        <div key={f.storedName} className='flex items-center gap-2 text-[10px] bg-slate-100/60 dark:bg-slate-800/40 rounded p-1'>
+                        <div key={f.storedName} className='flex items-center gap-1 text-[9px] bg-slate-100/70 dark:bg-slate-800/40 rounded p-1'>
                           {isImage ? (
-                            <img src={f.url} alt={f.originalName} className='h-10 w-14 object-cover rounded border border-slate-200 dark:border-slate-700' />
+                            <img src={f.url} alt={f.originalName} className='h-8 w-10 object-cover rounded border border-slate-200 dark:border-slate-700' />
                           ) : (
-                            <span className='h-10 w-14 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[9px] font-medium'>{isPdf ? 'PDF' : 'FILE'}</span>
+                            <span className='h-8 w-10 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[8px] font-medium'>{isPdf ? 'PDF' : 'FILE'}</span>
                           )}
                           <div className='flex-1 min-w-0'>
                             <span className='block truncate max-w-full' title={f.originalName}>{f.originalName}</span>
-                            <a className='text-blue-600 hover:underline text-[9px]' href={f.url} target='_blank' rel='noreferrer'>view</a>
                           </div>
                         </div>
                       );
