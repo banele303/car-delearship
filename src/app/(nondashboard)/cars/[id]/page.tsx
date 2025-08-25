@@ -452,7 +452,7 @@ const CarDetailPage = () => {
                       className="w-full border-[#00A211] text-[#00A211] hover:bg-[#00A211] hover:text-white py-3 text-lg font-semibold transition-colors"
                       onClick={handleContactDealer}
                     >
-                      Interested Inquire
+                      Am interested in this Car
                     </Button>
 
                     <Button
