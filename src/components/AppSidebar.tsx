@@ -205,6 +205,25 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
                 </SidebarMenuItem>
               );
             })}
+            {/* Global finance quick action */}
+            <SidebarMenuItem>
+              <Link href="/financing" passHref scroll={false}>
+                <SidebarMenuButton
+                  isActive={pathname === '/financing'}
+                  variant={pathname === '/financing' ? 'default' : 'outline'}
+                  size="default"
+                  className={cn(
+                    'mt-2 font-semibold border-2',
+                    pathname === '/financing'
+                      ? (isDark ? 'bg-green-600/90 text-white hover:bg-green-600' : 'bg-green-600 text-white hover:bg-green-500')
+                      : (isDark ? 'border-green-600/60 text-green-400 hover:bg-green-600/15' : 'border-green-600 text-green-700 hover:bg-green-50')
+                  )}
+                >
+                  <CreditCard size={18} />
+                  <span className="text-[14px]">Apply Finance</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
           </div>
           
           

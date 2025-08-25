@@ -9,7 +9,7 @@ interface FloatingWhatsAppProps {
 }
 
 const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({
-  phone = "27720000000",
+  phone = "27680720424",
   message = "Hi! I'm interested in one of your vehicles.",
 }) => {
   const encoded = encodeURIComponent(message);

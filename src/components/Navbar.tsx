@@ -93,7 +93,7 @@ export default function Navbar() {
           {/* Contact quick actions (desktop) */}
           <div className="hidden md:flex items-center gap-2 mr-2">
             <a
-              href="https://wa.me/27720000000?text=Hi%20I%27m%20interested%20in%20a%20vehicle"
+              href="https://wa.me/27680720424?text=Hi%20I%27m%20interested%20in%20a%20vehicle"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="WhatsApp"
@@ -105,7 +105,7 @@ export default function Navbar() {
               </svg>
             </a>
             <a
-              href="tel:+27720000000"
+              href="tel:+27680720424"
               aria-label="Call"
               className="inline-flex items-center justify-center h-10 px-4 rounded-full bg-white hover:bg-[var(--tw-nav-green,#00A211)]/10 text-[var(--tw-nav-green,#00A211)] gap-2 text-sm font-medium transition-colors shadow-sm"
             >
@@ -165,7 +165,7 @@ export default function Navbar() {
           <div className="pt-2 flex flex-col gap-2 border-t border-slate-200 dark:border-slate-700 mt-2">
             <div className="flex items-center gap-3 pb-2">
               <a
-                href="https://wa.me/27720000000?text=Hi%20I%27m%20interested%20in%20a%20vehicle"
+                href="https://wa.me/27680720424?text=Hi%20I%27m%20interested%20in%20a%20vehicle"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-md bg-[var(--tw-nav-green,#00A211)] hover:brightness-110 text-white text-sm font-medium transition-colors shadow-sm"
@@ -177,7 +177,7 @@ export default function Navbar() {
                 WhatsApp
               </a>
               <a
-                href="tel:+27720000000"
+                href="tel:+27680720424"
                 className="h-10 flex items-center justify-center gap-2 text-[var(--tw-nav-green,#00A211)] text-sm font-medium transition-colors hover:text-[var(--tw-nav-green,#008d0f)]"
               >
                 <Phone className="h-4 w-4" />
