@@ -15,9 +15,10 @@ export function formatPriceValue(value: number | null, isMin: boolean) {
     return isMin ? "Any Min Price" : "Any Max Price";
   if (value >= 1000) {
     const kValue = value / 1000;
-    return isMin ? `$${kValue}k+` : `<$${kValue}k`;
+  // Switched from USD to South African Rand (R) symbol per request
+    return isMin ? `R${kValue}k+` : `<R${kValue}k`;
   }
-  return isMin ? `$${value}+` : `<$${value}`;
+  return isMin ? `R${value}+` : `<R${value}`;
 }
 
 
