@@ -15,8 +15,8 @@ function Home() {
     <div>
   <HeroSection />
   <FeaturedCars />
-  <ReferralCalloutSection />
   <AboutUsSection />
+  <ReferralCalloutSection />
   <StatsSection />
       <FeaturedDealer />
       <TestimonialsSection />

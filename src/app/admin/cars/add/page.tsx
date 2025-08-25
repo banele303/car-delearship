@@ -336,20 +336,44 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
         }
 
         
-        // Quick preflight to warn if payload likely too big (heuristic)
-        const approxPayloadMb = photoFiles.reduce((s,f)=>s+f.size,0)/(1024*1024);
-        if (approxPayloadMb > MAX_TOTAL_MB) {
-          toast.error(`Payload ~${approxPayloadMb.toFixed(1)}MB exceeds safe limit (${MAX_TOTAL_MB}MB). Remove some images.`);
-          setIsLoading(false);
-          return;
+        // Pre-upload using presigned URLs to avoid hitting API body size limits
+        let uploadedUrls: string[] = [];
+        if (photoFiles.length) {
+          const presign = await fetch('/api/uploads/presign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ files: photoFiles.map(f => ({ name: f.name, type: f.type })) })
+          });
+          if (!presign.ok) {
+            const t = await presign.text();
+            throw new Error(`Failed to prepare uploads: ${t}`);
+          }
+          const presignData = await presign.json();
+          const items: { uploadUrl: string; url: string; contentType: string }[] = presignData.files || [];
+          for (let i=0;i<items.length;i++) {
+            const f = photoFiles[i];
+            const { uploadUrl, url, contentType } = items[i];
+            const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: f });
+            if (!putRes.ok) {
+              throw new Error(`Upload failed (${putRes.status}) for ${f.name}`);
+            }
+            uploadedUrls.push(url);
+          }
         }
 
+        const payload = {
+          ...formData,
+          year: formData.year,
+          price: Number(formData.price || '0'),
+          mileage: Number(formData.mileage || '0'),
+          featured: formData.featured,
+          photoUrls: uploadedUrls,
+        };
+        if (!hasDealership) delete (payload as any).dealershipId;
         const carResponse = await fetch('/api/cars', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: submitFormData,
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
 
         if (!carResponse.ok) {
@@ -360,7 +384,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
             message = parsed.message || parsed.error || raw;
           } catch {
             if (carResponse.status === 413) {
-              message = 'Upload too large (413). Reduce image count/size.';
+              message = 'Upload too large (413). (Legacy path)';
             }
           }
           throw new Error(message.slice(0,300));

@@ -62,96 +62,99 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const carData: any = {};
-
-    for (const [key, value] of formData.entries()) {
-      if (key === "photos") continue;
-      if (key === "features") {
-        carData[key] = (value as string).split(",").map((s) => s.trim());
-      } else if (
-        key === "price" ||
-        key === "mileage" ||
-        key === "year" ||
-        key === "dealershipId"
-      ) {
-        carData[key] = Number(value);
-  } else {
-        carData[key] = value as any;
+    const contentType = req.headers.get('content-type') || '';
+    let carData: any = {};
+    let photos: File[] = [];
+    let preUploaded: string[] = [];
+    if (contentType.startsWith('application/json')) {
+      const body = await req.json();
+      carData = { ...body };
+      if (Array.isArray(body.photoUrls)) {
+        preUploaded = body.photoUrls.filter((u: any) => typeof u === 'string');
       }
+      if (Array.isArray(body.features)) {
+        carData.features = body.features.map((s: any) => String(s).trim());
+      }
+    } else {
+      const formData = await req.formData();
+      for (const [key, value] of formData.entries()) {
+        if (key === 'photos') continue;
+        if (key === 'features') {
+          carData[key] = (value as string).split(',').map(s => s.trim());
+        } else if (['price','mileage','year','dealershipId'].includes(key)) {
+          carData[key] = Number(value);
+        } else {
+          carData[key] = value as any;
+        }
+      }
+      photos = formData.getAll('photos') as File[];
     }
 
-  const photos = formData.getAll("photos") as File[];
-  // Upload limits (can be overridden via env). Keep reasonable to avoid platform hard limits.
-  const MAX_FILES = Number(process.env.CAR_UPLOAD_MAX_FILES || 25);
-  const MAX_SINGLE_MB = Number(process.env.CAR_UPLOAD_SINGLE_MAX_MB || 10); // was 5
-  const MAX_TOTAL_MB = Number(process.env.CAR_UPLOAD_TOTAL_MAX_MB || 80); // was 40
-    if (photos.length > MAX_FILES) {
+    const usingJsonUpload = preUploaded.length > 0;
+    const MAX_FILES = Number(process.env.CAR_UPLOAD_MAX_FILES || 25);
+    const MAX_SINGLE_MB = Number(process.env.CAR_UPLOAD_SINGLE_MAX_MB || 10);
+    const MAX_TOTAL_MB = Number(process.env.CAR_UPLOAD_TOTAL_MAX_MB || 80);
+
+    if (!usingJsonUpload && photos.length > MAX_FILES) {
       return NextResponse.json({ message: `Too many photos: ${photos.length} > ${MAX_FILES}` }, { status: 400 });
     }
-    let totalBytes = 0;
-    for (const p of photos) {
-      totalBytes += p.size;
-      const mb = p.size / (1024*1024);
-      if (mb > MAX_SINGLE_MB) {
-        return NextResponse.json({ message: `File ${p.name} is ${mb.toFixed(1)}MB > ${MAX_SINGLE_MB}MB limit` }, { status: 400 });
+
+    if (!usingJsonUpload) {
+      let totalBytes = 0;
+      for (const p of photos) {
+        totalBytes += p.size;
+        const mb = p.size / (1024 * 1024);
+        if (mb > MAX_SINGLE_MB) {
+          return NextResponse.json({ message: `File ${p.name} is ${mb.toFixed(1)}MB > ${MAX_SINGLE_MB}MB limit` }, { status: 400 });
+        }
       }
-    }
-    const totalMb = totalBytes / (1024*1024);
-    if (totalMb > MAX_TOTAL_MB) {
-      return NextResponse.json({ message: `Total upload ${totalMb.toFixed(1)}MB exceeds ${MAX_TOTAL_MB}MB limit` }, { status: 413 });
-    }
-    const photoUrls: string[] = [];
-    for (const photo of photos) {
-      try {
-        const url = await uploadToS3(photo, "cars");
-        photoUrls.push(url);
-      } catch (err) {
-        console.error("S3 upload error:", err);
+      const totalMb = totalBytes / (1024 * 1024);
+      if (totalMb > MAX_TOTAL_MB) {
+        return NextResponse.json({ message: `Total upload ${totalMb.toFixed(1)}MB exceeds ${MAX_TOTAL_MB}MB limit` }, { status: 413 });
       }
+      const photoUrls: string[] = [];
+      for (const photo of photos) {
+        try {
+          const url = await uploadToS3(photo, 'cars');
+          photoUrls.push(url);
+        } catch (err) {
+          console.error('S3 upload error:', err);
+        }
+      }
+      carData.photoUrls = photoUrls;
+    } else {
+      carData.photoUrls = preUploaded;
     }
-    carData.photoUrls = photoUrls;
+
     if (typeof carData.featured === 'string') {
       carData.featured = carData.featured === 'true';
     }
 
-    // Validate dealership exists early to avoid FK P2003
-    // dealershipId optional: validate only if passed
     if (carData.dealershipId) {
-      if (isNaN(carData.dealershipId)) {
+      if (isNaN(Number(carData.dealershipId))) {
         return NextResponse.json({ message: 'Invalid dealershipId supplied.' }, { status: 400 });
       }
-      const dealershipExists = await prisma.dealership.findUnique({ where: { id: carData.dealershipId } });
+      const dealershipExists = await prisma.dealership.findUnique({ where: { id: Number(carData.dealershipId) } });
       if (!dealershipExists) {
         return NextResponse.json({ message: `Dealership ${carData.dealershipId} not found.` }, { status: 404 });
       }
+      carData.dealershipId = Number(carData.dealershipId);
     } else {
-      delete carData.dealershipId; // omit so Prisma uses default or allows null depending on schema (currently required)
+      delete carData.dealershipId;
     }
 
     try {
-      const newCar = await prisma.car.create({
-        data: carData as any,
-      });
+      const newCar = await prisma.car.create({ data: carData as any });
       return NextResponse.json(newCar, { status: 201 });
     } catch (prismaError: any) {
       if (prismaError.code === 'P2002' && prismaError.meta?.target?.includes('vin')) {
-        return NextResponse.json(
-          { message: "A car with this VIN already exists. Please use a unique VIN." },
-          { status: 409 }
-        );
+        return NextResponse.json({ message: 'A car with this VIN already exists. Please use a unique VIN.' }, { status: 409 });
       }
       console.error(prismaError);
-      return NextResponse.json(
-        { message: "Failed to create car.", error: prismaError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ message: 'Failed to create car.', error: prismaError.message }, { status: 500 });
     }
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { message: "Failed to create car." },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Failed to create car.' }, { status: 500 });
   }
 }
