@@ -12,7 +12,6 @@ import { useGetCarQuery, useAddFavoriteCarMutation, useRemoveFavoriteCarMutation
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ReserveCarForm from "@/components/forms/ReserveCarForm";
-import CarReviews from "@/components/CarReviews";
 
 const CarDetailPage = () => {
   const params = useParams();
@@ -328,7 +327,7 @@ const CarDetailPage = () => {
             </Card>
 
             
-            <CarReviews carId={carId} />
+            {/* Customer Reviews section removed as requested */}
 
             {/* Recent Vehicles Section */}
             {recentCars && recentCars.length > 0 && (
@@ -445,7 +444,7 @@ const CarDetailPage = () => {
                       className="w-full border-[#00A211] text-[#00A211] hover:bg-[#00A211] hover:text-white py-3 text-lg font-semibold transition-colors"
                       onClick={handleContactDealer}
                     >
-                      Reserve Car
+                      Interested Inquire
                     </Button>
 
                     <Button
