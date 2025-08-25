@@ -82,7 +82,16 @@ const CarDetailPage = () => {
           make: car.make,
           model: car.model,
           year: car.year,
-          price: car.price
+          price: car.price,
+          condition: car.condition, // NEW / USED / etc.
+          mileage: car.mileage,
+          fuelType: car.fuelType,
+            transmission: car.transmission,
+          carType: car.carType,
+          exteriorColor: car.exteriorColor,
+          interiorColor: car.interiorColor,
+          status: car.status,
+          vin: car.vin
         };
         localStorage.setItem("financingCarDetails", JSON.stringify(carDetails));
       }

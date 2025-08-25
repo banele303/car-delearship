@@ -58,6 +58,9 @@ const schema = z.object({
   vehicleModel: z.string().optional(),
   vehicleMMCode: z.string().optional(),
   vehicleKM: z.string().optional(),
+  vehicleFuelType: z.string().optional(),
+  vehicleTransmission: z.string().optional(),
+  vehicleType: z.string().optional(),
   serviceAndDelivery: z.string().optional(),
   licenseFee: z.string().optional(),
   // balloonResidual & vehicleExtras removed per request
@@ -148,6 +151,7 @@ const defaultValues: FinancingPublicForm = {
   hasTradeIn: false, tradeInDetails: '',
   consentCreditCheck: false, agreeTerms: false,
   vehicleCondition: '', cashPrice: '', vehicleMake: '', vehicleModel: '', vehicleMMCode: '', vehicleKM: '', serviceAndDelivery: '', licenseFee: '',
+  vehicleFuelType: '', vehicleTransmission: '', vehicleType: '',
   title: '', initials: '', gender: '', dependants: '', maritalStatus: '', dateMarried: '', periodAtAddress: '', periodAtPreviousAddress: '', previousAddress: '', postalAddress: '', telephoneHome: '', telephoneWork: '', fax: '', spouseName: '', spouseId: '', spouseCell: '', nextOfKinName: '', nextOfKinRelationship: '', nextOfKinAddress: '', nextOfKinCell: '',
   bondHolder: '', bondOutstandingAmount: '', propertyValue: '', propertyInstalmentMonthly: '', propertyPurchasePrice: '', propertyPurchaseDate: '', propertyRegisteredInName: '',
   employerAddress: '', occupation: '', graduate: '', yearsPreviouslyEmployed: '', salaryDate: '', spouseEmployer: '', spouseYearsEmployed: '', spouseOccupation: '', employerTelephone: '',
@@ -237,7 +241,12 @@ export default function FinancingApplicationForm() {
           vehicleMake: carDetails.make || prev.vehicleMake,
           vehicleModel: carDetails.model || prev.vehicleModel,
           loanAmount: carDetails.price?.toString() || prev.loanAmount,
-          cashPrice: carDetails.price?.toString() || prev.cashPrice
+          cashPrice: carDetails.price?.toString() || prev.cashPrice,
+          vehicleCondition: carDetails.condition ? (carDetails.condition === 'NEW' ? 'New' : 'Used') : prev.vehicleCondition,
+          vehicleKM: carDetails.mileage != null ? String(carDetails.mileage) : prev.vehicleKM,
+          vehicleFuelType: carDetails.fuelType || prev.vehicleFuelType,
+          vehicleTransmission: carDetails.transmission || prev.vehicleTransmission,
+          vehicleType: carDetails.carType || prev.vehicleType
         }));
         
         // Clear localStorage after using it
@@ -296,6 +305,9 @@ export default function FinancingApplicationForm() {
     vehicleMake: (v: string) => handleFieldUpdate('vehicleMake', v),
     vehicleModel: (v: string) => handleFieldUpdate('vehicleModel', v),
     cashPrice: (v: string) => handleFieldUpdate('cashPrice', v),
+  vehicleFuelType: (v: string) => handleFieldUpdate('vehicleFuelType', v),
+  vehicleTransmission: (v: string) => handleFieldUpdate('vehicleTransmission', v),
+  vehicleType: (v: string) => handleFieldUpdate('vehicleType', v),
     housingStatus: (v: string) => handleFieldUpdate('housingStatus', v),
     hasTradeIn: (v: boolean) => handleFieldUpdate('hasTradeIn', v),
     legalCapacityConfirm: (v: boolean) => handleFieldUpdate('legalCapacityConfirm', v),
@@ -653,6 +665,9 @@ export default function FinancingApplicationForm() {
             <TextField label='Model' name='vehicleModel' defaultValue={form.vehicleModel||''} />
             <TextField label='KM (if used)' name='vehicleKM' defaultValue={form.vehicleKM||''} />
             <TextField label='M & M' name='vehicleMMCode' defaultValue={form.vehicleMMCode||''} />
+            <TextField label='Fuel Type' name='vehicleFuelType' defaultValue={form.vehicleFuelType||''} />
+            <TextField label='Transmission' name='vehicleTransmission' defaultValue={form.vehicleTransmission||''} />
+            <TextField label='Body / Type' name='vehicleType' defaultValue={form.vehicleType||''} />
             <TextField label='Service & Delivery' name='serviceAndDelivery' defaultValue={form.serviceAndDelivery||''} />
             <TextField label='License Fee' name='licenseFee' defaultValue={form.licenseFee||''} />
             {/* Balloon / Residual and Extras removed */}
