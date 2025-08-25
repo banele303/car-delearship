@@ -12,6 +12,7 @@ import CarCard from "@/components/CarCard";
 import { useGetCarsQuery, useAddFavoriteCarMutation, useRemoveFavoriteCarMutation } from "@/state/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -128,14 +129,22 @@ const CarsContent = () => {
     return `R ${price.toLocaleString()}`;
   };
 
+  const { user } = useAuthenticator((ctx)=>[ctx.user]);
+  const cognitoId = (user as any)?.userId || (user as any)?.username || null;
+
   const handleFavoriteToggle = async (carId: number) => {
     try {
+      if (!cognitoId) {
+        toast.error("Please sign in to manage favorites");
+        router.push('/signin');
+        return;
+      }
       if (favorites.includes(carId)) {
-        await removeFavorite({ cognitoId: "temp-user-id", carId }).unwrap();
+        await removeFavorite({ cognitoId, carId }).unwrap();
         setFavorites(prev => prev.filter(id => id !== carId));
         toast.success("Removed from favorites");
       } else {
-        await addFavorite({ cognitoId: "temp-user-id", carId }).unwrap();
+        await addFavorite({ cognitoId, carId }).unwrap();
         setFavorites(prev => [...prev, carId]);
         toast.success("Added to favorites");
       }

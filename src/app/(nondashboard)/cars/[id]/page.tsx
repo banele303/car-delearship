@@ -12,6 +12,7 @@ import { useGetCarQuery, useAddFavoriteCarMutation, useRemoveFavoriteCarMutation
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ReserveCarForm from "@/components/forms/ReserveCarForm";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 
 const CarDetailPage = () => {
   const params = useParams();
@@ -65,6 +66,8 @@ const CarDetailPage = () => {
   
   const [addFavorite] = useAddFavoriteCarMutation();
   const [removeFavorite] = useRemoveFavoriteCarMutation();
+  const { user } = useAuthenticator((context) => [context.user]);
+  const cognitoId = (user as any)?.userId || (user as any)?.username || null;
 
   const formatPrice = (price: number) => {
     return `R ${price.toLocaleString()}`;
@@ -110,12 +113,17 @@ const CarDetailPage = () => {
 
   const handleToggleFavorite = async () => {
     try {
+      if (!cognitoId) {
+        toast.error("Please sign in to manage favorites");
+        router.push('/signin');
+        return;
+      }
       if (isFavorite) {
-        await removeFavorite({ cognitoId: "temp-user-id", carId }).unwrap();
+        await removeFavorite({ cognitoId, carId }).unwrap();
         setIsFavorite(false);
         toast.success("Removed from favorites");
       } else {
-        await addFavorite({ cognitoId: "temp-user-id", carId }).unwrap();
+        await addFavorite({ cognitoId, carId }).unwrap();
         setIsFavorite(true);
         toast.success("Added to favorites");
       }
