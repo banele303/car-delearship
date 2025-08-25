@@ -470,20 +470,7 @@ const CarDetailPage = () => {
                   <Separator className="my-6" />
 
                   
-                  {car.dealershipId && (
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Dealership</h3>
-                      <div className="space-y-2">
-                        <p className="font-medium">Dealership ID: {car.dealershipId}</p>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-gray-500" />
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Contact dealer for more information
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Dealership info removed per request */}
                 </CardContent>
               </Card>
             </div>

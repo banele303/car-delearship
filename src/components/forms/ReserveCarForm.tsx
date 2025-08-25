@@ -36,16 +36,11 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
     city: "",
     state: "",
     zipCode: "",
-    employmentStatus: "",
-    monthlyIncome: "",
-    financingOption: "cash",
-    downPayment: "",
     preferredPickupDate: "",
     tradeInVehicle: false,
     tradeInDetails: "",
     message: "",
     agreeToTerms: false,
-    agreeToCredit: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,12 +64,6 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
         return;
       }
 
-      if (formData.financingOption === "financing" && !formData.agreeToCredit) {
-        toast.error("Credit check authorization is required for financing");
-        setIsSubmitting(false);
-        return;
-      }
-
       const requestData = {
         carId,
         customerId: `temp_customer_${Date.now()}`, // Temporary ID, API will create proper customer
@@ -88,12 +77,6 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
           city: formData.city,
           state: formData.state,
           zipCode: formData.zipCode,
-        },
-        financing: {
-          financingOption: formData.financingOption as "cash" | "financing" | "lease",
-          downPayment: formData.downPayment ? parseFloat(formData.downPayment) : undefined,
-          monthlyIncome: formData.monthlyIncome ? parseFloat(formData.monthlyIncome) : undefined,
-          employmentStatus: formData.employmentStatus,
         },
         tradeIn: {
           hasTradeIn: formData.tradeInVehicle,
@@ -126,16 +109,11 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
           city: "",
           state: "",
           zipCode: "",
-          employmentStatus: "",
-          monthlyIncome: "",
-          financingOption: "cash",
-          downPayment: "",
           preferredPickupDate: "",
           tradeInVehicle: false,
           tradeInDetails: "",
           message: "",
           agreeToTerms: false,
-          agreeToCredit: false,
         });
         
         onClose();
@@ -303,70 +281,7 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
           </div>
 
           
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-              <DollarSign className="mr-2" size={20} />
-              Financial Information
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="employmentStatus">Employment Status</Label>
-                <Select value={formData.employmentStatus} onValueChange={(value) => handleInputChange("employmentStatus", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select employment status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employed">Employed</SelectItem>
-                    <SelectItem value="self-employed">Self Employed</SelectItem>
-                    <SelectItem value="unemployed">Unemployed</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="monthlyIncome">Monthly Income (optional)</Label>
-                <Input
-                  id="monthlyIncome"
-                  type="number"
-                  value={formData.monthlyIncome}
-                  onChange={(e) => handleInputChange("monthlyIncome", e.target.value)}
-                  placeholder="Monthly income in ZAR"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="financingOption">Payment Method</Label>
-              <Select value={formData.financingOption} onValueChange={(value) => handleInputChange("financingOption", value)}>
-                <SelectTrigger>
-                  <div className="flex items-center">
-                    <CreditCard className="mr-2 text-gray-400" size={16} />
-                    <SelectValue />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Cash Purchase</SelectItem>
-                  <SelectItem value="financing">Vehicle Financing</SelectItem>
-                  <SelectItem value="lease">Lease Option</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {formData.financingOption !== "cash" && (
-              <div>
-                <Label htmlFor="downPayment">Down Payment Amount</Label>
-                <Input
-                  id="downPayment"
-                  type="number"
-                  value={formData.downPayment}
-                  onChange={(e) => handleInputChange("downPayment", e.target.value)}
-                  placeholder="Down payment in ZAR"
-                />
-              </div>
-            )}
-          </div>
+          {/* Financial Information section removed per request */}
 
           
           <div className="space-y-4">
@@ -448,19 +363,7 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
                 </Label>
               </div>
 
-              {formData.financingOption === "financing" && (
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="agreeToCredit"
-                    checked={formData.agreeToCredit}
-                    onCheckedChange={(checked) => handleInputChange("agreeToCredit", checked as boolean)}
-                    className="mt-1"
-                  />
-                  <Label htmlFor="agreeToCredit" className="text-sm leading-5">
-                    I authorize a credit check to be performed for financing approval. *
-                  </Label>
-                </div>
-              )}
+              {/* Credit check removed with financial fields */}
             </div>
           </div>
 
@@ -499,7 +402,7 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
               ) : (
                 <ShieldCheck className="mr-2" size={16} />
               )}
-              {isSubmitting ? "Processing..." : "Reserve Vehicle"}
+              {isSubmitting ? "Processing..." : "Send"}
             </Button>
           </div>
         </form>
