@@ -1,22 +1,25 @@
 import React from "react";
 import HeroSection from "./HeroSection";
-import CallToActionSection from "./CallToActionSection";
+// CallToActionSection removed per request
+import FAQSection from "./FAQSection";
+import SiteFooter from "./SiteFooter";
 import FeaturedDealer from "./FeaturedDealer";
 import TestimonialsSection from "./TestimonialsSection";
 import FeaturedCars from "./FeaturedCars";
+import ReferralCalloutSection from "./ReferralCalloutSection";
 import StatsSection from "./StatsSection";
 
 function Home() { 
   return (
     <div>
-      <HeroSection />
-      
+  <HeroSection />
   <FeaturedCars />
+  <ReferralCalloutSection />
   <StatsSection />
       <FeaturedDealer />
       <TestimonialsSection />
-      <CallToActionSection />
-  {/* FooterSection removed: global footer handles site-wide footer */}
+  <FAQSection />
+  <SiteFooter />
     </div>
   );
 }
