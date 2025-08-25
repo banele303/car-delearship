@@ -18,8 +18,6 @@ import {
   FileText,
   Heart,
   Users,
-  Settings,
-  BellRing,
   CreditCard,
   LogOut,
   ChevronRight,
@@ -31,12 +29,10 @@ import {
   BarChart3,
   Phone,
   UserCheck,
-  Wrench,
-  DollarSign, // Added for sales/financing
-  Key, // Added for VIN/unique identifiers
-  Gauge, // Added for mileage/fuel
-  Truck, // Added for inventory/deliveries
-  Building, // Added for dealerships alternative icon
+  DollarSign,
+  Key,
+  Gauge,
+  Building,
 } from "lucide-react";
 import { NAVBAR_HEIGHT } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -68,12 +64,12 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
   
   const employeeLinks = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/employees/dashboard" },
-    { icon: Car, label: "Inventory", href: "/employees/inventory" },
+    // Inventory removed per request
     { icon: MessageSquare, label: "Inquiries", href: "/employees/inquiries" },
     { icon: Calendar, label: "Test Drives", href: "/employees/testdrives" },
-    { icon: DollarSign, label: "Sales", href: "/employees/sales" }, // Changed icon
+    { icon: DollarSign, label: "Sales", href: "/employees/sales" },
     { icon: Users, label: "Customers", href: "/employees/customers" },
-    { icon: CreditCard, label: "Financing", href: "/employees/financing" }, // Changed icon
+    { icon: CreditCard, label: "Financing", href: "/employees/financing" },
   ];
 
   const customerLinks = [
@@ -91,7 +87,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
     { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
     { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
     { icon: Car, label: "Cars", href: "/admin/cars" },
-    { icon: Truck, label: "Inventory", href: "/admin/inventory" },
+    // Inventory removed per request
     { icon: Users, label: "Employees", href: "/admin/employees" },
     { icon: UserCheck, label: "Customers", href: "/admin/customers" },
     { icon: MessageSquare, label: "Inquiries", href: "/admin/inquiries" },
@@ -99,21 +95,11 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
     { icon: CreditCard, label: "Financing", href: "/admin/financing" },
     { icon: Award, label: "Reviews", href: "/admin/reviews" },
     { icon: Building, label: "Dealerships", href: "/admin/dealerships" },
-    { icon: Wrench, label: "System", href: "/admin/system" },
+    // System removed per request
   ];
   
-  const bottomLinks = [
-    { 
-      icon: Settings, 
-      label: "Settings", 
-      href: userType === "admin" ? "/admin/settings" : `/${userType}s/settings`
-    },
-    { 
-      icon: BellRing, 
-      label: "Notifications", 
-      href: userType === "admin" ? "/admin/notifications" : `/${userType}s/notifications`
-    },
-  ];
+  // Bottom links (Settings & Notifications) removed per request
+  const bottomLinks: any[] = [];
 
   const navLinks = 
     userType === "employee" ? employeeLinks : 
@@ -152,7 +138,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
               {open ? (
                 <div className="flex items-center gap-2">
                   <Image
-                    src="/Advanced_Auto_logoo.png"
+                    src="/Advance_Auto_logoo.png"
                     alt="SaCar Logo"
                     width={34}
                     height={34}
@@ -168,7 +154,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
                 </div>
               ) : (
                 <Image
-                  src="/Advanced_Auto_logoo.png"
+                  src="/Advance_Auto_logoo.png"
                   alt="SaCar Logo"
                   width={40}
                   height={40}
@@ -239,32 +225,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
           
           
           <div>
-            {bottomLinks.map((link) => {
-              const isActive = pathname === link.href;
-              const IconComponent = link.icon;
-              return (
-                <SidebarMenuItem key={link.href}>
-                  <Link href={link.href} passHref scroll={false}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      variant="ghost"
-                      size="default"
-                      className={cn(
-                        "transition-colors",
-                        isDark ? 
-                          "text-slate-400 hover:text-white hover:bg-slate-800/50" : 
-                          "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                      )}
-                    >
-                      <IconComponent size={18} />
-                      <span className="text-[14px] font-medium">{link.label}</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              );
-            })}
-            
-            
+            {/* Settings & Notifications removed */}
             <SidebarMenuItem className="mt-4">
               <SidebarMenuButton
                 variant="ghost"

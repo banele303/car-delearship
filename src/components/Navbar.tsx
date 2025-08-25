@@ -57,7 +57,7 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2" aria-label="SaCar Home">
             <Image
-              src="/Advanced_Auto_logoo.png"
+              src="/Advance_Auto_logoo.png"
               alt="SaCar Dealership Logo"
               width={220}
               height={80}

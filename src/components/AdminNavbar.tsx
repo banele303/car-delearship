@@ -104,10 +104,10 @@ const AdminNavbar = () => {
             <Link href="/admin" className="group flex items-center gap-3">
               <div className="relative">
                 <Image
-                  src="/car-logg.png"
-                  alt="Car Dealership Logo"
-                  width={140}
-                  height={46}
+                  src="/Advance_Auto_logoo.png"
+                  alt="Advance Auto Dealership Logo"
+                  width={160}
+                  height={54}
                   className="object-contain h-12 w-auto transition-transform duration-300 group-hover:scale-105"
                   priority
                   draggable={false}

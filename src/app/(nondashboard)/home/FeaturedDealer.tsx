@@ -1,196 +1,144 @@
 "use client";
-import React, { useMemo } from "react";
+import React from "react";
 import { motion } from "framer-motion";
-import { MapPin, Phone, Clock, Mail, Star } from "lucide-react";
-import Image from "next/image";
+import { MapPin, Phone, Clock, Mail, Car, ShieldCheck, Wrench, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// Completely re-imagined single-location section
 const FeaturedDealer = () => {
-  const dealerships = [
-    {
-      id: 1,
-  name: "Advanced Auto Trader Johannesburg",
-      address: "123 Main Street, Sandton, Johannesburg",
-      phone: "+27 11 123 4567",
-      email: "jhb@sacar.co.za",
-      hours: "Mon-Fri: 8AM-6PM, Sat: 8AM-4PM, Sun: Closed",
-      rating: 4.8,
-      reviews: 324,
-      image: "/placeholder.jpg",
-      specialties: ["Luxury Cars", "Electric Vehicles", "Financing"]
-    },
-    {
-      id: 2,
-  name: "Advanced Auto Trader Cape Town",
-      address: "456 Waterfront Drive, V&A Waterfront, Cape Town",
-      phone: "+27 21 456 7890",
-      email: "cpt@sacar.co.za",
-      hours: "Mon-Fri: 8AM-6PM, Sat: 8AM-4PM, Sun: Closed",
-      rating: 4.9,
-      reviews: 256,
-      image: "/placeholder.jpg",
-      specialties: ["Premium SUVs", "Sports Cars", "Trade-ins"]
-    },
-    {
-      id: 3,
-  name: "Advanced Auto Trader Pretoria",
-      address: "789 Church Street, Pretoria Central",
-      phone: "+27 12 789 0123",
-      email: "pta@sacar.co.za",
-      hours: "Mon-Fri: 8AM-6PM, Sat: 8AM-4PM, Sun: Closed",
-      rating: 4.7,
-      reviews: 189,
-      image: "/placeholder.jpg",
-      specialties: ["Family Cars", "Commercial Vehicles", "Service"]
-    }
+  const address = "2A Amanda Ave, Gleneagles, Johannesburg South, 2091";
+  const phone = "+27 72 000 0000"; // adjust if a different number is preferred
+  const email = "info@advanceauto.co.za"; // placeholder business email
+  const hours = [
+    { label: "Mon - Fri", value: "08:00 - 18:00" },
+    { label: "Saturday", value: "08:00 - 14:00" },
+    { label: "Sunday", value: "Closed" },
   ];
 
-  // Pick unique random images from public/ for each dealership card
-  const cityImages = [
-    "/Johannesburg.jpg",
-    "/durban.png",
-    "/pretoria.png",
-    "/Bloemfontein.jpg",
+  const highlights = [
+    { icon: Car, title: "Curated Stock", desc: "Hand-selected vehicles inspected for quality." },
+    { icon: ShieldCheck, title: "Trusted Service", desc: "Transparent history & reliable guidance." },
+    { icon: Wrench, title: "Maintenance Ready", desc: "Service partners & post-sale assistance." },
+    { icon: ThumbsUp, title: "Flexible Deals", desc: "Financing options tailored to your needs." },
   ];
-
-  const randomImages = useMemo(() => {
-    const shuffled = [...cityImages].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, dealerships.length);
-  }, []);
 
   return (
-    <section className="py-16 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4">
+    <section className="relative overflow-hidden py-20 bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-900 dark:via-slate-900 dark:to-slate-800">
+      {/* Subtle background accents */}
+      <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(circle_at_center,white,transparent)]">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#00A211]/10 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
+      </div>
+      <div className="relative container mx-auto px-4">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="max-w-3xl text-center mx-auto mb-14"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Our Dealership Locations
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#00A211]/10 text-[#00780d] dark:text-[#38d752] px-4 py-1 text-xs font-semibold tracking-wide mb-5">
+            <MapPin size={14} /> Our Showroom
+          </span>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 dark:from-emerald-300 dark:via-green-300 dark:to-emerald-200">
+            Visit Advance Auto Johannesburg
           </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Visit one of our premium locations across South Africa
+          <p className="mt-5 text-lg leading-relaxed text-gray-600 dark:text-gray-300">
+            Your destination for quality vehicles and personal service. Book a test drive, explore financing, or just drop in for a consultation—everything starts at our single flagship location.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {dealerships.map((dealer, index) => (
-            <motion.div
-              key={dealer.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              viewport={{ once: true }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
-            >
-              
-              <div className="relative h-48 overflow-hidden">
-                <Image
-                  src={randomImages[index] || "/landing-discover-bg.jpg"}
-                  alt={`${dealer.name} exterior`}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-black/30"></div>
-                <div className="absolute bottom-4 left-4 text-white">
-                  <h3 className="text-xl font-bold">{dealer.name}</h3>
-                  <div className="flex items-center mt-1">
-                    <Star size={16} className="text-yellow-400 mr-1" />
-                    <span className="text-sm">{dealer.rating} ({dealer.reviews} reviews)</span>
-                  </div>
-                </div>
-              </div>
-
-              
-              <div className="p-6">
-                
-                <div className="flex items-start mb-3">
-                  <MapPin size={18} className="text-[#00A211] mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 dark:text-gray-300 text-sm">
-                    {dealer.address}
-                  </span>
-                </div>
-
-                
-                <div className="flex items-center mb-3">
-                  <Phone size={18} className="text-[#00A211] mr-3 flex-shrink-0" />
-                  <span className="text-gray-600 dark:text-gray-300 text-sm">
-                    {dealer.phone}
-                  </span>
-                </div>
-
-                
-                <div className="flex items-center mb-3">
-                  <Mail size={18} className="text-[#00A211] mr-3 flex-shrink-0" />
-                  <span className="text-gray-600 dark:text-gray-300 text-sm">
-                    {dealer.email}
-                  </span>
-                </div>
-
-                
-                <div className="flex items-start mb-4">
-                  <Clock size={18} className="text-[#00A211] mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 dark:text-gray-300 text-sm">
-                    {dealer.hours}
-                  </span>
-                </div>
-
-                
-                <div className="mb-4">
-                  <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                    Specialties:
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {dealer.specialties.map((specialty, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-[#00A211]/10 dark:bg-[#00A211]/20 text-[#00780d] dark:text-[#00A211] px-2 py-1 rounded-md text-xs"
-                      >
-                        {specialty}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="border-[#00A211] text-[#00A211] hover:bg-[#00A211] hover:text-white"
-                  >
-                    Get Directions
-                  </Button>
-                  <Button 
-                    size="sm"
-                    className="bg-[#00A211] hover:brightness-110 text-white"
-                  >
-                    Contact Us
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          viewport={{ once: true }}
-          className="text-center mt-12"
-        >
-          <Button 
-            size="lg"
-            className="bg-[#00A211] hover:brightness-110 text-white px-8 py-3"
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-10">
+          {/* Info + Highlights */}
+          <motion.div
+            initial={{ opacity: 0, x: -24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="xl:col-span-2 space-y-8"
           >
-            <MapPin size={20} className="mr-2" />
-            Find All Locations
-          </Button>
-        </motion.div>
+            <div className="rounded-2xl border border-gray-200/70 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 backdrop-blur-sm p-6 shadow-sm">
+              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Showroom Details</h3>
+              <ul className="space-y-4 text-sm">
+                <li className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-[#00A211] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700 dark:text-gray-300 leading-relaxed">{address}</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-[#00A211] flex-shrink-0" />
+                  <a href={`tel:${phone.replace(/\s|\+/g, '')}`} className="text-gray-700 dark:text-gray-300 hover:text-[#00A211] transition-colors">{phone}</a>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-[#00A211] flex-shrink-0" />
+                  <a href={`mailto:${email}`} className="text-gray-700 dark:text-gray-300 hover:text-[#00A211] transition-colors">{email}</a>
+                </li>
+              </ul>
+              <div className="mt-6">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">Opening Hours</h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
+                  {hours.map(h => (
+                    <React.Fragment key={h.label}>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{h.label}</span>
+                      <span>{h.value}</span>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`,'_blank')}
+                  className="flex-1 bg-[#00A211] hover:brightness-110 text-white"
+                >
+                  Get Directions
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.href = 'tel:' + phone.replace(/\s|\+/g, '')}
+                  className="flex-1 border-[#00A211] text-[#00A211] hover:bg-[#00A211] hover:text-white"
+                >
+                  Call Us
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {highlights.map((h, i) => (
+                <motion.div
+                  key={h.title}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.05 * i }}
+                  viewport={{ once: true }}
+                  className="rounded-xl border border-gray-200/60 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm p-4 hover:shadow-md transition-shadow"
+                >
+                  <h.icon className="h-5 w-5 text-[#00A211] mb-2" />
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">{h.title}</div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{h.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Map + Overlay */}
+          <motion.div
+            initial={{ opacity: 0, x: 24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="xl:col-span-3"
+          >
+            <div className="h-[520px] w-full rounded-2xl overflow-hidden ring-1 ring-gray-200/70 dark:ring-slate-700 shadow-md bg-gray-100 dark:bg-slate-800">
+              {/* Simple embed without API key: uses public search-based maps embed */}
+              <iframe
+                title="Advance Auto Johannesburg Map"
+                src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
+                className="w-full h-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
   );

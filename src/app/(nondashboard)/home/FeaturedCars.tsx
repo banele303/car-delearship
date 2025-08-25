@@ -19,6 +19,10 @@ const FeaturedCars = () => {
   // Fetch all cars (featured or not)
   const { data: cars, isLoading, error, refetch, isError } = useGetCarsQuery({});
 
+  // Pagination (client-side) for All Cars section
+  const pageSize = 12; // display about 12 cards per page
+  const [currentPage, setCurrentPage] = useState(1);
+
   const formatPrice = (price: number) => `R ${price.toLocaleString("en-US")}`;
 
   const handleViewAllCars = () => router.push("/cars");
@@ -82,16 +86,26 @@ const FeaturedCars = () => {
   }
 
   const allCars = cars || [];
+  const totalPages = Math.ceil(allCars.length / pageSize) || 1;
+  const paginatedCars = allCars.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const goToPage = (p: number) => {
+    setCurrentPage(p);
+    // Scroll to top of section when page changes for better UX
+    if (typeof window !== 'undefined') {
+      const el = document.getElementById('all-cars-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
-    <section className="py-16 bg-white dark:bg-gray-900">
+  <section id="all-cars-section" className="py-16 bg-white dark:bg-gray-900">
       <div className="container mx-auto px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} viewport={{ once: true }} className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">All Cars</h2>
         </motion.div>
 
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {allCars.map((car: any, index: number) => (
+          {paginatedCars.map((car: any, index: number) => (
             <motion.div key={car.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: index * 0.1 }} viewport={{ once: true }}
               className="group bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:border-[#00A211]/50 transition-all duration-300">
               <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-700">
@@ -142,11 +156,50 @@ const FeaturedCars = () => {
           ))}
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} viewport={{ once: true }} className="text-center mt-12">
-          <Button size="lg" onClick={handleViewAllCars} className="bg-[#00A211] hover:brightness-110 text-white px-8 py-3">
-            <Car size={20} className="mr-2" /> View All Cars
-          </Button>
-        </motion.div>
+        {/* Pagination Controls */}
+        {allCars.length > pageSize && (
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }} viewport={{ once: true }} className="mt-12 flex flex-col items-center gap-4">
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => goToPage(currentPage - 1)}
+              >Prev</Button>
+              {Array.from({ length: totalPages }).slice(0, 8).map((_, i) => {
+                // If many pages, show first 3, current +/-1, and last page with ellipses
+                const pageNumber = i + 1;
+                if (totalPages > 8) {
+                  const shouldShow = pageNumber <= 2 || pageNumber === totalPages || Math.abs(pageNumber - currentPage) <= 1;
+                  if (!shouldShow) {
+                    if (pageNumber === 3 || pageNumber === totalPages - 1) {
+                      return <span key={pageNumber} className="px-2 text-gray-400">…</span>;
+                    }
+                    return null;
+                  }
+                }
+                return (
+                  <Button
+                    key={pageNumber}
+                    variant={currentPage === pageNumber ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => goToPage(pageNumber)}
+                  >{pageNumber}</Button>
+                );
+              })}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => goToPage(currentPage + 1)}
+              >Next</Button>
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Page {currentPage} of {totalPages}</div>
+            <Button size="sm" onClick={handleViewAllCars} className="bg-[#00A211] hover:brightness-110 text-white px-6">
+              <Car size={16} className="mr-2" /> Full Inventory
+            </Button>
+          </motion.div>
+        )}
       </div>
 
       {selectedCar && (

@@ -245,10 +245,11 @@ export default function AdminSignup() {
         <CardHeader className="space-y-1 flex flex-col items-center">
           <div className="mb-4">
             <Image 
-              src="/logo.jpg" 
-              alt="Advanced Auto Trader Logo" 
-              width={120} 
-              height={40} 
+              src="/Advance_Auto_logoo.png" 
+              alt="Advance Auto Logo" 
+              width={140} 
+              height={48} 
+              className="object-contain" 
             />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Admin Registration</CardTitle>
@@ -382,11 +383,11 @@ export default function AdminSignup() {
           <p>Already have an admin account? <a href="/admin-login" className="text-blue-600 hover:underline">Login</a></p>
           <div className="mt-4 flex justify-center">
             <Image 
-              src="/logo.jpg" 
-              alt="Advanced Auto Trader Logo" 
-              width={120} 
-              height={40} 
-              className="opacity-70 dark:opacity-50" 
+              src="/Advance_Auto_logoo.png" 
+              alt="Advance Auto Logo" 
+              width={140} 
+              height={48} 
+              className="opacity-80 dark:opacity-60 object-contain" 
             />
           </div>
         </div>
