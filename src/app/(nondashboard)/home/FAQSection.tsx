@@ -7,7 +7,7 @@ interface FaqItem { q: string; a: string; }
 
 const faqs: FaqItem[] = [
   { q: "Do you offer vehicle financing?", a: "Yes. We work with multiple finance partners to secure competitive rates. Submit a financing application and our team will contact you." },
-  { q: "Can I book a test drive?", a: "Absolutely. Use the contact form or call us to schedule a convenient time." },
+  { q: "Can you arrange a insurance and trector installation for me?", a: "Absolutely. We help you with that and the extended warranty and trector instalation" },
   { q: "Do you accept trade‑ins?", a: "Yes, we evaluate trade‑ins on site. Provide details in the financing form or bring the vehicle for an appraisal." },
   { q: "Are all vehicles inspected?", a: "Each vehicle undergoes a multi‑point inspection for mechanical, safety, and cosmetic standards before listing." },
   { q: "What documents do I need for finance?", a: "Typically: ID, driver’s license, recent payslips, bank statements, and proof of residence. Self‑employed clients should include business registration docs." },
