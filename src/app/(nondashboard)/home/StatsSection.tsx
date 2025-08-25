@@ -6,8 +6,7 @@ import { Car, Users, Award, MapPin } from "lucide-react";
 
 const StatsSection = () => {
   const [dynamicStats, setDynamicStats] = useState({
-    vehicles: "500+",
-    dealerships: "5"
+    vehicles: "500+"
   });
 
   useEffect(() => {
@@ -25,15 +24,7 @@ const StatsSection = () => {
         }
 
         
-        const dealershipsResponse = await fetch('/api/dealerships');
-        if (dealershipsResponse.ok) {
-          const dealerships = await dealershipsResponse.json();
-          const dealershipCount = dealerships.length;
-          setDynamicStats(prev => ({
-            ...prev,
-            dealerships: dealershipCount > 0 ? dealershipCount.toString() : "5"
-          }));
-        }
+  // Removed dealerships fetch since dealership locations card was removed
       } catch (error) {
         console.error('Error fetching stats:', error);
         
@@ -52,7 +43,6 @@ const StatsSection = () => {
     { key: 'vehicles', icon: Car, raw: dynamicStats.vehicles, label: 'Premium Vehicles', description: 'Quality cars in our inventory' },
     { key: 'customers', icon: Users, raw: '10000+', label: 'Happy Customers', description: 'Satisfied with our service' },
     { key: 'experience', icon: Award, raw: '15+', label: 'Years Experience', description: 'In automotive industry' },
-    { key: 'dealerships', icon: MapPin, raw: dynamicStats.dealerships, label: 'Dealership Locations', description: 'Across South Africa' },
   ].map(s => ({
     ...s,
     target: parseValue(s.raw.toString()),
@@ -101,7 +91,7 @@ const StatsSection = () => {
           Leaders in affordable and quality vehicles you can trust and rely on 
           </p>
         </motion.div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             const count = useCountUp(stat.target);

@@ -17,7 +17,7 @@ const FeaturedCars = () => {
   const [isReserveFormOpen, setIsReserveFormOpen] = useState(false);
 
   // Fetch all cars (featured or not)
-  const { data: cars, isLoading, error } = useGetCarsQuery({});
+  const { data: cars, isLoading, error, refetch, isError } = useGetCarsQuery({});
 
   const formatPrice = (price: number) => `R ${price.toLocaleString("en-US")}`;
 
@@ -51,16 +51,30 @@ const FeaturedCars = () => {
     );
   }
 
-  if (error) {
+  if (isError) {
+    // Attempt to extract more detail for troubleshooting production issue
+    const err: any = error;
+    const status = err?.status ?? err?.originalStatus;
+    const message = typeof err?.data === 'string' ? err.data : (err?.data?.message || err?.error || 'Unknown error');
     return (
       <section className="py-16 bg-white dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">All Cars</h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">Sorry, we couldn't load the cars at this time.</p>
-            <Button onClick={handleViewAllCars} className="bg-[#00A211] hover:brightness-110 text-white px-8 py-3">
-              <Car size={20} className="mr-2" /> View All Cars
-            </Button>
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">Sorry, we couldn't load the cars at this time.</p>
+            <div className="max-w-xl mx-auto text-left text-xs bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 mb-6 text-red-700 dark:text-red-300">
+              <p className="font-semibold mb-1">Debug Info (remove after fixing):</p>
+              <p>Status: {status ?? 'N/A'}</p>
+              <p className="break-all">Message: {message}</p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button onClick={() => refetch()} variant="outline" className="border-[#00A211] text-[#00A211] hover:bg-[#00A211] hover:text-white px-6 py-3">
+                Retry
+              </Button>
+              <Button onClick={handleViewAllCars} className="bg-[#00A211] hover:brightness-110 text-white px-8 py-3">
+                <Car size={20} className="mr-2" /> View All Cars
+              </Button>
+            </div>
           </div>
         </div>
       </section>
