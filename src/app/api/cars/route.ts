@@ -82,6 +82,24 @@ export async function POST(req: NextRequest) {
     }
 
     const photos = formData.getAll("photos") as File[];
+    const MAX_FILES = 25;
+    const MAX_SINGLE_MB = 5;
+    const MAX_TOTAL_MB = 40;
+    if (photos.length > MAX_FILES) {
+      return NextResponse.json({ message: `Too many photos: ${photos.length} > ${MAX_FILES}` }, { status: 400 });
+    }
+    let totalBytes = 0;
+    for (const p of photos) {
+      totalBytes += p.size;
+      const mb = p.size / (1024*1024);
+      if (mb > MAX_SINGLE_MB) {
+        return NextResponse.json({ message: `File ${p.name} is ${mb.toFixed(1)}MB > ${MAX_SINGLE_MB}MB limit` }, { status: 400 });
+      }
+    }
+    const totalMb = totalBytes / (1024*1024);
+    if (totalMb > MAX_TOTAL_MB) {
+      return NextResponse.json({ message: `Total upload ${totalMb.toFixed(1)}MB exceeds ${MAX_TOTAL_MB}MB limit` }, { status: 413 });
+    }
     const photoUrls: string[] = [];
     for (const photo of photos) {
       try {

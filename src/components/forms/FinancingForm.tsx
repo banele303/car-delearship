@@ -280,7 +280,7 @@ const FinancingForm: React.FC<FinancingFormProps> = ({
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="downPayment">Down Payment (R)</Label>
+                  <Label htmlFor="downPayment">Down Payment (R) (optional)</Label>
                   <Input 
                     id="downPayment" 
                     type="number"
@@ -340,7 +340,7 @@ const FinancingForm: React.FC<FinancingFormProps> = ({
               <h3 className="font-medium">Financial Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="employmentStatus">Employment Status</Label>
+                  <Label htmlFor="employmentStatus">Employment Status (optional)</Label>
                   <Select 
                     value={formData.employmentStatus} 
                     onValueChange={(value) => handleInputChange("employmentStatus", value)}
@@ -359,7 +359,7 @@ const FinancingForm: React.FC<FinancingFormProps> = ({
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="monthlyIncome">Monthly Income (R)</Label>
+                  <Label htmlFor="monthlyIncome">Monthly Income (R) (optional)</Label>
                   <Input 
                     id="monthlyIncome" 
                     type="number"

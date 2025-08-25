@@ -134,14 +134,25 @@ export default function AddCarPage() {
   
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('/api/employees');
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString();
+      const response = await fetch('/api/employees', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
+      });
+      if (response.status === 401) {
+        console.warn('Unauthorized fetching employees (401) – ensure user has ADMIN or SALES_MANAGER role');
+        return; // suppress toast spam here
+      }
+      if (!response.ok) {
+        const txt = await response.text();
+        console.error('Failed employees fetch', response.status, txt);
+        return;
+      }
       const data = await response.json();
-      
-      if (data && Array.isArray(data)) {
+      if (Array.isArray(data)) {
         setEmployees(data);
-        
         if (data.length > 0) {
-          setFormData(prev => ({ ...prev, employeeId: data[0].id.toString() }));
+          setFormData(prev => ({ ...prev, employeeId: prev.employeeId || data[0].id.toString() }));
         }
       }
     } catch (error) {
@@ -189,14 +200,32 @@ const handleSelectChange = (name: keyof CarFormData, value: string): void => {
 };
 
   
+const MAX_SINGLE_FILE_MB = 5; // enforce per-image size
+const MAX_TOTAL_MB = 40; // cap total payload to reduce 413 risk
+
 const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
   if (!e.target.files) return;
   const newlySelected = Array.from(e.target.files);
 
-  // Merge with existing selections (avoid duplicate File objects by name+size)
+  // Filter invalid types & oversize
+  const valid: File[] = [];
+  newlySelected.forEach(f => {
+    const sizeMb = f.size / (1024 * 1024);
+    if (!f.type.startsWith('image/')) {
+      toast.error(`${f.name}: not an image – skipped`);
+      return;
+    }
+    if (sizeMb > MAX_SINGLE_FILE_MB) {
+      toast.error(`${f.name}: ${sizeMb.toFixed(1)}MB > ${MAX_SINGLE_FILE_MB}MB limit – skipped`);
+      return;
+    }
+    valid.push(f);
+  });
+
+  // Merge unique by name+size
   const merged: File[] = [];
   const seen = new Set<string>();
-  [...photoFiles, ...newlySelected].forEach(f => {
+  [...photoFiles, ...valid].forEach(f => {
     const key = `${f.name}-${f.size}`;
     if (!seen.has(key)) {
       seen.add(key);
@@ -204,18 +233,35 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     }
   });
 
+  // Enforce photo count limit
   let finalList = merged;
   if (merged.length > MAX_PHOTOS) {
     finalList = merged.slice(0, MAX_PHOTOS);
     const rejected = merged.length - MAX_PHOTOS;
-    toast.error(`Photo limit reached: kept first ${MAX_PHOTOS}, ${rejected} ignored.`);
-  } else {
-    const addedCount = newlySelected.length;
-    toast.success(`${addedCount} photo${addedCount !== 1 ? 's' : ''} added (total ${merged.length}/${MAX_PHOTOS}).`);
+    toast.error(`Photo cap ${MAX_PHOTOS}: trimmed ${rejected} excess.`);
   }
+
+  // Enforce total size limit
+  const totalBytes = finalList.reduce((sum, f) => sum + f.size, 0);
+  const totalMb = totalBytes / (1024 * 1024);
+  if (totalMb > MAX_TOTAL_MB) {
+    // Trim from the end until under cap
+    const trimmed: File[] = [];
+    let running = 0;
+    for (const f of finalList) {
+      if ((running + f.size) / (1024 * 1024) > MAX_TOTAL_MB) {
+        break;
+      }
+      trimmed.push(f);
+      running += f.size;
+    }
+    toast.error(`Total size ${totalMb.toFixed(1)}MB > ${MAX_TOTAL_MB}MB. Keeping first ${trimmed.length} images.`);
+    finalList = trimmed;
+  }
+
   setPhotoFiles(finalList);
-  // Reset the input so the same files can be re-selected if desired
-  e.target.value = "";
+  toast.success(`Selected ${finalList.length} image${finalList.length!==1?'s':''} (≈${(finalList.reduce((s,f)=>s+f.size,0)/(1024*1024)).toFixed(1)}MB).`);
+  e.target.value = ""; // allow re-select same files
 };
 
   
@@ -289,17 +335,34 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
         }
 
         
+        // Quick preflight to warn if payload likely too big (heuristic)
+        const approxPayloadMb = photoFiles.reduce((s,f)=>s+f.size,0)/(1024*1024);
+        if (approxPayloadMb > MAX_TOTAL_MB) {
+          toast.error(`Payload ~${approxPayloadMb.toFixed(1)}MB exceeds safe limit (${MAX_TOTAL_MB}MB). Remove some images.`);
+          setIsLoading(false);
+          return;
+        }
+
         const carResponse = await fetch('/api/cars', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            body: submitFormData, 
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: submitFormData,
         });
 
         if (!carResponse.ok) {
-            const error: ErrorResponse = await carResponse.json();
-            throw new Error(error.message || 'Failed to create car');
+          const raw = await carResponse.text();
+          let message = raw;
+          try {
+            const parsed = JSON.parse(raw);
+            message = parsed.message || parsed.error || raw;
+          } catch {
+            if (carResponse.status === 413) {
+              message = 'Upload too large (413). Reduce image count/size.';
+            }
+          }
+          throw new Error(message.slice(0,300));
         }
 
         const car: CarResponse = await carResponse.json();

@@ -162,13 +162,18 @@ const defaultValues: FinancingPublicForm = {
 
 interface FieldProps { label: string; name: keyof FinancingPublicForm; type?: string; placeholder?: string; colSpan?: string; uncontrolled?: boolean; defaultValue?: string; value?: string; onChange?: (v: string)=>void; }
 
+// Required field names (excluding declaration checkboxes handled elsewhere)
+const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>(['loanAmount','termMonths','firstName','lastName']);
+
 const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholder, colSpan, uncontrolled = true, defaultValue = '', value, onChange }) => {
   const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) onChange(e.target.value);
   }, [onChange]);
+  const isOptional = !REQUIRED_FIELDS.has(name);
+  const displayLabel = isOptional && !/optional/i.test(label) ? `${label} (optional)` : label;
   return (
     <div className={colSpan || ''}>
-      <Label className='text-sm font-medium' htmlFor={name}>{label}</Label>
+      <Label className='text-sm font-medium' htmlFor={name}>{displayLabel}</Label>
       <Input
         id={name}
         name={name}
@@ -546,7 +551,7 @@ export default function FinancingApplicationForm() {
           <TextField label='State/Province' name='state' defaultValue={form.state||''} />
           <TextField label='Postal Code' name='postalCode' defaultValue={form.postalCode||''} />
           <div>
-            <Label className='text-sm font-medium'>Housing Status</Label>
+            <Label className='text-sm font-medium'>Housing Status (optional)</Label>
             <Select value={form.housingStatus||''} onValueChange={onChangeHandlers.housingStatus}>
               <SelectTrigger className='mt-1'><SelectValue placeholder='Select' /></SelectTrigger>
               <SelectContent>
@@ -597,7 +602,7 @@ export default function FinancingApplicationForm() {
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Work & Income Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
             <div>
-              <Label className='text-sm font-medium'>Employment Status</Label>
+              <Label className='text-sm font-medium'>Employment Status (optional)</Label>
               <Select value={form.employmentStatus||''} onValueChange={onChangeHandlers.employmentStatus}>
                 <SelectTrigger className='mt-1'><SelectValue placeholder='Select' /></SelectTrigger>
                 <SelectContent>
@@ -630,12 +635,12 @@ export default function FinancingApplicationForm() {
           {/* Preferred Contact Method removed */}
           <div className='flex items-center gap-3 pt-6'>
             <Checkbox id='hasTradeIn' checked={form.hasTradeIn} onCheckedChange={onChangeHandlers.hasTradeInChecked} />
-            <Label htmlFor='hasTradeIn' className='text-sm font-medium'>I have a vehicle to trade in</Label>
+            <Label htmlFor='hasTradeIn' className='text-sm font-medium'>I have a vehicle to trade in (optional)</Label>
           </div>
         </div>
         {form.hasTradeIn && (
           <div className='mt-4'>
-            <Label className='text-sm font-medium'>Trade-In Details</Label>
+            <Label className='text-sm font-medium'>Trade-In Details (optional)</Label>
             <Textarea value={form.tradeInDetails||''} onChange={onChangeHandlers.tradeInDetailsTextarea} placeholder='Vehicle year, make, model, mileage, condition...' className='mt-1' />
           </div>
         )}
@@ -682,16 +687,29 @@ export default function FinancingApplicationForm() {
                     acceptedFileTypes={['application/pdf','image/jpeg','image/png']}
                     className='filepond--financing'
                     labelIdle='<span class="text-xs font-medium">Drag & Drop</span> <span class="filepond--label-action text-blue-600">Browse</span>'
+                    imagePreviewHeight={72}
+                    stylePanelAspectRatio='1:1'
                   />
                 </div>
                 {!!uploaded && (
-                  <div className='mt-3 space-y-1 overflow-auto max-h-24 pr-1'>
-                    {uploadedByType[d.key].map(f => (
-                      <div key={f.storedName} className='flex items-center justify-between text-[11px] bg-slate-100/60 dark:bg-slate-800/40 rounded px-2 py-1'>
-                        <span className='truncate max-w-[120px]' title={f.originalName}>{f.originalName}</span>
-                        <a className='text-blue-600 hover:underline ml-2 shrink-0' href={f.url} target='_blank' rel='noreferrer'>view</a>
-                      </div>
-                    ))}
+                  <div className='mt-3 grid grid-cols-2 gap-2 overflow-auto max-h-28 pr-1'>
+                    {uploadedByType[d.key].map(f => {
+                      const isImage = /\.(jpe?g|png|gif|webp)$/i.test(f.originalName);
+                      const isPdf = /\.pdf$/i.test(f.originalName);
+                      return (
+                        <div key={f.storedName} className='flex items-center gap-2 text-[10px] bg-slate-100/60 dark:bg-slate-800/40 rounded p-1'>
+                          {isImage ? (
+                            <img src={f.url} alt={f.originalName} className='h-10 w-14 object-cover rounded border border-slate-200 dark:border-slate-700' />
+                          ) : (
+                            <span className='h-10 w-14 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[9px] font-medium'>{isPdf ? 'PDF' : 'FILE'}</span>
+                          )}
+                          <div className='flex-1 min-w-0'>
+                            <span className='block truncate max-w-full' title={f.originalName}>{f.originalName}</span>
+                            <a className='text-blue-600 hover:underline text-[9px]' href={f.url} target='_blank' rel='noreferrer'>view</a>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

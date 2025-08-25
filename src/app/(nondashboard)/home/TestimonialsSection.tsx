@@ -43,14 +43,10 @@ const TestimonialsSection: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-8"
         >
-          <h2 id="google-reviews-heading" className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            What Our Customers Say here
-          </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Live Google reviews powered by Elfsight
-          </p>
+          {/* Heading removed per request; keep an accessible label off-screen */}
+          <h2 id="google-reviews-heading" className="sr-only">Customer Reviews</h2>
         </motion.div>
 
         {/* Elfsight Google Reviews Widget */}
