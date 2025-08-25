@@ -12,7 +12,7 @@ const perks = [
   },
   {
     icon: Gift,
-    title: 'Earn R8,000+ Per Deal',
+    title: 'Earn R1,000+ Per Deal',
     desc: 'Get a cash reward or service credit for every successful financed vehicle purchased through your referral.'
   },
   {
