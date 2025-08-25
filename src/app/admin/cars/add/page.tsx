@@ -338,26 +338,34 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
         
         // Pre-upload using presigned URLs to avoid hitting API body size limits
         let uploadedUrls: string[] = [];
+        let presignFailed = false;
         if (photoFiles.length) {
-          const presign = await fetch('/api/uploads/presign', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ files: photoFiles.map(f => ({ name: f.name, type: f.type })) })
-          });
-          if (!presign.ok) {
-            const t = await presign.text();
-            throw new Error(`Failed to prepare uploads: ${t}`);
-          }
-          const presignData = await presign.json();
-          const items: { uploadUrl: string; url: string; contentType: string }[] = presignData.files || [];
-          for (let i=0;i<items.length;i++) {
-            const f = photoFiles[i];
-            const { uploadUrl, url, contentType } = items[i];
-            const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: f });
-            if (!putRes.ok) {
-              throw new Error(`Upload failed (${putRes.status}) for ${f.name}`);
+          try {
+            const presign = await fetch('/api/uploads/presign', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ files: photoFiles.map(f => ({ name: f.name, type: f.type })) })
+            });
+            if (!presign.ok) {
+              const t = await presign.text();
+              presignFailed = true;
+              console.warn('Presign failed', presign.status, t);
+            } else {
+              const presignData = await presign.json();
+              const items: { uploadUrl: string; url: string; contentType: string }[] = presignData.files || [];
+              for (let i=0;i<items.length;i++) {
+                const f = photoFiles[i];
+                const { uploadUrl, url, contentType } = items[i];
+                const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: f });
+                if (!putRes.ok) {
+                  throw new Error(`Upload failed (${putRes.status}) for ${f.name}`);
+                }
+                uploadedUrls.push(url);
+              }
             }
-            uploadedUrls.push(url);
+          } catch (err) {
+            presignFailed = true;
+            console.warn('Presign exception fallback to multipart', err);
           }
         }
 
@@ -370,11 +378,32 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
           photoUrls: uploadedUrls,
         };
         if (!hasDealership) delete (payload as any).dealershipId;
-        const carResponse = await fetch('/api/cars', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        let carResponse: Response;
+        if (!presignFailed) {
+          carResponse = await fetch('/api/cars', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          // Fallback legacy multipart if presign route not available
+          const fd = new FormData();
+          Object.entries(formData).forEach(([k,v]) => {
+            if (k === 'featured') return; // handle separately
+            fd.append(k, String(v));
+          });
+          fd.append('featured', formData.featured ? 'true':'false');
+          if (!hasDealership) fd.delete('dealershipId');
+          photoFiles.forEach(f=>fd.append('photos', f));
+          carResponse = await fetch('/api/cars', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd
+          });
+          if (presignFailed) {
+            toast.message('Using fallback upload', { description: 'Presign route failed; sent legacy multipart.' });
+          }
+        }
 
         if (!carResponse.ok) {
           const raw = await carResponse.text();
