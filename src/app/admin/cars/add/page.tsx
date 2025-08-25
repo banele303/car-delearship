@@ -201,8 +201,8 @@ const handleSelectChange = (name: keyof CarFormData, value: string): void => {
 
   
 // Client-side limits (mirrors server; can be relaxed via env vars exposed if needed)
-const MAX_SINGLE_FILE_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_SINGLE_MAX_MB || 10);
-const MAX_TOTAL_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_TOTAL_MAX_MB || 80);
+const MAX_SINGLE_FILE_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_SINGLE_MAX_MB || 15);
+const MAX_TOTAL_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_TOTAL_MAX_MB || 120);
 
 const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
   if (!e.target.files) return;
@@ -295,39 +295,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
   // dealershipId now optional per request: only validate if provided
   const hasDealership = formData.dealershipId && !isNaN(Number(formData.dealershipId)) && Number(formData.dealershipId) > 0;
         
-        const submitFormData = new FormData();
-        
-        
-        submitFormData.append('make', formData.make);
-        submitFormData.append('model', formData.model);
-        submitFormData.append('year', formData.year.toString());
-        submitFormData.append('price', formData.price || '0');
-        submitFormData.append('vin', formData.vin);
-        submitFormData.append('carType', formData.carType);
-        submitFormData.append('fuelType', formData.fuelType);
-        submitFormData.append('condition', formData.condition);
-        submitFormData.append('transmission', formData.transmission);
-        submitFormData.append('engine', formData.engine);
-        submitFormData.append('exteriorColor', formData.exteriorColor);
-        submitFormData.append('interiorColor', formData.interiorColor);
-        submitFormData.append('mileage', formData.mileage || '0');
-        submitFormData.append('description', formData.description);
-    if (hasDealership) {
-      submitFormData.append('dealershipId', formData.dealershipId);
-    }
-        if (formData.employeeId) {
-            submitFormData.append('employeeId', formData.employeeId);
-        }
-        submitFormData.append('status', formData.status);
-  submitFormData.append('featured', formData.featured ? 'true' : 'false');
-
-        
-        photoFiles.forEach(file => {
-            submitFormData.append('photos', file);
-        });
-
-        
-        const session = await fetchAuthSession();
+  const session = await fetchAuthSession();
         const token = session.tokens?.idToken?.toString();
         
         if (!token) {
@@ -336,76 +304,33 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
         }
 
         
-        // Pre-upload using presigned URLs to avoid hitting API body size limits
-        let uploadedUrls: string[] = [];
-        let presignFailed = false;
-        if (photoFiles.length) {
-          try {
-            const presign = await fetch('/api/uploads/presign', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ files: photoFiles.map(f => ({ name: f.name, type: f.type })) })
-            });
-            if (!presign.ok) {
-              const t = await presign.text();
-              presignFailed = true;
-              console.warn('Presign failed', presign.status, t);
-            } else {
-              const presignData = await presign.json();
-              const items: { uploadUrl: string; url: string; contentType: string }[] = presignData.files || [];
-              for (let i=0;i<items.length;i++) {
-                const f = photoFiles[i];
-                const { uploadUrl, url, contentType } = items[i];
-                const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: f });
-                if (!putRes.ok) {
-                  throw new Error(`Upload failed (${putRes.status}) for ${f.name}`);
-                }
-                uploadedUrls.push(url);
-              }
-            }
-          } catch (err) {
-            presignFailed = true;
-            console.warn('Presign exception fallback to multipart', err);
-          }
-        }
-
-        const payload = {
-          ...formData,
-          year: formData.year,
-          price: Number(formData.price || '0'),
-          mileage: Number(formData.mileage || '0'),
-          featured: formData.featured,
-          photoUrls: uploadedUrls,
-        };
-        if (!hasDealership) delete (payload as any).dealershipId;
-        let carResponse: Response;
-        if (!presignFailed) {
-          carResponse = await fetch('/api/cars', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-        } else {
-          // Fallback legacy multipart if presign route not available
-          const fd = new FormData();
-          Object.entries(formData).forEach(([k,v]) => {
-            if (k === 'featured') return; // handle separately
-            fd.append(k, String(v));
-          });
-          fd.append('featured', formData.featured ? 'true':'false');
-          if (!hasDealership) fd.delete('dealershipId');
-          photoFiles.forEach(f=>fd.append('photos', f));
-          carResponse = await fetch('/api/cars', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: fd
-          });
-          if (presignFailed) {
-            toast.message('Using fallback upload', { description: 'Presign route failed; sent legacy multipart.' });
-          }
-        }
-
-        if (!carResponse.ok) {
+  // Build legacy multipart form
+        const fd = new FormData();
+        fd.append('make', formData.make);
+        fd.append('model', formData.model);
+        fd.append('year', String(formData.year));
+        fd.append('price', formData.price || '0');
+        fd.append('vin', formData.vin);
+        fd.append('carType', formData.carType);
+        fd.append('fuelType', formData.fuelType);
+        fd.append('condition', formData.condition);
+        fd.append('transmission', formData.transmission);
+        fd.append('engine', formData.engine);
+        fd.append('exteriorColor', formData.exteriorColor);
+        fd.append('interiorColor', formData.interiorColor);
+        fd.append('mileage', formData.mileage || '0');
+        fd.append('description', formData.description);
+        if (hasDealership) fd.append('dealershipId', formData.dealershipId);
+        if (formData.employeeId) fd.append('employeeId', formData.employeeId);
+        fd.append('status', formData.status);
+        fd.append('featured', formData.featured ? 'true' : 'false');
+        photoFiles.forEach(f=>fd.append('photos', f));
+  const carResponse = await fetch('/api/cars', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: fd
+        });
+  if (!carResponse.ok) {
           const raw = await carResponse.text();
           let message = raw;
           try {
@@ -413,17 +338,17 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
             message = parsed.message || parsed.error || raw;
           } catch {
             if (carResponse.status === 413) {
-              message = 'Upload too large (413). (Legacy path)';
+              message = 'Upload too large (413) after increasing limits. Try fewer or smaller images.';
             }
           }
           throw new Error(message.slice(0,300));
         }
 
-        const car: CarResponse = await carResponse.json();
+  const car: CarResponse = await carResponse.json();
 
         toast.success('Car added successfully!');
         router.push('/admin/cars');
-    } catch (error) {
+  } catch (error) {
         console.error('Error adding car:', error);
         if (error instanceof Error) {
             toast.error(error.message || 'Failed to add car');
@@ -786,7 +711,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
                 onClick={() => document.getElementById('photos')?.click()}
               >
                 <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Drag & drop images here or click to browse</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">PNG/JPG up to 5MB each • Max {MAX_PHOTOS} images total</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">PNG/JPG up to {MAX_SINGLE_FILE_MB}MB each • Max {MAX_PHOTOS} images • Total ≤ {MAX_TOTAL_MB}MB</p>
                 <Input
                   id="photos"
                   type="file"
