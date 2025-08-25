@@ -137,14 +137,6 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
             >
               {open ? (
                 <div className="flex items-center gap-2">
-                  <Image
-                    src="/Advance_Auto_logoo.png"
-                    alt="SaCar Logo"
-                    width={34}
-                    height={34}
-                    className="h-9 w-auto object-contain drop-shadow-sm"
-                    priority
-                  />
                   <span className={cn(
                     "font-semibold text-base tracking-tight",
                     isDark ? "text-white" : "text-slate-900"
@@ -153,14 +145,12 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
                   </span>
                 </div>
               ) : (
-                <Image
-                  src="/Advance_Auto_logoo.png"
-                  alt="SaCar Logo"
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 object-contain rounded-md"
-                  priority
-                />
+                <div className={cn(
+                  "h-10 w-10 flex items-center justify-center rounded-md font-semibold text-sm",
+                  isDark ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-700"
+                )}>
+                  {userType === "employee" ? "E" : userType === "customer" ? "C" : "A"}
+                </div>
               )}
               <button
                 className={cn(

@@ -7,6 +7,7 @@ import FeaturedDealer from "./FeaturedDealer";
 import TestimonialsSection from "./TestimonialsSection";
 import FeaturedCars from "./FeaturedCars";
 import ReferralCalloutSection from "./ReferralCalloutSection";
+import AboutUsSection from "./AboutUsSection";
 import StatsSection from "./StatsSection";
 
 function Home() { 
@@ -15,6 +16,7 @@ function Home() {
   <HeroSection />
   <FeaturedCars />
   <ReferralCalloutSection />
+  <AboutUsSection />
   <StatsSection />
       <FeaturedDealer />
       <TestimonialsSection />

@@ -81,10 +81,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const photos = formData.getAll("photos") as File[];
-    const MAX_FILES = 25;
-    const MAX_SINGLE_MB = 5;
-    const MAX_TOTAL_MB = 40;
+  const photos = formData.getAll("photos") as File[];
+  // Upload limits (can be overridden via env). Keep reasonable to avoid platform hard limits.
+  const MAX_FILES = Number(process.env.CAR_UPLOAD_MAX_FILES || 25);
+  const MAX_SINGLE_MB = Number(process.env.CAR_UPLOAD_SINGLE_MAX_MB || 10); // was 5
+  const MAX_TOTAL_MB = Number(process.env.CAR_UPLOAD_TOTAL_MAX_MB || 80); // was 40
     if (photos.length > MAX_FILES) {
       return NextResponse.json({ message: `Too many photos: ${photos.length} > ${MAX_FILES}` }, { status: 400 });
     }

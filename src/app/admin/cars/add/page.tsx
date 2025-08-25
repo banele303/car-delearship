@@ -200,8 +200,9 @@ const handleSelectChange = (name: keyof CarFormData, value: string): void => {
 };
 
   
-const MAX_SINGLE_FILE_MB = 5; // enforce per-image size
-const MAX_TOTAL_MB = 40; // cap total payload to reduce 413 risk
+// Client-side limits (mirrors server; can be relaxed via env vars exposed if needed)
+const MAX_SINGLE_FILE_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_SINGLE_MAX_MB || 10);
+const MAX_TOTAL_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_TOTAL_MAX_MB || 80);
 
 const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
   if (!e.target.files) return;
