@@ -75,9 +75,11 @@ export async function POST(req: NextRequest) {
       }
     }
     const photos = formData.getAll('photos') as File[];
-    const MAX_FILES = Number(process.env.CAR_UPLOAD_MAX_FILES || 50);
-    const MAX_SINGLE_MB = Number(process.env.CAR_UPLOAD_SINGLE_MAX_MB || 15);
-    const MAX_TOTAL_MB = Number(process.env.CAR_UPLOAD_TOTAL_MAX_MB || 120);
+  const MAX_FILES = Number(process.env.CAR_UPLOAD_MAX_FILES || 50);
+  const MAX_SINGLE_MB = Number(process.env.CAR_UPLOAD_SINGLE_MAX_MB || 15);
+  // Allow disabling the total size cap by setting env CAR_UPLOAD_TOTAL_MAX_MB=0
+  const rawTotal = process.env.CAR_UPLOAD_TOTAL_MAX_MB;
+  const MAX_TOTAL_MB = rawTotal === '0' ? 0 : Number(rawTotal || 120);
     if (photos.length > MAX_FILES) {
       return NextResponse.json({ message: `Too many photos: ${photos.length} > ${MAX_FILES}` }, { status: 400 });
     }
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
       }
     }
     const totalMb = totalBytes / (1024*1024);
-    if (totalMb > MAX_TOTAL_MB) {
+    if (MAX_TOTAL_MB > 0 && totalMb > MAX_TOTAL_MB) {
       return NextResponse.json({ message: `Total upload ${totalMb.toFixed(1)}MB exceeds ${MAX_TOTAL_MB}MB limit` }, { status: 413 });
     }
     const photoUrls: string[] = [];

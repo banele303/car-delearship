@@ -200,9 +200,11 @@ const handleSelectChange = (name: keyof CarFormData, value: string): void => {
 };
 
   
-// Client-side limits (mirrors server; can be relaxed via env vars exposed if needed)
+// Client-side limits (mirrors server; can be relaxed via env vars exposed if needed).
+// Set NEXT_PUBLIC_CAR_UPLOAD_TOTAL_MAX_MB=0 to disable total size enforcement client-side.
 const MAX_SINGLE_FILE_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_SINGLE_MAX_MB || 15);
-const MAX_TOTAL_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_TOTAL_MAX_MB || 120);
+const rawClientTotal = process.env.NEXT_PUBLIC_CAR_UPLOAD_TOTAL_MAX_MB;
+const MAX_TOTAL_MB = rawClientTotal === '0' ? 0 : Number(rawClientTotal || 120);
 
 const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
   if (!e.target.files) return;
@@ -242,22 +244,24 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     toast.error(`Photo cap ${MAX_PHOTOS}: trimmed ${rejected} excess.`);
   }
 
-  // Enforce total size limit
-  const totalBytes = finalList.reduce((sum, f) => sum + f.size, 0);
-  const totalMb = totalBytes / (1024 * 1024);
-  if (totalMb > MAX_TOTAL_MB) {
-    // Trim from the end until under cap
-    const trimmed: File[] = [];
-    let running = 0;
-    for (const f of finalList) {
-      if ((running + f.size) / (1024 * 1024) > MAX_TOTAL_MB) {
-        break;
+  // Enforce total size limit only if enabled (>0)
+  if (MAX_TOTAL_MB > 0) {
+    const totalBytes = finalList.reduce((sum, f) => sum + f.size, 0);
+    const totalMb = totalBytes / (1024 * 1024);
+    if (totalMb > MAX_TOTAL_MB) {
+      // Trim from the end until under cap
+      const trimmed: File[] = [];
+      let running = 0;
+      for (const f of finalList) {
+        if ((running + f.size) / (1024 * 1024) > MAX_TOTAL_MB) {
+          break;
+        }
+        trimmed.push(f);
+        running += f.size;
       }
-      trimmed.push(f);
-      running += f.size;
+      toast.error(`Total size ${totalMb.toFixed(1)}MB > ${MAX_TOTAL_MB}MB. Keeping first ${trimmed.length} images.`);
+      finalList = trimmed;
     }
-    toast.error(`Total size ${totalMb.toFixed(1)}MB > ${MAX_TOTAL_MB}MB. Keeping first ${trimmed.length} images.`);
-    finalList = trimmed;
   }
 
   setPhotoFiles(finalList);
@@ -711,7 +715,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
                 onClick={() => document.getElementById('photos')?.click()}
               >
                 <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Drag & drop images here or click to browse</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">PNG/JPG up to {MAX_SINGLE_FILE_MB}MB each • Max {MAX_PHOTOS} images • Total ≤ {MAX_TOTAL_MB}MB</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">PNG/JPG up to {MAX_SINGLE_FILE_MB}MB each • Max {MAX_PHOTOS} images • {MAX_TOTAL_MB>0 ? `Total ≤ ${MAX_TOTAL_MB}MB` : 'No total size cap'}</p>
                 <Input
                   id="photos"
                   type="file"
