@@ -536,46 +536,33 @@ export default function FinancingApplicationForm() {
     return () => document.removeEventListener('blur', blurListener, true);
   }, []);
 
-  // New document requirements (aligned with provided screenshot layout)
+  // Document requirements (restored full list + payslip variants) with small upload zones
   const docRequirements = [
-    {
-      key: 'id_copy',
-      question: "Valid id document - no copies (if you don't have a valid id you need to get a temporary one)",
-      uploadLabel: 'Upload ID Copy',
-      required: true,
-      max: 2,
-      hint: 'Clear photo or PDF of both sides.'
-    },
-    {
-      key: 'drivers_license_copy',
-      question: "Valid driver's license (if you don't have a valid driver's license you need to get a temporary one and attach a copy as well as the receipt to the deal)",
-      uploadLabel: 'Upload Drivers License Copy',
-      required: true,
-      max: 2,
-      hint: 'Both sides, not expired.'
-    },
-    {
-      key: 'latest_payslip',
-      question: 'If you receive the same salary every month you need to get the latest payslip',
-      uploadLabel: 'Upload Latest Payslip',
-      required: false,
-      requireIfAnswerYes: true,
-      max: 2,
-      hint: 'Most recent payslip (salary fixed).'
-    },
-    {
-      key: 'latest_3_payslips',
-      question: 'If you earn commision and other extras and your income differs you need to get the latest three months payslips',
-      uploadLabel: 'Upload Latest 3 Payslips',
-      required: false,
-      requireIfAnswerYes: true,
-      max: 6,
-      hint: 'Last 3 months (variable / commission).'
-    }
+    { key: 'id_doc', question: "Valid id document - no copies (if you don't have a valid id you need to get a temporary one)", uploadLabel: 'Upload ID Copy', required: true, max: 2, hint: 'Clear photos (front & back).' },
+    { key: 'drivers_license', question: "Valid driver's license (if you don't have a valid driver's license you need to get a temporary one and attach a copy as well as the receipt to the deal)", uploadLabel: 'Upload Drivers License Copy', required: true, max: 2, hint: 'Both sides.' },
+    { key: 'payslip_latest', question: 'If you receive the same salary every month you need to get the latest payslip', uploadLabel: 'Upload Latest Payslip', required: false, max: 2, hint: 'Most recent payslip.' },
+    { key: 'payslips_3_months', question: 'If you earn commission / extras and income differs get the latest three months payslips', uploadLabel: 'Upload Latest 3 Payslips', required: false, max: 6, hint: 'Last 3 months.' },
+    { key: 'bank_statements', question: 'Bank statements (latest 3 months - 6 if self‑employed)', uploadLabel: 'Upload Bank Statements', required: true, max: 6, hint: 'PDF preferred.' },
+    { key: 'proof_of_residence', question: 'Proof of residence (utility bill < 3 months old)', uploadLabel: 'Upload Proof of Residence', required: true, max: 2, hint: 'Utility / rates bill.' },
+    { key: 'self_employed_docs', question: 'Business docs (if self‑employed)', uploadLabel: 'Upload Business Docs', required: false, max: 6, hint: 'CK / tax / financials.' },
   ] as const;
   const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
   const [docAnswers, setDocAnswers] = useState<Record<string, 'yes' | 'no'>>(() => docRequirements.reduce((acc, d) => { acc[d.key] = 'no'; return acc; }, {} as Record<string,'yes'|'no'>));
   const handleAnswerChange = (key: string, val: 'yes' | 'no') => setDocAnswers(a => ({ ...a, [key]: val }));
+  // Inject tiny FilePond style once
+  const tinyStyleInjected = useRef(false);
+  useEffect(() => {
+    if (tinyStyleInjected.current) return;
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .filepond--tiny .filepond--panel-root { min-height:46px; height:46px; }
+      .filepond--tiny .filepond--drop-label { font-size:11px; padding:2px 4px; }
+      .filepond--tiny .filepond--item-panel { height:40px; }
+      .filepond--tiny .filepond--item { width:38px; }
+    `;
+    document.head.appendChild(style);
+    tinyStyleInjected.current = true;
+  }, []);
   const createServerConfig = (docType: string) => ({
     process: {
       url: `/api/uploads/financing?docType=${encodeURIComponent(docType)}`,
@@ -599,11 +586,7 @@ export default function FinancingApplicationForm() {
     },
     revert: null,
   }) as any;
-  const missingRequiredDocs = () => docRequirements.filter(d => {
-    const uploaded = uploadedByType[d.key]?.length;
-    const dynamicRequired = (d as any).requireIfAnswerYes && docAnswers[d.key] === 'yes';
-    return (d.required || dynamicRequired) && !uploaded;
-  });
+  const missingRequiredDocs = () => docRequirements.filter(d => d.required && !(uploadedByType[d.key]?.length));
 
   return (
   <form ref={formRef} onSubmit={handleSubmit} className='mt-12 space-y-6'>
@@ -739,12 +722,12 @@ export default function FinancingApplicationForm() {
   {/* Consent & terms section removed per request */}
 
       <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
-        <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
-        <p className='text-xs text-slate-500 mt-1'>Items with <span className='text-red-500 font-semibold'>*</span> must be supplied. Select Yes only when you are ready to upload.</p>
+    <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
+    <p className='text-xs text-slate-500 mt-1'>All required documents (<span className='text-red-500 font-semibold'>*</span>) must be uploaded before submission. Upload boxes are intentionally small.</p>
         <div className='mt-6 space-y-8'>
           {docRequirements.map((d, idx) => {
             const uploaded = uploadedByType[d.key]?.length || 0;
-            const isReq = d.required || ((d as any).requireIfAnswerYes && docAnswers[d.key] === 'yes');
+      const isReq = d.required; // static required state
             return (
               <div key={d.key} className='grid md:grid-cols-2 gap-6'>
                 <div>
@@ -781,17 +764,17 @@ export default function FinancingApplicationForm() {
                     <span>{d.uploadLabel}{isReq && <span className='text-red-500'>*</span>}</span>
                     <span className='text-[10px] font-normal text-slate-500'>{uploaded} / {d.max}</span>
                   </Label>
-                  <div className={`rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2`}> 
+          <div className={`rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs`}> 
                     <FilePond
                       name={`files_${d.key}`}
                       allowMultiple
                       maxFiles={d.max}
                       server={createServerConfig(d.key)}
-                      acceptedFileTypes={['application/pdf','image/jpeg','image/png']}
-                      className='filepond--financing-compact'
-                      labelIdle='<span class="text-[11px] font-medium">Drop files or <span class="text-blue-600">Browse</span></span>'
-                      imagePreviewHeight={60}
-                      stylePanelAspectRatio='1:0.75'
+            acceptedFileTypes={['application/pdf','image/jpeg','image/png','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','text/plain','application/zip']}
+            className='filepond--financing-compact filepond--tiny'
+            labelIdle='<span class="text-[10px] font-medium">Upload / Drop</span>'
+            imagePreviewHeight={40}
+            stylePanelAspectRatio='1:0.35'
                       disabled={docAnswers[d.key] === 'no'}
                     />
                   </div>
