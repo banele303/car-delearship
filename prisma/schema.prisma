@@ -189,6 +189,23 @@ model FinancingApplication {
   customer        Customer                    @relation(fields: [customerId], references: [cognitoId])
   details         FinancingApplicationDetail?
   sale            Sale?
+  documents       FinancingApplicationDocument[]
+}
+
+model FinancingApplicationDocument {
+  id                     Int                    @id @default(autoincrement())
+  financingApplicationId Int
+  docType                String
+  originalName           String
+  storedName             String
+  mime                   String
+  size                   Int
+  url                    String
+  uploadedAt             DateTime               @default(now())
+  financingApplication   FinancingApplication   @relation(fields: [financingApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([financingApplicationId])
+  @@index([docType])
 }
 
 model FinancingApplicationDetail {

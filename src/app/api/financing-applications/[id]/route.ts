@@ -18,16 +18,16 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     const financingApplication = await prisma.financingApplication.findUnique({
       where: { id },
+  include: {
+    customer: true,
+    sale: {
       include: {
-        customer: true,
-        sale: {
-          include: {
-            car: true,
-            employee: true,
-            dealership: true
-          }
-        }
+        car: true,
+        employee: true,
+        dealership: true
       }
+    }
+  }
     });
 
     if (!financingApplication) {

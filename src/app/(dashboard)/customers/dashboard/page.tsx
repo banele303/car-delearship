@@ -274,15 +274,7 @@ const CustomerDashboard = () => {
             <h3 className="text-lg font-medium text-white mb-2">Schedule Test Drive</h3>
             <p className="text-gray-400 text-sm">Book a test drive for your favorite cars</p>
           </Link>
-          
-          <Link 
-            href="/customers/financing"
-            className="bg-[#0F1112] border border-[#333] rounded-xl p-6 hover:border-[#555] transition-colors text-center"
-          >
-            <CreditCard className="h-8 w-8 text-purple-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-white mb-2">Apply for Financing</h3>
-            <p className="text-gray-400 text-sm">Get pre-approved for car financing</p>
-          </Link>
+          {/* Financing quick action removed per request */}
         </div>
       </div>
     </div>

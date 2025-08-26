@@ -129,6 +129,27 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // Optional: persist document metadata if client sent it and model exists
+    try {
+      const bodyAny: any = json;
+      if (Array.isArray(bodyAny.documents) && bodyAny.documents.length && (prisma as any).financingApplicationDocument) {
+        const docsToCreate = bodyAny.documents.slice(0, 100).map((d: any) => ({
+          financingApplicationId: financingApplication.id,
+          docType: String(d.docType || d.type || 'unknown'),
+          originalName: String(d.originalName || d.name || 'file'),
+          storedName: String(d.storedName || d.serverId || d.originalName || 'file'),
+          mime: String(d.mime || d.type || 'application/octet-stream'),
+          size: Number(d.size || 0),
+          url: String(d.url || ''),
+        }));
+        if (docsToCreate.length) {
+          await (prisma as any).financingApplicationDocument.createMany({ data: docsToCreate });
+        }
+      }
+    } catch (docErr) {
+      console.warn('Document metadata persistence skipped:', docErr);
+    }
+
     return NextResponse.json({ id: financingApplication.id, status: 'PENDING' }, { status: 201 });
   } catch (e: any) {
     if (e.name === 'ZodError') {

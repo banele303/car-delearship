@@ -224,10 +224,22 @@ export default function FinancingApplicationForm() {
         lastFocusedRef.current = t;
       }
     };
-    const handleDocumentClick = () => {
-      // If focus vanished (e.g. body focused) & we have a last input, restore
+    // Prevent scroll jump when interacting with document upload areas / file dialogs
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      // If click originated inside a FilePond / upload wrapper, skip auto-focus restore
+      if (target.closest('.doc-upload-wrapper') || target.closest('.filepond--root')) return;
+      // Only attempt to restore if body is active (no other element took focus)
       if (document.activeElement === document.body && lastFocusedRef.current) {
-        lastFocusedRef.current.focus();
+        // Extra guard: ensure last focused element is still in DOM and visible
+        const el = lastFocusedRef.current;
+        if (document.contains(el) && el.offsetParent !== null) {
+          // Use requestAnimationFrame to avoid layout thrash & potential scroll jump
+          requestAnimationFrame(() => {
+            try { el.focus({ preventScroll: true }); } catch {}
+          });
+        }
       }
     };
     window.addEventListener('focusin', handleFocusIn);
@@ -426,11 +438,7 @@ export default function FinancingApplicationForm() {
     collected.creditRecordDeclaration = form.creditRecordDeclaration;
     collected.marketingCommunicationConsent = form.marketingCommunicationConsent;
 
-    const parsed = schema.safeParse(collected);
-    if (!parsed.success) {
-      toast.error('Please complete required required declarations & loan amount');
-      return;
-    }
+  // Removed strict schema blocking per request (previously enforced declarations & loan fields)
     // Ensure required documents uploaded
     const missingDocs = typeof missingRequiredDocs === 'function' ? (missingRequiredDocs() as any) : [];
     if (missingDocs.length) {
@@ -443,6 +451,10 @@ export default function FinancingApplicationForm() {
     try {
       const payload = {
         ...collected,
+        // Coerce hidden consent flags (they come through as strings from hidden inputs)
+        consentCreditCheck: typeof collected.consentCreditCheck === 'string' ? collected.consentCreditCheck === 'true' : collected.consentCreditCheck === true,
+        agreeTerms: typeof collected.agreeTerms === 'string' ? collected.agreeTerms === 'true' : collected.agreeTerms === true,
+  documents: uploadedDocsRef.current(),
         loanAmount: collected.loanAmount ? Number(collected.loanAmount) : undefined,
         termMonths: collected.termMonths ? Number(collected.termMonths) : undefined,
         interestRate: collected.interestRate ? Number(collected.interestRate) : undefined,
@@ -460,8 +472,15 @@ export default function FinancingApplicationForm() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const j = await res.json().catch(()=>({error:'Failed'}));
-        toast.error(j.error || 'Submission failed');
+        const j = await res.json().catch(()=>({error:'Submission failed'}));
+        if (j.issues?.length) {
+          // Show first validation issue for clarity
+            const first = j.issues[0];
+            const msg = first?.message || j.error || 'Submission failed';
+            toast.error(msg);
+        } else {
+          toast.error(j.error || 'Submission failed');
+        }
       } else {
         toast.success('Application submitted!');
         formRef.current.reset(); // clear visible inputs
@@ -546,8 +565,12 @@ export default function FinancingApplicationForm() {
     { key: 'proof_of_residence', question: 'Proof of residence (utility bill < 3 months old)', uploadLabel: 'Upload Proof of Residence', required: true, max: 2, hint: 'Utility / rates bill.' },
     { key: 'self_employed_docs', question: 'Business docs (if self‑employed)', uploadLabel: 'Upload Business Docs', required: false, max: 6, hint: 'CK / tax / financials.' },
   ] as const;
-  const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
-  const [uploadingByType, setUploadingByType] = useState<Record<string, boolean>>({});
+  // Document uploads handled in isolated component to avoid re-renders that steal input focus
+  const missingRequiredDocsRef = useRef<() => any[]>(() => []);
+  const registerMissingDocsFn = (fn: () => any[]) => { missingRequiredDocsRef.current = fn; };
+  // Store accessor for collected uploaded documents metadata (flattened)
+  const uploadedDocsRef = useRef<() => any[]>(() => []);
+  const registerUploadedDocsFn = (fn: () => any[]) => { uploadedDocsRef.current = fn; };
   // Inject tiny FilePond style once
   const tinyStyleInjected = useRef(false);
   useEffect(() => {
@@ -577,30 +600,127 @@ export default function FinancingApplicationForm() {
     document.head.appendChild(style);
     tinyStyleInjected.current = true;
   }, []);
-  const createServerConfig = (docType: string) => ({
-    process: {
-      url: `/api/uploads/financing?docType=${encodeURIComponent(docType)}`,
-      method: 'POST',
-      onload: (res: any) => {
-        try {
-          const parsed = JSON.parse(res);
-          if (parsed.files) {
-            setUploadedByType(prev => ({
-              ...prev,
-              [docType]: [...(prev[docType]||[]), ...parsed.files]
-            }));
-          }
-        } catch {}
-        return res;
+  // Missing docs accessor used on submit (populated by child component)
+  const missingRequiredDocs = () => missingRequiredDocsRef.current();
+
+  // Child component for uploads
+  const DocumentUploads: React.FC<{ docRequirements: readonly any[], register: (fn: () => any[]) => void, registerDocs: (fn: () => any[]) => void }> = React.memo(({ docRequirements, register, registerDocs }) => {
+    const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
+    const [uploadingByType, setUploadingByType] = useState<Record<string, boolean>>({});
+    const createServerConfig = (docType: string) => ({
+      process: {
+        url: `/api/uploads/financing?docType=${encodeURIComponent(docType)}`,
+        method: 'POST',
+        onload: (res: any) => {
+          try {
+            const parsed = JSON.parse(res);
+            if (parsed.files) {
+              setUploadedByType(prev => ({
+                ...prev,
+                [docType]: [...(prev[docType]||[]), ...parsed.files]
+              }));
+            }
+          } catch {}
+          return res;
+        },
+        onerror: (err: any) => {
+          toast.error('Upload failed');
+          return err;
+        }
       },
-      onerror: (err: any) => {
-        toast.error('Upload failed');
-        return err;
-      }
-    },
-    revert: null,
-  }) as any;
-  const missingRequiredDocs = () => docRequirements.filter(d => d.required && !(uploadedByType[d.key]?.length));
+      revert: null,
+    }) as any;
+    // Expose missing docs function to parent
+    useEffect(() => {
+      register(() => docRequirements.filter(d => d.required && !(uploadedByType[d.key]?.length)));
+      registerDocs(() => {
+        const flat: any[] = [];
+        Object.entries(uploadedByType).forEach(([docType, arr]) => {
+          (arr||[]).forEach((f: any) => flat.push({ docType, ...f }));
+        });
+        return flat;
+      });
+    }, [docRequirements, uploadedByType, register, registerDocs]);
+    return (
+      <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
+        <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
+        <p className='text-xs text-slate-500 mt-1'>All required documents (<span className='text-red-500 font-semibold'>*</span>) must be uploaded before submission. Upload boxes are intentionally small.</p>
+        <div className='mt-6 space-y-8'>
+          {docRequirements.map(d => {
+            const uploaded = uploadedByType[d.key]?.length || 0;
+            const isReq = d.required;
+            return (
+              <div key={d.key} className='grid md:grid-cols-2 gap-6'>
+                <div>
+                  <p className='text-[13px] font-medium leading-snug mr-4'>
+                    {d.question}{isReq && <span className='text-red-500'> *</span>}
+                  </p>
+                </div>
+                <div>
+                  <Label className='text-[12px] font-semibold leading-snug flex items-center justify-between mb-2'>
+                    <span>{d.uploadLabel}{isReq && <span className='text-red-500'>*</span>}</span>
+                    <span className='text-[10px] font-normal text-slate-500'>{uploaded} / {d.max}</span>
+                  </Label>
+                  <div className={`doc-upload-wrapper ${uploadingByType[d.key] ? 'uploading' : ''} relative rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs transition-all`}> 
+                    <FilePond
+                      name={`files_${d.key}`}
+                      allowMultiple
+                      maxFiles={d.max}
+                      instantUpload
+                      credits={false}
+                      server={createServerConfig(d.key)}
+                      acceptedFileTypes={['application/pdf','image/jpeg','image/png','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','text/plain','application/zip']}
+                      className='filepond--financing-compact filepond--tiny'
+                      labelIdle='<span class="text-[10px] font-medium">Upload / Drop</span>'
+                      imagePreviewHeight={40}
+                      stylePanelAspectRatio='1:0.35'
+                      styleLoadIndicatorPosition='right'
+                      styleProgressIndicatorPosition='right'
+                      styleButtonRemoveItemPosition='right'
+                      onaddfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
+                      onprocessfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
+                      onprocessfile={(error: any, file: any)=> { setUploadingByType(u=>({...u,[d.key]:false})); if(!error && file && file.remove) { file.remove(); } }}
+                      onprocessfileabort={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
+                      onprocessfilerevert={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
+                    />
+                    {uploadingByType[d.key] && (
+                      <div className='doc-upload-overlay-fade absolute inset-0 bg-gradient-to-br from-white/70 to-white/40 dark:from-slate-900/70 dark:to-slate-800/40 backdrop-blur-sm flex items-center justify-center rounded-md pointer-events-none'>
+                        <div className='flex flex-col items-center gap-1'>
+                          <span className='h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent'></span>
+                          <span className='text-[10px] font-medium tracking-wide text-slate-700 dark:text-slate-300'>Uploading...</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className='mt-2 text-[10px] text-slate-500 leading-snug pr-4'>{d.hint}</p>
+                  {!!uploaded && (
+                    <div className='mt-2 flex flex-wrap gap-2'>
+                      {uploadedByType[d.key].map(f => {
+                        const isImage = /\.(jpe?g|png|gif|webp)$/i.test(f.originalName);
+                        const isPdf = /\.pdf$/i.test(f.originalName);
+                        return (
+                          <div key={f.storedName} className='relative group w-16 h-16 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex items-center justify-center shadow-sm'>
+                            {isImage ? (
+                              <img src={f.url} alt={f.originalName} className='object-cover w-full h-full' />
+                            ) : (
+                              <span className='text-[10px] font-medium text-slate-600 dark:text-slate-300 px-1 text-center leading-tight'>{isPdf ? 'PDF' : 'FILE'}</span>
+                            )}
+                            <button type='button'
+                              onClick={() => setUploadedByType(prev => ({ ...prev, [d.key]: prev[d.key].filter((x: any) => x.storedName !== f.storedName) }))}
+                              className='absolute bottom-0 left-0 right-0 text-[10px] bg-black/60 text-white py-0.5 font-medium opacity-90 hover:opacity-100 transition'>X</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  });
 
   return (
   <form ref={formRef} onSubmit={handleSubmit} className='mt-12 space-y-6'>
@@ -608,10 +728,10 @@ export default function FinancingApplicationForm() {
 
   <Section id='applicant' title='Applicant Details' desc='Primary applicant profile and supporting details'>
         <div className='grid md:grid-cols-4 gap-4'>
-          <TextField label='First Name' name='firstName' uncontrolled={false} value={form.firstName} onChange={onChangeHandlers.firstName} />
-          <TextField label='Last Name' name='lastName' uncontrolled={false} value={form.lastName} onChange={onChangeHandlers.lastName} />
-          <TextField label='Email' name='email' uncontrolled={false} value={form.email || ''} onChange={onChangeHandlers.email} />
-          <TextField label='Phone' name='phone' uncontrolled={false} value={form.phone || ''} onChange={onChangeHandlers.phone} />
+          <TextField label='First Name' name='firstName' defaultValue={form.firstName} />
+          <TextField label='Last Name' name='lastName' defaultValue={form.lastName} />
+          <TextField label='Email' name='email' defaultValue={form.email || ''} />
+          <TextField label='Phone' name='phone' defaultValue={form.phone || ''} />
           <TextField label='Date of Birth' name='dateOfBirth' defaultValue={form.dateOfBirth||''} placeholder='YYYY-MM-DD' />
           <TextField label='ID Number' name='idNumber' defaultValue={form.idNumber||''} />
           <TextField label='Address' name='address' defaultValue={form.address||''} colSpan='md:col-span-2' />
@@ -697,9 +817,9 @@ export default function FinancingApplicationForm() {
       <Section id='vehicle' title='Vehicle & Financing' desc='Structure & trade / vehicle details'>
         <div className='grid md:grid-cols-4 gap-4'>
           {/* Required financing fields moved from removed Loan Snapshot section */}
-          <TextField label='Desired Loan Amount (R)' name='loanAmount' uncontrolled={false} value={form.loanAmount||''} onChange={onChangeHandlers.loanAmount} />
-          <TextField label='Term (Months)' name='termMonths' uncontrolled={false} value={form.termMonths||''} onChange={onChangeHandlers.termMonths} />
-          <TextField label='Planned Down Payment (R)' name='downPaymentAmount' uncontrolled={false} value={form.downPaymentAmount||''} onChange={onChangeHandlers.downPaymentAmount} />
+          <TextField label='Desired Loan Amount (R)' name='loanAmount' defaultValue={form.loanAmount||''} />
+          <TextField label='Term (Months)' name='termMonths' defaultValue={form.termMonths||''} />
+          <TextField label='Planned Down Payment (R)' name='downPaymentAmount' defaultValue={form.downPaymentAmount||''} />
           {/* Preferred Contact Method removed */}
           <div className='flex items-center gap-3 pt-6'>
             <Checkbox id='hasTradeIn' checked={form.hasTradeIn} onCheckedChange={onChangeHandlers.hasTradeInChecked} />
@@ -715,17 +835,17 @@ export default function FinancingApplicationForm() {
         <div className='mt-6 border-t pt-6'>
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Vehicle / Goods Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
-            <TextField label='New or Used' name='vehicleCondition' uncontrolled={false} value={form.vehicleCondition||''} onChange={onChangeHandlers.vehicleCondition} />
-            <TextField label='Cash Price' name='cashPrice' uncontrolled={false} value={form.cashPrice||''} onChange={onChangeHandlers.cashPrice} />
-            <TextField label='Make' name='vehicleMake' uncontrolled={false} value={form.vehicleMake||''} onChange={onChangeHandlers.vehicleMake} />
-            <TextField label='Model' name='vehicleModel' uncontrolled={false} value={form.vehicleModel||''} onChange={onChangeHandlers.vehicleModel} />
-            <TextField label='KM (if used)' name='vehicleKM' uncontrolled={false} value={form.vehicleKM||''} onChange={onChangeHandlers.vehicleKM} />
-            <TextField label='M & M' name='vehicleMMCode' uncontrolled={false} value={form.vehicleMMCode||''} onChange={onChangeHandlers.vehicleMMCode} />
-            <TextField label='Fuel Type' name='vehicleFuelType' uncontrolled={false} value={form.vehicleFuelType||''} onChange={onChangeHandlers.vehicleFuelType} />
-            <TextField label='Transmission' name='vehicleTransmission' uncontrolled={false} value={form.vehicleTransmission||''} onChange={onChangeHandlers.vehicleTransmission} />
-            <TextField label='Body / Type' name='vehicleType' uncontrolled={false} value={form.vehicleType||''} onChange={onChangeHandlers.vehicleType} />
-            <TextField label='Service & Delivery' name='serviceAndDelivery' uncontrolled={false} value={form.serviceAndDelivery||''} onChange={onChangeHandlers.serviceAndDelivery} />
-            <TextField label='License Fee' name='licenseFee' uncontrolled={false} value={form.licenseFee||''} onChange={onChangeHandlers.licenseFee} />
+            <TextField label='New or Used' name='vehicleCondition' defaultValue={form.vehicleCondition||''} />
+            <TextField label='Cash Price' name='cashPrice' defaultValue={form.cashPrice||''} />
+            <TextField label='Make' name='vehicleMake' defaultValue={form.vehicleMake||''} />
+            <TextField label='Model' name='vehicleModel' defaultValue={form.vehicleModel||''} />
+            <TextField label='KM (if used)' name='vehicleKM' defaultValue={form.vehicleKM||''} />
+            <TextField label='M & M' name='vehicleMMCode' defaultValue={form.vehicleMMCode||''} />
+            <TextField label='Fuel Type' name='vehicleFuelType' defaultValue={form.vehicleFuelType||''} />
+            <TextField label='Transmission' name='vehicleTransmission' defaultValue={form.vehicleTransmission||''} />
+            <TextField label='Body / Type' name='vehicleType' defaultValue={form.vehicleType||''} />
+            <TextField label='Service & Delivery' name='serviceAndDelivery' defaultValue={form.serviceAndDelivery||''} />
+            <TextField label='License Fee' name='licenseFee' defaultValue={form.licenseFee||''} />
             {/* Balloon / Residual and Extras removed */}
           </div>
         </div>
@@ -735,84 +855,7 @@ export default function FinancingApplicationForm() {
 
   {/* Consent & terms section removed per request */}
 
-      <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
-    <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
-    <p className='text-xs text-slate-500 mt-1'>All required documents (<span className='text-red-500 font-semibold'>*</span>) must be uploaded before submission. Upload boxes are intentionally small.</p>
-        <div className='mt-6 space-y-8'>
-          {docRequirements.map((d, idx) => {
-    const uploaded = uploadedByType[d.key]?.length || 0;
-    const isReq = d.required; // static required state
-            return (
-              <div key={d.key} className='grid md:grid-cols-2 gap-6'>
-                <div>
-                  <p className='text-[13px] font-medium leading-snug mr-4'>
-                    {d.question}{isReq && <span className='text-red-500'> *</span>}
-      </p>
-                </div>
-                <div>
-                  <Label className='text-[12px] font-semibold leading-snug flex items-center justify-between mb-2'>
-                    <span>{d.uploadLabel}{isReq && <span className='text-red-500'>*</span>}</span>
-                    <span className='text-[10px] font-normal text-slate-500'>{uploaded} / {d.max}</span>
-                  </Label>
-                  <div className={`doc-upload-wrapper ${uploadingByType[d.key] ? 'uploading' : ''} relative rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs transition-all`}> 
-                    <FilePond
-                      name={`files_${d.key}`}
-                      allowMultiple
-                      maxFiles={d.max}
-                      instantUpload
-                      credits={false}
-                      server={createServerConfig(d.key)}
-                      acceptedFileTypes={['application/pdf','image/jpeg','image/png','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','text/plain','application/zip']}
-                      className='filepond--financing-compact filepond--tiny'
-                      labelIdle='<span class="text-[10px] font-medium">Upload / Drop</span>'
-                      imagePreviewHeight={40}
-                      stylePanelAspectRatio='1:0.35'
-                      styleLoadIndicatorPosition='right'
-                      styleProgressIndicatorPosition='right'
-                      styleButtonRemoveItemPosition='right'
-                      onaddfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
-                      onprocessfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
-                      onprocessfile={(error: any, file: any)=> { setUploadingByType(u=>({...u,[d.key]:false})); if(!error && file && file.remove) { file.remove(); } }}
-                      onprocessfileabort={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
-                      onprocessfileprogress={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
-                      onprocessfilerevert={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
-                    />
-                    {uploadingByType[d.key] && (
-                      <div className='doc-upload-overlay-fade absolute inset-0 bg-gradient-to-br from-white/70 to-white/40 dark:from-slate-900/70 dark:to-slate-800/40 backdrop-blur-sm flex items-center justify-center rounded-md pointer-events-none'>
-                        <div className='flex flex-col items-center gap-1'>
-                          <span className='h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent'></span>
-                          <span className='text-[10px] font-medium tracking-wide text-slate-700 dark:text-slate-300'>Uploading...</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className='mt-2 text-[10px] text-slate-500 leading-snug pr-4'>{d.hint}</p>
-                  {!!uploaded && (
-                    <div className='mt-2 flex flex-wrap gap-2'>
-                      {uploadedByType[d.key].map(f => {
-                        const isImage = /\.(jpe?g|png|gif|webp)$/i.test(f.originalName);
-                        const isPdf = /\.pdf$/i.test(f.originalName);
-                        return (
-                          <div key={f.storedName} className='relative group w-16 h-16 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex items-center justify-center shadow-sm'>
-                            {isImage ? (
-                              <img src={f.url} alt={f.originalName} className='object-cover w-full h-full' />
-                            ) : (
-                              <span className='text-[10px] font-medium text-slate-600 dark:text-slate-300 px-1 text-center leading-tight'>{isPdf ? 'PDF' : 'FILE'}</span>
-                            )}
-                            <button type='button'
-                              onClick={() => setUploadedByType(prev => ({ ...prev, [d.key]: prev[d.key].filter(x => x.storedName !== f.storedName) }))}
-                              className='absolute bottom-0 left-0 right-0 text-[10px] bg-black/60 text-white py-0.5 font-medium opacity-90 hover:opacity-100 transition'>X</button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+  <DocumentUploads docRequirements={docRequirements} register={registerMissingDocsFn} registerDocs={registerUploadedDocsFn} />
 
       {/* Added declarations as requested */}
       <div className='space-y-6 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-5'>

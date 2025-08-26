@@ -71,6 +71,15 @@ type FinancingApplication = {
     price: number;
     imageUrl: string | null;
   };
+  documents?: {
+    id: number;
+    docType: string;
+    originalName: string;
+    url: string;
+    mime: string;
+    size: number;
+    uploadedAt: string;
+  }[];
 };
 
 export default function FinancingApplicationDetail({ params }: { params: { id: string } }) {
@@ -419,6 +428,31 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
         </div>
         
         <div className="space-y-6">
+          {/* Documents Section */}
+          {application.documents && application.documents.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Submitted Documents</CardTitle>
+                <CardDescription>Download the supporting files provided by the applicant.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {application.documents.map(doc => (
+                    <div key={doc.id} className="flex items-center justify-between rounded border px-3 py-2 text-sm">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{doc.docType}</span>
+                        <span className="text-xs text-gray-500 break-all">{doc.originalName}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">{(doc.size/1024).toFixed(1)} KB</span>
+                        <a href={doc.url} download className="text-blue-600 hover:underline text-xs">Download</a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Credit Assessment</CardTitle>
