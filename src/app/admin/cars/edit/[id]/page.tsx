@@ -84,6 +84,15 @@ export default function EditCarPage({ params }: PageProps) {
   'Nudge bar',
   ];
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [newFeature, setNewFeature] = useState("");
+
+  const addCustomFeature = () => {
+    const val = newFeature.trim();
+    if (!val) return;
+    const exists = selectedFeatures.some(f => f.toLowerCase() === val.toLowerCase());
+    if (!exists) setSelectedFeatures(prev => [...prev, val]);
+    setNewFeature("");
+  };
 
   const [formData, setFormData] = useState({
     make: "",
@@ -569,7 +578,7 @@ export default function EditCarPage({ params }: PageProps) {
               <Label className="block">Extras</Label>
               <p className="text-xs text-slate-500">Select or deselect applicable extra features.</p>
               <div className="flex flex-wrap gap-2">
-                {FEATURE_OPTIONS.map(opt => {
+                {([...FEATURE_OPTIONS, ...selectedFeatures.filter(f=>!FEATURE_OPTIONS.includes(f))]).map(opt => {
                   const active = selectedFeatures.includes(opt);
                   return (
                     <button
@@ -590,6 +599,16 @@ export default function EditCarPage({ params }: PageProps) {
               {selectedFeatures.length > 0 && (
                 <div className="text-xs text-slate-500">{selectedFeatures.length} selected</div>
               )}
+              <div className="flex items-center gap-2 pt-2">
+                <Input
+                  placeholder="Type extra & press Enter"
+                  value={newFeature}
+                  onChange={(e)=>setNewFeature(e.target.value)}
+                  onKeyDown={(e)=>{ if (e.key==='Enter' || e.key===','){ e.preventDefault(); addCustomFeature(); } }}
+                  className="h-8 text-sm w-56"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={addCustomFeature} disabled={!newFeature.trim()} className="h-8">Add</Button>
+              </div>
             </div>
 
             <div className="space-y-2">

@@ -336,15 +336,20 @@ const CarDetailPage = () => {
                 {car.features && car.features.length > 0 && (
                   <div className="mt-8">
                     <h3 className="text-lg font-semibold mb-3">Extras</h3>
-                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-12 gap-y-2">
-                      {car.features.map((f, i) => (
-                        <div key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                          <span className="mt-1 h-3.5 w-3.5 rounded-full bg-[#00A211]/10 border border-[#00A211]/40 flex items-center justify-center">
-                            <span className="h-2 w-2 rounded-full bg-[#00A211]" />
-                          </span>
-                          <span>{f}</span>
-                        </div>
-                      ))}
+                    <div className="grid md:grid-cols-2 gap-x-10 gap-y-3">
+                      {car.features
+                        .filter(f => !!f)
+                        .map(f => f.trim())
+                        .filter((f, i, arr) => f.length > 0 && arr.indexOf(f) === i) // dedupe & remove empties
+                        .sort((a, b) => a.localeCompare(b))
+                        .map((f, i) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#0079d6] text-white shadow-sm ring-1 ring-[#0079d6]/70 dark:ring-[#0079d6]/60">
+                              <Check className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="text-sm text-gray-800 dark:text-gray-200 leading-snug">{f}</span>
+                          </div>
+                        ))}
                     </div>
                   </div>
                 )}
@@ -478,6 +483,14 @@ const CarDetailPage = () => {
                             className="col-span-2 bg-[#0a5c48] hover:bg-[#084c3c] text-white font-semibold flex items-center justify-center gap-2"
                           >
                             <span className="text-sm font-semibold">WhatsApp</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleApplyForFinancing}
+                            className="col-span-2 bg-gradient-to-r from-[#00A211] to-[#00A211]/70 hover:from-[#029c12] hover:to-[#029c12]/70 text-white font-semibold flex items-center justify-center gap-2 border border-[#00A211]/50 shadow-sm"
+                          >
+                            <DollarSign className="h-4 w-4" />
+                            <span className="text-sm font-semibold">Apply for Financing</span>
                           </Button>
                         </div>
                       </div>
