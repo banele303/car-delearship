@@ -20,8 +20,8 @@ export default function AboutUsSection() {
             <div className="absolute -inset-4 bg-[radial-gradient(circle_at_30%_30%,hsl(var(--primary))_0%,transparent_70%)] rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative rounded-3xl overflow-hidden ring-1 ring-emerald-500/10 shadow-xl h-[300px] sm:h-[340px] md:h-[380px] lg:h-[420px] xl:h-[440px]">
               <Image
-                src="/IMG-20250823-WA0008.jpg"
-                alt="Showroom team at Advance Auto"
+                src="/about-image.jpeg"
+                alt="Advance Auto dealership overview"
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
