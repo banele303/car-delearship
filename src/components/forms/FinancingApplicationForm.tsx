@@ -547,18 +547,23 @@ export default function FinancingApplicationForm() {
     { key: 'self_employed_docs', question: 'Business docs (if self‑employed)', uploadLabel: 'Upload Business Docs', required: false, max: 6, hint: 'CK / tax / financials.' },
   ] as const;
   const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
-  const [docAnswers, setDocAnswers] = useState<Record<string, 'yes' | 'no'>>(() => docRequirements.reduce((acc, d) => { acc[d.key] = 'no'; return acc; }, {} as Record<string,'yes'|'no'>));
-  const handleAnswerChange = (key: string, val: 'yes' | 'no') => setDocAnswers(a => ({ ...a, [key]: val }));
+  const [uploadingByType, setUploadingByType] = useState<Record<string, boolean>>({});
   // Inject tiny FilePond style once
   const tinyStyleInjected = useRef(false);
   useEffect(() => {
     if (tinyStyleInjected.current) return;
     const style = document.createElement('style');
     style.innerHTML = `
-      .filepond--tiny .filepond--panel-root { min-height:46px; height:46px; }
-      .filepond--tiny .filepond--drop-label { font-size:11px; padding:2px 4px; }
-      .filepond--tiny .filepond--item-panel { height:40px; }
+      .filepond--tiny .filepond--panel-root { min-height:46px; height:46px; border-radius:6px; }
+      .filepond--tiny .filepond--drop-label { font-size:11px; padding:2px 4px; color:#334155; }
+      .dark .filepond--tiny .filepond--drop-label { color:#cbd5e1; }
+      .filepond--tiny .filepond--item-panel { height:40px; background:linear-gradient(145deg,#f1f5f9,#e2e8f0); }
+      .dark .filepond--tiny .filepond--item-panel { background:linear-gradient(145deg,#1e293b,#334155); }
       .filepond--tiny .filepond--item { width:38px; }
+      .filepond--tiny .filepond--file-status-main { font-size:9px; }
+      .filepond--tiny .filepond--file-info { font-size:9px; }
+      .filepond--tiny .filepond--progress-indicator { transform:scale(.7); }
+      .filepond--tiny .filepond--progress-indicator svg { stroke-width:2px; }
     `;
     document.head.appendChild(style);
     tinyStyleInjected.current = true;
@@ -726,57 +731,50 @@ export default function FinancingApplicationForm() {
     <p className='text-xs text-slate-500 mt-1'>All required documents (<span className='text-red-500 font-semibold'>*</span>) must be uploaded before submission. Upload boxes are intentionally small.</p>
         <div className='mt-6 space-y-8'>
           {docRequirements.map((d, idx) => {
-            const uploaded = uploadedByType[d.key]?.length || 0;
-      const isReq = d.required; // static required state
+    const uploaded = uploadedByType[d.key]?.length || 0;
+    const isReq = d.required; // static required state
             return (
               <div key={d.key} className='grid md:grid-cols-2 gap-6'>
                 <div>
                   <p className='text-[13px] font-medium leading-snug mr-4'>
                     {d.question}{isReq && <span className='text-red-500'> *</span>}
-                  </p>
-                  <div className='mt-3 flex items-center gap-6 text-sm'>
-                    <label className='flex items-center gap-2 cursor-pointer'>
-                      <input
-                        type='radio'
-                        name={`ans_${d.key}`}
-                        value='yes'
-                        checked={docAnswers[d.key] === 'yes'}
-                        onChange={() => handleAnswerChange(d.key, 'yes')}
-                        className='h-3.5 w-3.5 accent-blue-600'
-                      />
-                      <span>Yes</span>
-                    </label>
-                    <label className='flex items-center gap-2 cursor-pointer'>
-                      <input
-                        type='radio'
-                        name={`ans_${d.key}`}
-                        value='no'
-                        checked={docAnswers[d.key] === 'no'}
-                        onChange={() => handleAnswerChange(d.key, 'no')}
-                        className='h-3.5 w-3.5 accent-blue-600'
-                      />
-                      <span>No</span>
-                    </label>
-                  </div>
+      </p>
                 </div>
                 <div>
                   <Label className='text-[12px] font-semibold leading-snug flex items-center justify-between mb-2'>
                     <span>{d.uploadLabel}{isReq && <span className='text-red-500'>*</span>}</span>
                     <span className='text-[10px] font-normal text-slate-500'>{uploaded} / {d.max}</span>
                   </Label>
-          <div className={`rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs`}> 
+                  <div className={`relative rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs`}> 
                     <FilePond
                       name={`files_${d.key}`}
                       allowMultiple
                       maxFiles={d.max}
+                      instantUpload
+                      credits={false}
                       server={createServerConfig(d.key)}
-            acceptedFileTypes={['application/pdf','image/jpeg','image/png','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','text/plain','application/zip']}
-            className='filepond--financing-compact filepond--tiny'
-            labelIdle='<span class="text-[10px] font-medium">Upload / Drop</span>'
-            imagePreviewHeight={40}
-            stylePanelAspectRatio='1:0.35'
-                      disabled={docAnswers[d.key] === 'no'}
+                      acceptedFileTypes={['application/pdf','image/jpeg','image/png','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','text/plain','application/zip']}
+                      className='filepond--financing-compact filepond--tiny'
+                      labelIdle='<span class="text-[10px] font-medium">Upload / Drop</span>'
+                      imagePreviewHeight={40}
+                      stylePanelAspectRatio='1:0.35'
+                      styleLoadIndicatorPosition='right'
+                      styleProgressIndicatorPosition='right'
+                      styleButtonRemoveItemPosition='right'
+                      onprocessfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
+                      onprocessfile={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
+                      onprocessfileabort={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
+                      onprocessfileprogress={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
+                      onprocessfilerevert={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
                     />
+                    {uploadingByType[d.key] && (
+                      <div className='absolute inset-0 bg-white/60 dark:bg-slate-900/50 backdrop-blur-sm flex items-center justify-center rounded-md pointer-events-none'>
+                        <div className='flex items-center gap-2'>
+                          <span className='h-3 w-3 animate-spin rounded-full border-2 border-blue-500 border-t-transparent'></span>
+                          <span className='text-[10px] font-medium text-slate-600 dark:text-slate-300'>Uploading...</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <p className='mt-2 text-[10px] text-slate-500 leading-snug pr-4'>{d.hint}</p>
                   {!!uploaded && (
