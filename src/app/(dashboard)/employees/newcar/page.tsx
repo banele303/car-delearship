@@ -188,7 +188,7 @@ const NewCar = () => {
       mileage: 0,
       condition: CarCondition.NEW,
       carType: CarType.SEDAN,
-      fuelType: FuelType.GASOLINE,
+  fuelType: FuelType.FUEL,
       transmission: Transmission.AUTOMATIC,
       exteriorColor: "",
       interiorColor: "",

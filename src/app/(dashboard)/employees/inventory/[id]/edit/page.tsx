@@ -265,7 +265,7 @@ export default function EditCarPage() {
       mileage: 0,
       condition: CarCondition.NEW,
       carType: CarType.SEDAN,
-      fuelType: FuelType.GASOLINE,
+  fuelType: FuelType.FUEL,
       transmission: Transmission.AUTOMATIC,
       engine: "",
       exteriorColor: "",
@@ -277,19 +277,23 @@ export default function EditCarPage() {
     },
   });
 
+  // Normalize possible legacy API values (e.g., 'GASOLINE') to current FuelType enum
+  const normalizeFuelType = (value: unknown): FuelType => {
+    if (value === 'GASOLINE') return FuelType.FUEL;
+    if (Object.values(FuelType).includes(value as FuelType)) return value as FuelType;
+    return FuelType.FUEL;
+  };
+
   useEffect(() => {
     if (fetchedCarData) {
       carForm.reset({
-        vin: fetchedCarData.vin || "",
-        make: fetchedCarData.make || "",
-        model: fetchedCarData.model || "",
+        carType: fetchedCarData.carType || CarType.SEDAN,
+        fuelType: normalizeFuelType(fetchedCarData.fuelType),
+        transmission: fetchedCarData.transmission || Transmission.AUTOMATIC,
         year: fetchedCarData.year || new Date().getFullYear(),
         price: fetchedCarData.price || 0,
         mileage: fetchedCarData.mileage || 0,
         condition: fetchedCarData.condition || CarCondition.NEW,
-        carType: fetchedCarData.carType || CarType.SEDAN,
-        fuelType: fetchedCarData.fuelType || FuelType.GASOLINE,
-        transmission: fetchedCarData.transmission || Transmission.AUTOMATIC,
         engine: fetchedCarData.engine || "",
         exteriorColor: fetchedCarData.exteriorColor || "",
         interiorColor: fetchedCarData.interiorColor || "",
@@ -306,6 +310,16 @@ export default function EditCarPage() {
       setIsOverallPageLoading(false);
     }
   }, [fetchedCarData, carForm, setCurrentCarPhotos, setNewCarPhotoFiles, setCarPhotosMarkedForDelete, setReplaceCarPhotosFlag, setIsOverallPageLoading]);
+
+  // Utility: safely parse a fetch Response as JSON or fall back to text wrapped in object
+  async function safeJson(res: Response) {
+    try {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+      const text = await res.text();
+      try { return JSON.parse(text); } catch { return { raw: text }; }
+    } catch (e) { return { error: true, message: (e as Error).message }; }
+  }
 
   useEffect(() => {
     if (isCarError && !isLoadingCar) {

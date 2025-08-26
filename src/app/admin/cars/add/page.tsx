@@ -33,7 +33,7 @@ export default function AddCarPage() {
     price: "",
     vin: "",
     carType: "SEDAN",
-    fuelType: "GASOLINE",
+  fuelType: "FUEL",
     condition: "USED",
     transmission: "AUTOMATIC",
     engine: "",
@@ -198,7 +198,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElemen
   
 
 type CarType = "SEDAN" | "SUV" | "HATCHBACK" | "COUPE" | "CONVERTIBLE" | "TRUCK" | "VAN";
-type FuelType = "GASOLINE" | "DIESEL" | "HYBRID" | "ELECTRIC";
+type FuelType = "FUEL" | "DIESEL" | "HYBRID" | "ELECTRIC";
 type CarCondition = "NEW" | "USED" | "CERTIFIED_PRE_OWNED" | "DEALER_DEMO";
 type Transmission = "MANUAL" | "AUTOMATIC" | "CVT" | "DUAL_CLUTCH";
 type CarStatus = "AVAILABLE" | "SOLD" | "RESERVED" | "MAINTENANCE";
@@ -345,7 +345,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
         fd.append('price', formData.price || '0');
         fd.append('vin', formData.vin);
         fd.append('carType', formData.carType);
-        fd.append('fuelType', formData.fuelType);
+  fd.append('fuelType', formData.fuelType === 'FUEL' ? 'FUEL' : formData.fuelType);
         fd.append('condition', formData.condition);
         fd.append('transmission', formData.transmission);
         fd.append('engine', formData.engine);
@@ -527,7 +527,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="GASOLINE">Fuel</SelectItem>
+                    <SelectItem value="FUEL">Fuel</SelectItem>
                     <SelectItem value="DIESEL">Diesel</SelectItem>
                     <SelectItem value="HYBRID">Hybrid</SelectItem>
                     <SelectItem value="ELECTRIC">Electric</SelectItem>

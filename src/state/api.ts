@@ -105,32 +105,48 @@ export const api = createApi({
           const clonedResponse = response.clone();
 
           try {
-            // Try to parse as JSON first
-            const data = await response.json();
-            // Create a new Response with the JSON data
-            return new Response(JSON.stringify(data), {
-              status: response.status,
-              statusText: response.statusText,
-              headers: response.headers
-            });
+            // Prefer JSON but fall back to text without throwing parse errors
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              const data = await response.json();
+              return new Response(JSON.stringify(data), {
+                status: response.status,
+                statusText: response.statusText,
+                headers: response.headers
+              });
+            } else {
+              const text = await response.text();
+              // Attempt a secondary JSON parse (some APIs mislabel)
+              try {
+                const parsed = JSON.parse(text);
+                return new Response(JSON.stringify(parsed), {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers: response.headers
+                });
+              } catch {
+                // Wrap plain text in a JSON envelope so RTK Query doesn't choke
+                return new Response(JSON.stringify({ raw: text }), {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers: response.headers
+                });
+              }
+            }
           } catch (e) {
-            // If parsing fails, handle based on status
             if (response.status === 404 && response.url.includes('/rooms')) {
-              // Return empty array for 404s on rooms endpoint
               return new Response(JSON.stringify([]), {
                 status: 200,
                 statusText: 'OK',
                 headers: response.headers
               });
             }
-
-            // For other errors, get the text from the cloned response
-            const errorText = await clonedResponse.text();
-            throw {
+            const fallbackTxt = await clonedResponse.text().catch(()=> '');
+            return new Response(JSON.stringify({ error: true, status: response.status, body: fallbackTxt.slice(0,500) }), {
               status: response.status,
-              data: errorText,
-              originalStatus: response.status
-            };
+              statusText: response.statusText,
+              headers: response.headers
+            });
           }
         } catch (error) {
           lastError = error;

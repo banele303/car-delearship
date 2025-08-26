@@ -66,7 +66,7 @@ const Purchases = () => {
             // Convert enum values to strings
             condition: car.condition || 'USED',
             carType: car.carType || 'SEDAN',
-            fuelType: car.fuelType || 'GASOLINE',
+            fuelType: (car.fuelType === 'GASOLINE' ? 'FUEL' : car.fuelType) || 'FUEL',
             transmission: car.transmission || 'AUTOMATIC',
             // Ensure string properties exist
             engine: car.engine || '',

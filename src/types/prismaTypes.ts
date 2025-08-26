@@ -27,7 +27,7 @@ export enum CarStatus {
 }
 
 export enum FuelType {
-  GASOLINE = 'GASOLINE',
+  FUEL = 'FUEL', // renamed from GASOLINE
   DIESEL = 'DIESEL',
   ELECTRIC = 'ELECTRIC',
   HYBRID = 'HYBRID'
