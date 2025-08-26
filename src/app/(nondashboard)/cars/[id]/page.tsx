@@ -442,12 +442,14 @@ const CarDetailPage = () => {
                       {car.year} {car.make} {car.model}
                     </h1>
                     <div className="flex items-center gap-2 mb-3">
-                      <Badge
-                        variant="secondary"
-                        className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                      >
-                        {car.status}
-                      </Badge>
+                      {car.status !== 'AVAILABLE' && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                        >
+                          {car.status}
+                        </Badge>
+                      )}
                       {car.averageRating && (
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -455,9 +457,11 @@ const CarDetailPage = () => {
                         </div>
                       )}
                     </div>
-                    <p className="text-4xl font-bold text-[#00A211]">
-                      {formatPrice(car.price)}
-                    </p>
+                    {car.price > 0 && (
+                      <p className="text-4xl font-bold text-[#00A211]">
+                        {formatPrice(car.price)}
+                      </p>
+                    )}
                   </div>
 
                   <Separator className="mb-6" />

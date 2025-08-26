@@ -536,17 +536,46 @@ export default function FinancingApplicationForm() {
     return () => document.removeEventListener('blur', blurListener, true);
   }, []);
 
-  // Document metadata & upload helpers (compact zones)
-  const docMeta = [
-    { key: 'id_doc', label: 'ID (Front & Back)', required: true, max: 2, hint: 'Clear photos or PDF of both sides.' },
-    { key: 'drivers_license', label: "Driver's License (Front & Back)", required: true, max: 2, hint: 'Valid & not expired.' },
-    { key: 'payslips', label: 'Payslips (3 Months)', required: true, max: 6, hint: 'Last 3 months (6 if variable income).' },
-    { key: 'bank_statements', label: 'Bank Statements', required: true, max: 6, hint: 'Latest 3 months (6 if self‑employed). PDF preferred.' },
-    { key: 'proof_of_residence', label: 'Proof of Residence', required: true, max: 2, hint: 'Utility bill < 3 months old.' },
-    { key: 'self_employed_docs', label: 'Business Docs (If Self‑Employed)', required: false, max: 6, hint: 'CK docs, tax clearance, financials.' },
+  // New document requirements (aligned with provided screenshot layout)
+  const docRequirements = [
+    {
+      key: 'id_copy',
+      question: "Valid id document - no copies (if you don't have a valid id you need to get a temporary one)",
+      uploadLabel: 'Upload ID Copy',
+      required: true,
+      max: 2,
+      hint: 'Clear photo or PDF of both sides.'
+    },
+    {
+      key: 'drivers_license_copy',
+      question: "Valid driver's license (if you don't have a valid driver's license you need to get a temporary one and attach a copy as well as the receipt to the deal)",
+      uploadLabel: 'Upload Drivers License Copy',
+      required: true,
+      max: 2,
+      hint: 'Both sides, not expired.'
+    },
+    {
+      key: 'latest_payslip',
+      question: 'If you receive the same salary every month you need to get the latest payslip',
+      uploadLabel: 'Upload Latest Payslip',
+      required: false,
+      requireIfAnswerYes: true,
+      max: 2,
+      hint: 'Most recent payslip (salary fixed).'
+    },
+    {
+      key: 'latest_3_payslips',
+      question: 'If you earn commision and other extras and your income differs you need to get the latest three months payslips',
+      uploadLabel: 'Upload Latest 3 Payslips',
+      required: false,
+      requireIfAnswerYes: true,
+      max: 6,
+      hint: 'Last 3 months (variable / commission).'
+    }
   ] as const;
-  const requiredDocs = docMeta; // backward compatibility variable name
   const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
+  const [docAnswers, setDocAnswers] = useState<Record<string, 'yes' | 'no'>>(() => docRequirements.reduce((acc, d) => { acc[d.key] = 'no'; return acc; }, {} as Record<string,'yes'|'no'>));
+  const handleAnswerChange = (key: string, val: 'yes' | 'no') => setDocAnswers(a => ({ ...a, [key]: val }));
   const createServerConfig = (docType: string) => ({
     process: {
       url: `/api/uploads/financing?docType=${encodeURIComponent(docType)}`,
@@ -570,7 +599,11 @@ export default function FinancingApplicationForm() {
     },
     revert: null,
   }) as any;
-  const missingRequiredDocs = () => docMeta.filter(d => d.required && !(uploadedByType[d.key]?.length));
+  const missingRequiredDocs = () => docRequirements.filter(d => {
+    const uploaded = uploadedByType[d.key]?.length;
+    const dynamicRequired = (d as any).requireIfAnswerYes && docAnswers[d.key] === 'yes';
+    return (d.required || dynamicRequired) && !uploaded;
+  });
 
   return (
   <form ref={formRef} onSubmit={handleSubmit} className='mt-12 space-y-6'>
@@ -705,68 +738,85 @@ export default function FinancingApplicationForm() {
 
   {/* Consent & terms section removed per request */}
 
-      <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-5'>
-        <div className='mb-5'>
-          <h3 className='font-semibold text-base md:text-lg'>Supporting Documents</h3>
-          <p className='text-xs text-slate-500 mt-1'>Required documents marked with <span className="text-red-500 font-semibold">*</span>. Upload clear PDFs or images. Smaller zones below.</p>
-          <div className='mt-3 grid md:grid-cols-3 gap-2 text-[11px]'>
-            {docMeta.map(m => {
-              const uploaded = uploadedByType[m.key]?.length || 0;
-              const ok = uploaded > 0 || !m.required;
-              return (
-                <div key={m.key} className='flex items-center gap-2'>
-                  <span className={`h-2 w-2 rounded-full ${ok ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
-                  <span className='truncate'>{m.label}{m.required && <span className='text-red-500'>*</span>} {uploaded>0 && <span className='text-emerald-600'>({uploaded})</span>}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className='grid gap-4 md:grid-cols-3'>
-          {docMeta.map(d => {
+      <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
+        <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
+        <p className='text-xs text-slate-500 mt-1'>Items with <span className='text-red-500 font-semibold'>*</span> must be supplied. Select Yes only when you are ready to upload.</p>
+        <div className='mt-6 space-y-8'>
+          {docRequirements.map((d, idx) => {
             const uploaded = uploadedByType[d.key]?.length || 0;
+            const isReq = d.required || ((d as any).requireIfAnswerYes && docAnswers[d.key] === 'yes');
             return (
-              <div key={d.key} className='group relative rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow p-3 flex flex-col'>
-                <div className='flex items-start justify-between mb-2'>
-                  <Label className='text-[12px] font-semibold leading-snug pr-2'>
-                    {d.label}{d.required && <span className='text-red-500'>*</span>}
-                  </Label>
-                  <span className='text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'>{uploaded} / {d.max}</span>
-                </div>
-                <div className='flex-1'>
-                  <FilePond
-                    name={`files_${d.key}`}
-                    allowMultiple
-                    maxFiles={d.max}
-                    server={createServerConfig(d.key)}
-                    acceptedFileTypes={['application/pdf','image/jpeg','image/png']}
-                    className='filepond--financing-compact'
-                    labelIdle='<span class="text-[10px] font-medium">Drop / Browse</span>'
-                    imagePreviewHeight={56}
-                    stylePanelAspectRatio='1:0.75'
-                  />
-                </div>
-                <p className='mt-2 text-[10px] text-slate-500 leading-snug line-clamp-3'>{d.hint}</p>
-                {!!uploaded && (
-                  <div className='mt-2 grid grid-cols-2 gap-1 overflow-auto max-h-20 pr-1'>
-                    {uploadedByType[d.key].map(f => {
-                      const isImage = /\.(jpe?g|png|gif|webp)$/i.test(f.originalName);
-                      const isPdf = /\.pdf$/i.test(f.originalName);
-                      return (
-                        <div key={f.storedName} className='flex items-center gap-1 text-[9px] bg-slate-100/70 dark:bg-slate-800/40 rounded p-1'>
-                          {isImage ? (
-                            <img src={f.url} alt={f.originalName} className='h-8 w-10 object-cover rounded border border-slate-200 dark:border-slate-700' />
-                          ) : (
-                            <span className='h-8 w-10 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[8px] font-medium'>{isPdf ? 'PDF' : 'FILE'}</span>
-                          )}
-                          <div className='flex-1 min-w-0'>
-                            <span className='block truncate max-w-full' title={f.originalName}>{f.originalName}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+              <div key={d.key} className='grid md:grid-cols-2 gap-6'>
+                <div>
+                  <p className='text-[13px] font-medium leading-snug mr-4'>
+                    {d.question}{isReq && <span className='text-red-500'> *</span>}
+                  </p>
+                  <div className='mt-3 flex items-center gap-6 text-sm'>
+                    <label className='flex items-center gap-2 cursor-pointer'>
+                      <input
+                        type='radio'
+                        name={`ans_${d.key}`}
+                        value='yes'
+                        checked={docAnswers[d.key] === 'yes'}
+                        onChange={() => handleAnswerChange(d.key, 'yes')}
+                        className='h-3.5 w-3.5 accent-blue-600'
+                      />
+                      <span>Yes</span>
+                    </label>
+                    <label className='flex items-center gap-2 cursor-pointer'>
+                      <input
+                        type='radio'
+                        name={`ans_${d.key}`}
+                        value='no'
+                        checked={docAnswers[d.key] === 'no'}
+                        onChange={() => handleAnswerChange(d.key, 'no')}
+                        className='h-3.5 w-3.5 accent-blue-600'
+                      />
+                      <span>No</span>
+                    </label>
                   </div>
-                )}
+                </div>
+                <div>
+                  <Label className='text-[12px] font-semibold leading-snug flex items-center justify-between mb-2'>
+                    <span>{d.uploadLabel}{isReq && <span className='text-red-500'>*</span>}</span>
+                    <span className='text-[10px] font-normal text-slate-500'>{uploaded} / {d.max}</span>
+                  </Label>
+                  <div className={`rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2`}> 
+                    <FilePond
+                      name={`files_${d.key}`}
+                      allowMultiple
+                      maxFiles={d.max}
+                      server={createServerConfig(d.key)}
+                      acceptedFileTypes={['application/pdf','image/jpeg','image/png']}
+                      className='filepond--financing-compact'
+                      labelIdle='<span class="text-[11px] font-medium">Drop files or <span class="text-blue-600">Browse</span></span>'
+                      imagePreviewHeight={60}
+                      stylePanelAspectRatio='1:0.75'
+                      disabled={docAnswers[d.key] === 'no'}
+                    />
+                  </div>
+                  <p className='mt-2 text-[10px] text-slate-500 leading-snug pr-4'>{d.hint}</p>
+                  {!!uploaded && (
+                    <div className='mt-2 grid grid-cols-2 gap-1 overflow-auto max-h-20 pr-1'>
+                      {uploadedByType[d.key].map(f => {
+                        const isImage = /\.(jpe?g|png|gif|webp)$/i.test(f.originalName);
+                        const isPdf = /\.pdf$/i.test(f.originalName);
+                        return (
+                          <div key={f.storedName} className='flex items-center gap-1 text-[9px] bg-slate-100/70 dark:bg-slate-800/40 rounded p-1'>
+                            {isImage ? (
+                              <img src={f.url} alt={f.originalName} className='h-8 w-10 object-cover rounded border border-slate-200 dark:border-slate-700' />
+                            ) : (
+                              <span className='h-8 w-10 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[8px] font-medium'>{isPdf ? 'PDF' : 'FILE'}</span>
+                            )}
+                            <div className='flex-1 min-w-0'>
+                              <span className='block truncate max-w-full' title={f.originalName}>{f.originalName}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
