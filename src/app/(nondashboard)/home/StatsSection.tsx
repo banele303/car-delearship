@@ -42,7 +42,6 @@ const StatsSection = () => {
   const stats = [
     { key: 'vehicles', icon: Car, raw: dynamicStats.vehicles, label: 'Premium Vehicles', description: 'Quality cars in our inventory' },
     { key: 'customers', icon: Users, raw: '10000+', label: 'Happy Customers', description: 'Satisfied with our service' },
-    { key: 'experience', icon: Award, raw: '15+', label: 'Years Experience', description: 'In automotive industry' },
   ].map(s => ({
     ...s,
     target: parseValue(s.raw.toString()),

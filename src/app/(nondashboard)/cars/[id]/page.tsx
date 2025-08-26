@@ -331,6 +331,15 @@ const CarDetailPage = () => {
                     </div>
                   </div>
                 )}
+
+                {car.description && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold mb-2">Description</h3>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                      {car.description}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

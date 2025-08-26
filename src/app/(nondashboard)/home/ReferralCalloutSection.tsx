@@ -49,15 +49,13 @@ export default function ReferralCalloutSection() {
               <Share2 size={14} /> Referral Program
             </span>
             <h2 id="referral-heading" className="text-3xl md:text-4xl font-bold leading-tight">
-              Earn <span className="text-white/90 underline decoration-white/40">R8,000+</span> for Every Successful Referral
+                Earn <span className="text-white/90 underline decoration-white/40">R1,000+</span> for Every Successful Referral
             </h2>
             <p className="text-white/90 text-lg max-w-lg leading-relaxed">
               Love what we do? Turn your network into opportunity. Refer a buyer who completes a financed vehicle purchase and receive a generous reward. There&apos;s no cap—keep earning with every deal.
             </p>
             <ul className="space-y-3 text-sm text-white/85">
-              <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-white" /> Paid out within 7 days after a qualifying purchase is finalized.</li>
-              <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-white" /> Choose cash, service credits, or accessory vouchers.</li>
-              <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-white" /> Higher tiers unlock boosted payouts & exclusive invites.</li>
+                <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-white" /> Paid out within 7 days after a qualifying purchase is finalized.</li>
             </ul>
             <div className="flex flex-wrap gap-4 pt-2">
               <Link
@@ -75,31 +73,7 @@ export default function ReferralCalloutSection() {
             </div>
             <p className="text-[11px] text-white/70 max-w-md">* Example reward shown. Actual payout may vary by vehicle category & finance approval value. Terms apply.</p>
           </motion.div>
-            {/* Right perks grid */}
-            <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            viewport={{ once: true }}
-            className="grid sm:grid-cols-2 gap-5"
-          >
-              {perks.map((p, i) => (
-              <motion.div
-                key={p.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.05 * i }}
-                viewport={{ once: true }}
-                className="relative rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-5 flex flex-col hover:bg-white/15 transition-colors"
-              >
-                <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/20 text-white mb-4">
-                  <p.icon size={22} />
-                </div>
-                <h3 className="font-semibold text-base mb-1 leading-snug">{p.title}</h3>
-                <p className="text-sm text-white/80 leading-relaxed flex-1">{p.desc}</p>
-              </motion.div>
-              ))}
-            </motion.div>
+            {/* Right perks grid removed as requested */}
           </div>
         </div>
       </div>

@@ -75,7 +75,7 @@ export const createNewUserInDatabase = async (
       // For employees, include required fields
       ...(userRole?.toLowerCase() === "employee" && {
         role: 'SALES_ASSOCIATE',
-        status: 'ACTIVE',
+        status: 'ACTIVE', 
         hireDate: new Date().toISOString(),
         commission: 0.0
       })
