@@ -46,13 +46,13 @@ export default function AboutUsSection() {
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
               Advance Auto is a trusted dealership with clients from all corners of the country. Located at 2A Amanda Avenue in Gleneagles - Joburg South, we take pride in selling affordable and quality cars. We are happy to be at your service and look forward to helping you buy your next car with us.
             </p>
-            <p className="text-gray-600 dark:text-gray-300 leading-relaxed max-w-xl">
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
               We understand that mobility is a need and buying a car is one of the biggest commitments. Buying a car with us unlocks and creates opportunities for you. Mobility provides sense of pride, comfort and convenience. It widens our perspective and also gives us memories to cherish forever.
             </p>
-            <p className="text-gray-600 dark:text-gray-300 leading-relaxed max-w-xl">
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
               Come to Advance Auto for best service and customer experience!!!
             </p>
-            <p className="font-semibold text-gray-800 dark:text-gray-200">Advance Auto<br/>Cars You Can Trust</p>
+            <p className="font-semibold text-gray-800 dark:text-gray-200 text-lg">Advance Auto<br/>Cars You Can Trust</p>
             <div className="grid sm:grid-cols-3 gap-5 pt-4">
               {[
                 { label: 'Vehicles Curated', value: '500+' },
