@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FinancingAnalytics from '@/components/analytics/FinancingAnalytics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +10,28 @@ import Link from 'next/link';
 
 export default function FinancingAnalyticsPage() {
   const [timeRange, setTimeRange] = useState('6months');
+  const [summary, setSummary] = useState<{approvalRate:number; averageLoanAmount:number; averageProcessingDays:number;} | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/admin/financing/analytics');
+        if(res.ok){
+          const j = await res.json();
+          setSummary({
+            approvalRate: j.summary?.approvalRate ?? 0,
+            averageLoanAmount: j.summary?.averageLoanAmount ?? 0,
+            averageProcessingDays: j.summary?.averageProcessingDays ?? 0,
+          });
+        }
+      } catch(e){
+        // silent fallback
+      } finally { setLoading(false); }
+    };
+    load();
+  },[]);
   
   const handleExportData = () => {
     // In a real implementation, this would generate and download a CSV or PDF report
@@ -56,43 +78,29 @@ export default function FinancingAnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Approval Rate
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Approval Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">68%</div>
-            <p className="text-xs text-green-600 dark:text-green-400">
-              +2.5% from previous period
-            </p>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{loading ? '—' : `${summary?.approvalRate ?? 0}%`}</div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Live (last 6 months)</p>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Average Loan Amount
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Loan Amount</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">R245,800</div>
-            <p className="text-xs text-green-600 dark:text-green-400">
-              +R15,200 from previous period
-            </p>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{loading ? '—' : `R${(summary?.averageLoanAmount||0).toLocaleString()}`}</div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Across retrieved period</p>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Average Processing Time
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Processing Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">3.2 days</div>
-            <p className="text-xs text-green-600 dark:text-green-400">
-              -0.5 days from previous period
-            </p>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{loading ? '—' : `${summary?.averageProcessingDays ?? 0} days`}</div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Approved / rejected only</p>
           </CardContent>
         </Card>
       </div>

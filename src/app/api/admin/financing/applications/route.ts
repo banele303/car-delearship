@@ -74,6 +74,13 @@ export async function GET(request: NextRequest) {
             firstName: true,
             lastName: true
           }
+        },
+        sale: {
+          include: {
+            car: {
+              select: { make: true, model: true, year: true }
+            }
+          }
         }
       }
     });
@@ -85,6 +92,7 @@ export async function GET(request: NextRequest) {
         ? `${app.details.firstName} ${app.details.lastName}`
         : app.customer.name;
       
+      const carModel = app.sale?.car ? `${app.sale.car.make} ${app.sale.car.model}` : '';
       return {
         id: app.id,
         customerName,
@@ -95,7 +103,8 @@ export async function GET(request: NextRequest) {
         creditScore: app.creditScore || 0,
         termMonths: app.termMonths,
         monthlyPayment: app.monthlyPayment,
-        interestRate: app.interestRate
+        interestRate: app.interestRate,
+        carModel
       };
     });
 

@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
     sixMonthsAgo.setDate(1); // Start from the 1st day of that month
     sixMonthsAgo.setHours(0, 0, 0, 0);
     
-    // Get all financing applications from the last 6 months
-    const applications = await prisma.financingApplication.findMany({
+  // Get all financing applications from the last 6 months (include approvalDate for processing time calc)
+  const applications = await prisma.financingApplication.findMany({
       where: {
         applicationDate: {
           gte: sixMonthsAgo
@@ -155,11 +155,34 @@ export async function GET(request: NextRequest) {
       approvalRate: data.total > 0 ? Math.round((data.approved / data.total) * 100) : 0
     }));
     
+    // Summary metrics
+    const total = applications.length;
+    const approved = applications.filter(a => a.status === 'APPROVED').length;
+    const rejected = applications.filter(a => a.status === 'REJECTED').length;
+    const pending = applications.filter(a => a.status === 'PENDING').length;
+    const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
+    const averageLoanAmount = total > 0 ? Math.round(applications.reduce((sum, a) => sum + a.loanAmount, 0) / total) : 0;
+    const processingDurations: number[] = applications
+      .filter(a => a.approvalDate && a.status !== 'PENDING')
+      .map(a => (a.approvalDate!.getTime() - a.applicationDate.getTime()) / (1000 * 60 * 60 * 24));
+    const averageProcessingDays = processingDurations.length
+      ? Number((processingDurations.reduce((s,d)=>s+d,0) / processingDurations.length).toFixed(1))
+      : 0;
+
     return NextResponse.json({
       monthly,
       byLoanRange,
       byAgeGroup,
-      approvalRateTimeline
+      approvalRateTimeline,
+      summary: {
+        total,
+        approved,
+        rejected,
+        pending,
+        approvalRate,
+        averageLoanAmount,
+        averageProcessingDays
+      }
     });
     
   } catch (error) {

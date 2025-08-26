@@ -22,26 +22,11 @@ import {
 } from 'recharts';
 
 type FinancingData = {
-  monthly: Array<{
-    month: string;
-    applications: number;
-    approved: number;
-    rejected: number;
-  }>;
-  byVehicleType: Array<{
-    vehicleType: string;
-    count: number;
-    percentage: number;
-  }>;
-  byAgeGroup: Array<{
-    ageGroup: string;
-    count: number;
-    percentage: number;
-  }>;
-  approvalRateTimeline: Array<{
-    month: string;
-    approvalRate: number;
-  }>;
+  monthly: { month: string; applications: number; approved: number; rejected: number }[];
+  byLoanRange: { loanRange: string; count: number; percentage: number }[];
+  byAgeGroup: { ageGroup: string; count: number; percentage: number }[];
+  approvalRateTimeline: { month: string; approvalRate: number }[];
+  summary?: { total:number; approved:number; rejected:number; pending:number; approvalRate:number };
 };
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
@@ -58,41 +43,11 @@ export default function FinancingAnalytics() {
         const res = await fetch('/api/admin/financing/analytics');
         if (!res.ok) throw new Error('Failed to fetch financing analytics');
         
-        const analyticsData = await res.json();
-        setData(analyticsData);
+  const analyticsData = await res.json();
+  setData(analyticsData);
       } catch (error) {
         console.error('Error fetching financing analytics:', error);
-        // Fallback demo data
-        setData({
-          monthly: [
-            { month: 'Jan', applications: 12, approved: 8, rejected: 4 },
-            { month: 'Feb', applications: 15, approved: 10, rejected: 5 },
-            { month: 'Mar', applications: 18, approved: 12, rejected: 6 },
-            { month: 'Apr', applications: 16, approved: 9, rejected: 7 },
-            { month: 'May', applications: 20, approved: 14, rejected: 6 },
-            { month: 'Jun', applications: 22, approved: 16, rejected: 6 },
-          ],
-          byVehicleType: [
-            { vehicleType: 'Sedan', count: 30, percentage: 38 },
-            { vehicleType: 'SUV', count: 25, percentage: 32 },
-            { vehicleType: 'Hatchback', count: 15, percentage: 19 },
-            { vehicleType: 'Truck', count: 8, percentage: 10 },
-          ],
-          byAgeGroup: [
-            { ageGroup: '18-25', count: 22, percentage: 28 },
-            { ageGroup: '26-35', count: 35, percentage: 44 },
-            { ageGroup: '36-45', count: 15, percentage: 19 },
-            { ageGroup: '45+', count: 7, percentage: 9 },
-          ],
-          approvalRateTimeline: [
-            { month: 'Jan', approvalRate: 66 },
-            { month: 'Feb', approvalRate: 67 },
-            { month: 'Mar', approvalRate: 67 },
-            { month: 'Apr', approvalRate: 56 },
-            { month: 'May', approvalRate: 70 },
-            { month: 'Jun', approvalRate: 73 },
-          ],
-        });
+  setData({ monthly: [], byLoanRange: [], byAgeGroup: [], approvalRateTimeline: [], summary: { total:0, approved:0, rejected:0, pending:0, approvalRate:0 }});
       } finally {
         setIsLoading(false);
       }
@@ -138,7 +93,7 @@ export default function FinancingAnalytics() {
       <Tabs defaultValue="monthly" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="monthly">Monthly Applications</TabsTrigger>
-          <TabsTrigger value="vehicle">Vehicle Types</TabsTrigger>
+          <TabsTrigger value="loanRange">Loan Amount Ranges</TabsTrigger>
           <TabsTrigger value="age">Age Groups</TabsTrigger>
           <TabsTrigger value="approval">Approval Rate</TabsTrigger>
         </TabsList>
@@ -170,27 +125,27 @@ export default function FinancingAnalytics() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="vehicle">
+  <TabsContent value="loanRange">
           <Card>
             <CardHeader>
-              <CardTitle>Applications by Vehicle Type</CardTitle>
+        <CardTitle>Applications by Loan Amount Range</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={data?.byVehicleType}
+          data={data?.byLoanRange}
                       cx="50%"
                       cy="50%"
                       labelLine={true}
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                       outerRadius={120}
                       fill="#8884d8"
-                      dataKey="count"
-                      nameKey="vehicleType"
+          dataKey="count"
+          nameKey="loanRange"
                     >
-                      {data?.byVehicleType.map((entry, index) => (
+          {data?.byLoanRange.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
