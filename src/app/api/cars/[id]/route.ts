@@ -160,6 +160,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (data.mileage) data.mileage = parseInt(data.mileage);
     if (data.dealershipId) data.dealershipId = parseInt(data.dealershipId);
     if (data.employeeId === '' || data.employeeId === undefined) data.employeeId = null;
+    // Validate employeeId if provided (it references Employee.cognitoId)
+    if (data.employeeId) {
+      const employeeExists = await prisma.employee.findUnique({ where: { cognitoId: String(data.employeeId) } });
+      if (!employeeExists) {
+        return NextResponse.json({ message: `Employee ${data.employeeId} not found.` }, { status: 404 });
+      }
+    }
 
     // Existing photos kept
     let keptExisting = existingCar.photoUrls || [];

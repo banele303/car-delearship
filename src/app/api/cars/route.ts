@@ -152,6 +152,15 @@ export async function POST(req: NextRequest) {
     } else {
       delete carData.dealershipId;
     }
+    // Validate employeeId (references Employee.cognitoId) if provided
+    if (carData.employeeId) {
+      const employeeExists = await prisma.employee.findUnique({ where: { cognitoId: String(carData.employeeId) } });
+      if (!employeeExists) {
+        return NextResponse.json({ message: `Employee ${carData.employeeId} not found.` }, { status: 404 });
+      }
+    } else if (carData.employeeId === '') {
+      delete carData.employeeId;
+    }
     try {
       const newCar = await prisma.car.create({ data: carData as any });
       return NextResponse.json(newCar, { status: 201 });
