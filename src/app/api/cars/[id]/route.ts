@@ -123,25 +123,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const formData = await request.formData();
-    // Collect raw (excluding files)
+    // Collect raw (excluding files) and accumulate multi features entries
     const raw: Record<string, any> = {};
+    const featureBuffer: string[] = [];
     for (const [key, value] of formData.entries()) {
       if (key === 'photos') continue;
-      raw[key] = value;
-    }
-    // Handle features separately if provided
-    if (typeof raw.features === 'string') {
-      const fv = raw.features.trim();
-      try {
-        if (fv.startsWith('[')) {
-          const parsed = JSON.parse(fv);
-          if (Array.isArray(parsed)) raw.features = parsed.map(v=>String(v).trim()).filter(Boolean);
-        } else {
-          raw.features = fv.split(',').map(s=>s.trim()).filter(Boolean);
+      if (key === 'features') {
+        const rawVal = String(value).trim();
+        if (!rawVal) continue;
+        if (rawVal.startsWith('[')) {
+          try {
+            const parsed = JSON.parse(rawVal);
+            if (Array.isArray(parsed)) parsed.forEach(v=>{ const s=String(v).trim(); if(s) featureBuffer.push(s); });
+            continue;
+          } catch {}
         }
-      } catch {
-        raw.features = fv.split(',').map(s=>s.replace(/[\[\]"]+/g,'').trim()).filter(Boolean);
+        rawVal.split(',').forEach(tok => { const s = tok.replace(/[\[\]"]+/g,'').trim(); if (s) featureBuffer.push(s); });
+      } else {
+        raw[key] = value;
       }
+    }
+    if (featureBuffer.length) {
+      const seen = new Set<string>();
+      raw.features = featureBuffer.filter(f=>{ const k=f.toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; });
     }
     const photoUrlsRaw = typeof raw.photoUrls === 'string' ? raw.photoUrls : undefined;
     const photoOrderRaw = typeof raw.photoOrder === 'string' ? raw.photoOrder : undefined;

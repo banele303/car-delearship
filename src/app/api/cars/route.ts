@@ -64,29 +64,44 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const carData: any = {};
+    const featureBuffer: string[] = [];
     for (const [key, value] of formData.entries()) {
       if (key === 'photos') continue;
       if (key === 'features') {
-        const raw = String(value);
-        try {
-          if (raw.trim().startsWith('[')) {
+        const raw = String(value).trim();
+        if (!raw) continue;
+        if (raw.startsWith('[')) {
+          try {
             const arr = JSON.parse(raw);
             if (Array.isArray(arr)) {
-              carData[key] = arr.map(v => String(v).trim()).filter(v=>v.length);
-            } else {
-              carData[key] = raw.split(',').map(s=>s.replace(/[\[\]"]+/g,'').trim()).filter(Boolean);
+              arr.forEach(v => {
+                const s = String(v).trim();
+                if (s) featureBuffer.push(s);
+              });
             }
-          } else {
-            carData[key] = raw.split(',').map(s=>s.trim()).filter(Boolean);
+            continue; // handled
+          } catch {
+            // fall through to simple splitting
           }
-        } catch {
-          carData[key] = raw.split(',').map(s=>s.replace(/[\[\]"]+/g,'').trim()).filter(Boolean);
         }
+        raw.split(',').forEach(tok => {
+          const s = tok.replace(/[\[\]"]+/g,'').trim();
+          if (s) featureBuffer.push(s);
+        });
       } else if (['price','mileage','year','dealershipId'].includes(key)) {
         carData[key] = Number(value);
       } else {
         carData[key] = value as any;
       }
+    }
+    if (featureBuffer.length) {
+      // de-dupe preserving first selection order
+      const seen = new Set<string>();
+      carData.features = featureBuffer.filter(f => {
+        const k = f.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k); return true;
+      });
     }
     const photos = formData.getAll('photos') as File[];
   const MAX_FILES = Number(process.env.CAR_UPLOAD_MAX_FILES || 50);
