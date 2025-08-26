@@ -64,6 +64,16 @@ export default function AddCarPage() {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [dealershipFetchStatus, setDealershipFetchStatus] = useState<'idle'|'loading'|'success'|'error'>('idle');
   const [dealershipFetchError, setDealershipFetchError] = useState<string>('');
+  const FEATURE_OPTIONS = [
+    'Active/adaptive cruise control',
+    'Adaptive headlights (varying light distribution)',
+    'Navigation',
+    'Park distance control (PDC) - front',
+    'Park distance control (PDC) - rear',
+    'Rear side airbags',
+    'Sunroof',
+  ];
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
 
   // Central photo cap (adjust here if business rules change)
   const MAX_PHOTOS = 25; // Updated cap per request
@@ -324,6 +334,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
         fd.append('interiorColor', formData.interiorColor);
         fd.append('mileage', formData.mileage || '0');
         fd.append('description', formData.description);
+  fd.append('features', JSON.stringify(selectedFeatures));
         if (hasDealership) fd.append('dealershipId', formData.dealershipId);
         if (formData.employeeId) fd.append('employeeId', formData.employeeId);
         fd.append('status', formData.status);
@@ -577,6 +588,34 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
                   required
                 />
               </div>
+            </div>
+
+            {/* Extras / Features */}
+            <div className="space-y-3">
+              <Label className="block">Extras</Label>
+              <p className="text-xs text-slate-500">Select applicable extra features. These will display on the vehicle page.</p>
+              <div className="flex flex-wrap gap-2">
+                {FEATURE_OPTIONS.map(opt => {
+                  const active = selectedFeatures.includes(opt);
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setSelectedFeatures(prev => active ? prev.filter(f=>f!==opt) : [...prev, opt])}
+                      className={`px-3 py-1.5 text-xs rounded-full border transition focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-gray-900
+                        ${active ? 'bg-[#00A211] text-white border-[#00A211]' : 'bg-white dark:bg-gray-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-gray-700'}`}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {active && <span className="h-2.5 w-2.5 rounded-full bg-white/90 border border-white/30" />}
+                        {opt}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedFeatures.length > 0 && (
+                <div className="text-xs text-slate-500">{selectedFeatures.length} selected</div>
+              )}
             </div>
 
             <div className="space-y-2">

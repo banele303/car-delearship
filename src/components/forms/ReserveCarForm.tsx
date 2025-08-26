@@ -284,45 +284,7 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
           {/* Financial Information section removed per request */}
 
           
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-              <Calendar className="mr-2" size={20} />
-              Pickup Information
-            </h3>
-            
-            <div>
-              <Label htmlFor="preferredPickupDate">Preferred Pickup Date</Label>
-              <Input
-                id="preferredPickupDate"
-                type="date"
-                value={formData.preferredPickupDate}
-                onChange={(e) => handleInputChange("preferredPickupDate", e.target.value)}
-                min={minDate}
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="tradeInVehicle"
-                checked={formData.tradeInVehicle}
-                onCheckedChange={(checked) => handleInputChange("tradeInVehicle", checked as boolean)}
-              />
-              <Label htmlFor="tradeInVehicle">I have a vehicle to trade in</Label>
-            </div>
-
-            {formData.tradeInVehicle && (
-              <div>
-                <Label htmlFor="tradeInDetails">Trade-in Vehicle Details</Label>
-                <Textarea
-                  id="tradeInDetails"
-                  value={formData.tradeInDetails}
-                  onChange={(e) => handleInputChange("tradeInDetails", e.target.value)}
-                  placeholder="Please provide details about your trade-in vehicle (make, model, year, mileage, condition)"
-                  rows={3}
-                />
-              </div>
-            )}
-          </div>
+          {/* Pickup & trade-in section removed for inquiry focus */}
 
           
           <div className="space-y-4">
@@ -368,11 +330,11 @@ const ReserveCarForm: React.FC<ReserveCarFormProps> = ({ isOpen, onClose, carId,
           </div>
 
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-start">
               <AlertCircle className="text-blue-600 mr-2 mt-0.5" size={16} />
               <div className="text-sm text-blue-800">
-                <strong>Important:</strong> By submitting this reservation, you commit to purchasing this vehicle. We will hold the vehicle for 7 days. Final paperwork and payment must be completed within this period.
+        <strong>Note:</strong> This is an inquiry only. Submitting the form lets our team contact you with availability, viewing options, and next steps. No purchase or hold is created until you confirm in writing.
               </div>
             </div>
           </div>
