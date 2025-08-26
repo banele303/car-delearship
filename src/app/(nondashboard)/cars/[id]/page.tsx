@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, DollarSign, Heart, Share2, Calendar, Gauge, Fuel, Car, Star, Shield } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, DollarSign, Heart, Share2, Calendar, Gauge, Fuel, Car, Shield, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,14 @@ import { toast } from "sonner";
 import ReserveCarForm from "@/components/forms/ReserveCarForm";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 
+// Narrow type for car to include optional dealership (API returns it via include)
+interface CarWithRelations {
+  id: number; make: string; model: string; year: number; price: number; mileage: number;
+  condition: string; carType: string; fuelType: string; transmission: string; engine?: string;
+  exteriorColor?: string; interiorColor?: string; description?: string; status: string; vin: string;
+  photoUrls?: string[]; features?: string[]; dealershipId: number; averageRating?: number;
+  dealership?: { phoneNumber?: string } | null;
+}
 const CarDetailPage = () => {
   const params = useParams();
   const router = useRouter();
@@ -26,7 +34,7 @@ const CarDetailPage = () => {
   // (Moved car queries above photos usage to avoid ReferenceError)
 
   
-  const { data: car, isLoading, error } = useGetCarQuery(carId);
+  const { data: car, isLoading, error } = useGetCarQuery(carId) as { data: CarWithRelations | undefined, isLoading: boolean, error: any };
   // Fetch a small list of recent cars (excluding current) for the bottom section
   const { data: recentCars } = useGetCarsQuery({ limit: 8 });
   // Derive photos only after car is available (fallback to placeholder)
@@ -69,9 +77,8 @@ const CarDetailPage = () => {
   const { user } = useAuthenticator((context) => [context.user]);
   const cognitoId = (user as any)?.userId || (user as any)?.username || null;
 
-  const formatPrice = (price: number) => {
-    return `R ${price.toLocaleString()}`;
-  };
+  const formatPrice = (price: number) => `R ${price.toLocaleString()}`;
+  const [showNumber, setShowNumber] = useState(false);
 
   const handleApplyForFinancing = () => {
     try {
@@ -375,11 +382,7 @@ const CarDetailPage = () => {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60 group-hover:opacity-70 transition-opacity" />
                             <div className="absolute top-2 left-2 flex gap-2">
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#00A211]/90 text-white shadow">{rc.status}</span>
-                              {rc.averageRating && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-400/90 text-black flex items-center gap-1">
-                                  <Star className="h-3 w-3" /> {rc.averageRating}
-                                </span>
-                              )}
+                              {/* Rating badge removed in redesign */}
                             </div>
                             <div className="absolute bottom-2 left-2 right-2">
                               <p className="text-sm font-semibold text-white drop-shadow">{rc.year} {rc.make}</p>
@@ -423,68 +426,64 @@ const CarDetailPage = () => {
                 <CardContent className="p-6">
                   
                   <div className="mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
                       {car.year} {car.make} {car.model}
                     </h1>
-                    <div className="flex items-center gap-2 mb-3">
-                      {car.status !== 'AVAILABLE' && (
-                        <Badge
-                          variant="secondary"
-                          className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                        >
-                          {car.status}
-                        </Badge>
-                      )}
-                      {car.averageRating && (
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">{car.averageRating}</span>
-                        </div>
-                      )}
-                    </div>
+                    {car.status !== 'AVAILABLE' && (
+                      <Badge
+                        variant="secondary"
+                        className="mb-4 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                      >
+                        {car.status}
+                      </Badge>
+                    )}
                     {car.price > 0 && (
-                      <p className="text-4xl font-bold text-[#00A211]">
-                        {formatPrice(car.price)}
-                      </p>
+                      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-5 bg-white dark:bg-gray-800/70 shadow-sm">
+                        <div className="flex items-start justify-between">
+                          <p className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                            {formatPrice(car.price)}
+                          </p>
+                        </div>
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2.5 py-0.5 text-xs font-medium border border-emerald-200 dark:border-emerald-800">
+                            Great Price
+                          </span>
+                          {/* Placeholder for potential market diff tooltip */}
+                        </div>
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Price before fees & extras.</p>
+                        <div className="mt-5 grid grid-cols-2 gap-3">
+                          <Button
+                            type="button"
+                            onClick={() => setShowNumber(v=>!v)}
+                            className="col-span-1 bg-[#0079d6] hover:bg-[#006ac0] text-white font-semibold flex items-center justify-center gap-2"
+                          >
+                            <Phone className="h-4 w-4" />
+                            <span className="text-sm">{showNumber ? (((car as any).dealership?.phoneNumber) || 'N/A') : 'Show number'}</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleContactDealer}
+                            className="col-span-1 bg-[#0079d6] hover:bg-[#006ac0] text-white font-semibold flex items-center justify-center gap-2"
+                          >
+                            <Mail className="h-4 w-4" />
+                            <span className="text-sm">Message</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const phone = ((car as any).dealership?.phoneNumber)?.replace(/[^\d+]/g,'');
+                              const url = phone ? `https://wa.me/${phone.startsWith('+')?phone.substring(1):phone}?text=${encodeURIComponent('Hi, I am interested in the '+car.year+' '+car.make+' '+car.model)}` : `https://wa.me/?text=${encodeURIComponent('Hi, I am interested in the '+car.year+' '+car.make+' '+car.model)}`;
+                              window.open(url,'_blank','noopener');
+                            }}
+                            className="col-span-2 bg-[#0a5c48] hover:bg-[#084c3c] text-white font-semibold flex items-center justify-center gap-2"
+                          >
+                            <span className="text-sm font-semibold">WhatsApp</span>
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </div>
-
-                  <Separator className="mb-6" />
-
-                  
-                  <div className="space-y-3">
-                    <Button
-                      className="w-full bg-[#00A211] hover:bg-[#00870E] text-white py-3 text-lg font-semibold shadow-sm hover:shadow-md transition-colors"
-                      onClick={handleApplyForFinancing}
-                    >
-                      <DollarSign className="mr-2 h-5 w-5" />
-                      Apply for Financing
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      className="w-full border-[#00A211] text-[#00A211] hover:bg-[#00A211] hover:text-white py-3 text-lg font-semibold transition-colors"
-                      onClick={handleContactDealer}
-                    >
-                      Am interested in this Car
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      className={`w-full hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                        isFavorite ? 'text-red-500' : 'text-gray-600 dark:text-gray-400'
-                      }`}
-                      onClick={handleToggleFavorite}
-                    >
-                      <Heart className={`mr-2 h-4 w-4 ${isFavorite ? 'fill-red-500' : ''}`} />
-                      {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
-                    </Button>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  
-                  {/* Dealership info removed per request */}
+                  {/* Removed rating & old financing/contact/favorite buttons per new design */}
                 </CardContent>
               </Card>
             </div>
