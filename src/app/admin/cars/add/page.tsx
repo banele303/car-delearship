@@ -72,6 +72,16 @@ export default function AddCarPage() {
     'Park distance control (PDC) - rear',
     'Rear side airbags',
     'Sunroof',
+  // Added per request
+  'ABS',
+  'Airbags',
+  'Aircon',
+  'Cruise control',
+  'Electric Windows',
+  'Radio',
+  'Sidestep',
+  'Tow bar',
+  'Nudge bar',
   ];
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
 

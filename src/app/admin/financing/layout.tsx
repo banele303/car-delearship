@@ -43,15 +43,6 @@ export default function FinancingLayout({ children }: { children: React.ReactNod
           >
             <Link href="/admin/financing/analytics">Analytics</Link>
           </TabsTrigger>
-          <TabsTrigger 
-            value="settings" 
-            className={cn(
-              "data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900 dark:data-[state=active]:text-blue-100"
-            )}
-            asChild
-          >
-            <Link href="/admin/financing/settings">Settings</Link>
-          </TabsTrigger>
         </TabsList>
       </Tabs>
       {children}
@@ -63,6 +54,5 @@ function getTabValue(pathname: string): string {
   if (pathname.includes('/admin/financing/dashboard')) return 'dashboard';
   if (pathname.includes('/admin/financing/applications')) return 'applications';
   if (pathname.includes('/admin/financing/analytics')) return 'analytics';
-  if (pathname.includes('/admin/financing/settings')) return 'settings';
   return 'dashboard'; // Default
 }

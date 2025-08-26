@@ -318,24 +318,18 @@ const CarDetailPage = () => {
                 <Separator className="my-6" />
 
                 
-                {car.features && car.features.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Features & Equipment</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {car.features.map((feature, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <Shield className="h-4 w-4 text-[#00A211]" />
-                          <span className="text-sm">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
+                {car.description && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold mb-2">Description</h3>
+                    <p className="text-base md:text-lg text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">
+                      {car.description}
+                    </p>
                   </div>
                 )}
-
                 {car.features && car.features.length > 0 && (
                   <div className="mt-8">
                     <h3 className="text-lg font-semibold mb-3">Extras</h3>
-                    <div className="grid sm:grid-cols-2 gap-x-12 gap-y-2">
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-12 gap-y-2">
                       {car.features.map((f, i) => (
                         <div key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                           <span className="mt-1 h-3.5 w-3.5 rounded-full bg-[#00A211]/10 border border-[#00A211]/40 flex items-center justify-center">
@@ -345,15 +339,6 @@ const CarDetailPage = () => {
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {car.description && (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-2">Description</h3>
-                    <p className="text-base md:text-lg text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">
-                      {car.description}
-                    </p>
                   </div>
                 )}
               </CardContent>

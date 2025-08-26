@@ -19,13 +19,11 @@ import {
   Heart,
   Users,
   CreditCard,
-  LogOut,
   ChevronRight,
   Calendar,
   MessageSquare,
   Calculator,
   MapPin,
-  Award,
   BarChart3,
   Phone,
   UserCheck,
@@ -92,7 +90,6 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
     { icon: MessageSquare, label: "Inquiries", href: "/admin/inquiries" },
     { icon: DollarSign, label: "Sales", href: "/admin/sales" },
     { icon: CreditCard, label: "Financing", href: "/admin/financing" },
-    { icon: Award, label: "Reviews", href: "/admin/reviews" },
     { icon: Building, label: "Dealerships", href: "/admin/dealerships" },
     // System removed per request
   ];
@@ -214,28 +211,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
           )} />
           
           
-          <div>
-            {/* Settings & Notifications removed */}
-            <SidebarMenuItem className="mt-4">
-              <SidebarMenuButton
-                variant="ghost"
-                size="default"
-                className={cn(
-                  "transition-colors",
-                  isDark ? 
-                    "text-rose-400 hover:text-rose-300 hover:bg-rose-900/20" : 
-                    "text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                )}
-                onClick={() => {
-                  
-                  console.log('Logout clicked');
-                }}
-              >
-                <LogOut size={18} />
-                <span className="text-[14px] font-medium">Sign Out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </div>
+          {/* Sign Out button removed per request */}
         </SidebarMenu>
       </SidebarContent>
       

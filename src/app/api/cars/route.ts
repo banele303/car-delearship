@@ -67,7 +67,21 @@ export async function POST(req: NextRequest) {
     for (const [key, value] of formData.entries()) {
       if (key === 'photos') continue;
       if (key === 'features') {
-        carData[key] = (value as string).split(',').map(s => s.trim());
+        const raw = String(value);
+        try {
+          if (raw.trim().startsWith('[')) {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) {
+              carData[key] = arr.map(v => String(v).trim()).filter(v=>v.length);
+            } else {
+              carData[key] = raw.split(',').map(s=>s.replace(/[\[\]"]+/g,'').trim()).filter(Boolean);
+            }
+          } else {
+            carData[key] = raw.split(',').map(s=>s.trim()).filter(Boolean);
+          }
+        } catch {
+          carData[key] = raw.split(',').map(s=>s.replace(/[\[\]"]+/g,'').trim()).filter(Boolean);
+        }
       } else if (['price','mileage','year','dealershipId'].includes(key)) {
         carData[key] = Number(value);
       } else {

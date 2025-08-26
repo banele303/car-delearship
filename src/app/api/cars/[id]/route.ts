@@ -129,12 +129,26 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (key === 'photos') continue;
       raw[key] = value;
     }
+    // Handle features separately if provided
+    if (typeof raw.features === 'string') {
+      const fv = raw.features.trim();
+      try {
+        if (fv.startsWith('[')) {
+          const parsed = JSON.parse(fv);
+          if (Array.isArray(parsed)) raw.features = parsed.map(v=>String(v).trim()).filter(Boolean);
+        } else {
+          raw.features = fv.split(',').map(s=>s.trim()).filter(Boolean);
+        }
+      } catch {
+        raw.features = fv.split(',').map(s=>s.replace(/[\[\]"]+/g,'').trim()).filter(Boolean);
+      }
+    }
     const photoUrlsRaw = typeof raw.photoUrls === 'string' ? raw.photoUrls : undefined;
     const photoOrderRaw = typeof raw.photoOrder === 'string' ? raw.photoOrder : undefined;
     delete raw.photoUrls; delete raw.photoOrder;
     if (typeof raw.featured === 'string') raw.featured = raw.featured === 'true';
     // Whitelist fields
-    const allowed = ['make','model','vin','carType','fuelType','condition','transmission','engine','exteriorColor','interiorColor','description','status','featured','dealershipId','employeeId','mileage','price','year'];
+  const allowed = ['make','model','vin','carType','fuelType','condition','transmission','engine','exteriorColor','interiorColor','description','status','featured','dealershipId','employeeId','mileage','price','year','features'];
     const data: any = {};
     allowed.forEach(k=>{ if (raw[k] !== undefined && raw[k] !== null && raw[k] !== '') data[k]=raw[k]; });
     if (data.year) data.year = parseInt(data.year);
