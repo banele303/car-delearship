@@ -564,6 +564,15 @@ export default function FinancingApplicationForm() {
       .filepond--tiny .filepond--file-info { font-size:9px; }
       .filepond--tiny .filepond--progress-indicator { transform:scale(.7); }
       .filepond--tiny .filepond--progress-indicator svg { stroke-width:2px; }
+  /* Custom single-loading mode */
+  .doc-upload-wrapper.uploading .filepond--root { visibility:hidden; }
+  .doc-upload-wrapper .filepond--progress-indicator,
+  .doc-upload-wrapper .filepond--load-indicator,
+  .doc-upload-wrapper .filepond--file-status { display:none !important; }
+  .doc-upload-overlay-fade { animation: docpulse 1.2s ease-in-out infinite; }
+  @keyframes docpulse { 0%{opacity:.55;} 50%{opacity:1;} 100%{opacity:.55;} }
+  /* Hide internal FilePond preview list; we'll show our own thumbnails */
+  .doc-upload-wrapper .filepond--list { display:none !important; }
     `;
     document.head.appendChild(style);
     tinyStyleInjected.current = true;
@@ -745,7 +754,7 @@ export default function FinancingApplicationForm() {
                     <span>{d.uploadLabel}{isReq && <span className='text-red-500'>*</span>}</span>
                     <span className='text-[10px] font-normal text-slate-500'>{uploaded} / {d.max}</span>
                   </Label>
-                  <div className={`relative rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs`}> 
+                  <div className={`doc-upload-wrapper ${uploadingByType[d.key] ? 'uploading' : ''} relative rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs transition-all`}> 
                     <FilePond
                       name={`files_${d.key}`}
                       allowMultiple
@@ -761,37 +770,38 @@ export default function FinancingApplicationForm() {
                       styleLoadIndicatorPosition='right'
                       styleProgressIndicatorPosition='right'
                       styleButtonRemoveItemPosition='right'
+                      onaddfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
                       onprocessfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
-                      onprocessfile={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
+                      onprocessfile={(error: any, file: any)=> { setUploadingByType(u=>({...u,[d.key]:false})); if(!error && file && file.remove) { file.remove(); } }}
                       onprocessfileabort={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
                       onprocessfileprogress={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
                       onprocessfilerevert={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
                     />
                     {uploadingByType[d.key] && (
-                      <div className='absolute inset-0 bg-white/60 dark:bg-slate-900/50 backdrop-blur-sm flex items-center justify-center rounded-md pointer-events-none'>
-                        <div className='flex items-center gap-2'>
-                          <span className='h-3 w-3 animate-spin rounded-full border-2 border-blue-500 border-t-transparent'></span>
-                          <span className='text-[10px] font-medium text-slate-600 dark:text-slate-300'>Uploading...</span>
+                      <div className='doc-upload-overlay-fade absolute inset-0 bg-gradient-to-br from-white/70 to-white/40 dark:from-slate-900/70 dark:to-slate-800/40 backdrop-blur-sm flex items-center justify-center rounded-md pointer-events-none'>
+                        <div className='flex flex-col items-center gap-1'>
+                          <span className='h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent'></span>
+                          <span className='text-[10px] font-medium tracking-wide text-slate-700 dark:text-slate-300'>Uploading...</span>
                         </div>
                       </div>
                     )}
                   </div>
                   <p className='mt-2 text-[10px] text-slate-500 leading-snug pr-4'>{d.hint}</p>
                   {!!uploaded && (
-                    <div className='mt-2 grid grid-cols-2 gap-1 overflow-auto max-h-20 pr-1'>
+                    <div className='mt-2 flex flex-wrap gap-2'>
                       {uploadedByType[d.key].map(f => {
                         const isImage = /\.(jpe?g|png|gif|webp)$/i.test(f.originalName);
                         const isPdf = /\.pdf$/i.test(f.originalName);
                         return (
-                          <div key={f.storedName} className='flex items-center gap-1 text-[9px] bg-slate-100/70 dark:bg-slate-800/40 rounded p-1'>
+                          <div key={f.storedName} className='relative group w-16 h-16 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex items-center justify-center shadow-sm'>
                             {isImage ? (
-                              <img src={f.url} alt={f.originalName} className='h-8 w-10 object-cover rounded border border-slate-200 dark:border-slate-700' />
+                              <img src={f.url} alt={f.originalName} className='object-cover w-full h-full' />
                             ) : (
-                              <span className='h-8 w-10 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[8px] font-medium'>{isPdf ? 'PDF' : 'FILE'}</span>
+                              <span className='text-[10px] font-medium text-slate-600 dark:text-slate-300 px-1 text-center leading-tight'>{isPdf ? 'PDF' : 'FILE'}</span>
                             )}
-                            <div className='flex-1 min-w-0'>
-                              <span className='block truncate max-w-full' title={f.originalName}>{f.originalName}</span>
-                            </div>
+                            <button type='button'
+                              onClick={() => setUploadedByType(prev => ({ ...prev, [d.key]: prev[d.key].filter(x => x.storedName !== f.storedName) }))}
+                              className='absolute bottom-0 left-0 right-0 text-[10px] bg-black/60 text-white py-0.5 font-medium opacity-90 hover:opacity-100 transition'>X</button>
                           </div>
                         );
                       })}
