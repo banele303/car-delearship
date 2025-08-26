@@ -160,12 +160,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (data.mileage) data.mileage = parseInt(data.mileage);
     if (data.dealershipId) data.dealershipId = parseInt(data.dealershipId);
     if (data.employeeId === '' || data.employeeId === undefined) data.employeeId = null;
-    // Validate employeeId if provided (it references Employee.cognitoId)
+    // Optional employeeId handling: resolve to cognitoId or drop silently
     if (data.employeeId) {
-      const employeeExists = await prisma.employee.findUnique({ where: { cognitoId: String(data.employeeId) } });
-      if (!employeeExists) {
-        return NextResponse.json({ message: `Employee ${data.employeeId} not found.` }, { status: 404 });
+      const suppliedEmp = String(data.employeeId).trim();
+      let employee = await prisma.employee.findUnique({ where: { cognitoId: suppliedEmp } });
+      if (!employee && /^\d+$/.test(suppliedEmp)) {
+        const idNum = parseInt(suppliedEmp, 10);
+        if (!isNaN(idNum)) {
+          const byId = await prisma.employee.findUnique({ where: { id: idNum } });
+          if (byId) employee = byId;
+        }
       }
+      if (employee) data.employeeId = employee.cognitoId; else data.employeeId = null;
     }
 
     // Existing photos kept

@@ -152,11 +152,22 @@ export async function POST(req: NextRequest) {
     } else {
       delete carData.dealershipId;
     }
-    // Validate employeeId (references Employee.cognitoId) if provided
+    // Handle employeeId optionally: attempt to resolve; if not found just omit instead of error.
     if (carData.employeeId) {
-      const employeeExists = await prisma.employee.findUnique({ where: { cognitoId: String(carData.employeeId) } });
-      if (!employeeExists) {
-        return NextResponse.json({ message: `Employee ${carData.employeeId} not found.` }, { status: 404 });
+      const suppliedEmp = String(carData.employeeId).trim();
+      let employee = await prisma.employee.findUnique({ where: { cognitoId: suppliedEmp } });
+      if (!employee && /^\d+$/.test(suppliedEmp)) {
+        // If numeric, try matching by internal numeric id then map to cognitoId
+        const idNum = parseInt(suppliedEmp, 10);
+        if (!isNaN(idNum)) {
+          const byId = await prisma.employee.findUnique({ where: { id: idNum } });
+          if (byId) employee = byId;
+        }
+      }
+      if (employee) {
+        carData.employeeId = employee.cognitoId; // ensure referencing cognitoId FK
+      } else {
+        delete carData.employeeId; // make optional silently
       }
     } else if (carData.employeeId === '') {
       delete carData.employeeId;
