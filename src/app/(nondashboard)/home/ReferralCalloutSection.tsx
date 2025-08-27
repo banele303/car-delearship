@@ -12,7 +12,7 @@ const perks = [
   },
   {
     icon: Gift,
-    title: 'Earn R1,000+ Per Deal',
+    title: 'Earn up to R1 000 Per Deal',
     desc: 'Get a cash reward or service credit for every successful financed vehicle purchased through your referral.'
   },
   {
@@ -48,30 +48,16 @@ export default function ReferralCalloutSection() {
             <span className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-4 py-1.5 rounded-full text-xs tracking-wide font-semibold uppercase">
               <Share2 size={14} /> Referral Program
             </span>
-            <h2 id="referral-heading" className="text-3xl md:text-4xl font-bold leading-tight">
-                Earn <span className="text-white/90 underline decoration-white/40">R1,000+</span> for Every Successful Referral
-            </h2>
+      <h2 id="referral-heading" className="text-3xl md:text-4xl font-bold leading-tight">
+        Earn up to R1 000 for Every Successful Referral
+      </h2>
             <p className="text-white/90 text-lg max-w-lg leading-relaxed">
               Love what we do? Turn your network into opportunity. Refer a buyer who completes a financed vehicle purchase and receive a generous reward. There&apos;s no cap—keep earning with every deal.
             </p>
             <ul className="space-y-3 text-sm text-white/85">
                 <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-white" /> Paid out within 7 days after a qualifying purchase is finalized.</li>
             </ul>
-            <div className="flex flex-wrap gap-4 pt-2">
-              <Link
-                href="/contact-us"
-                className="inline-flex items-center gap-2 bg-white text-[hsl(var(--primary))] font-semibold px-6 py-3 rounded-full shadow hover:shadow-lg hover:bg-white/90 transition-colors"
-              >
-                Get Started <ArrowRight size={18} />
-              </Link>
-              <Link
-                href="/financing"
-                className="inline-flex items-center gap-2 border border-white/40 px-6 py-3 rounded-full font-medium hover:bg-white/10 transition-colors"
-              >
-                View Financing
-              </Link>
-            </div>
-            <p className="text-[11px] text-white/70 max-w-md">* Example reward shown. Actual payout may vary by vehicle category & finance approval value. Terms apply.</p>
+            {/* Action buttons removed per request */}
           </motion.div>
             {/* Right perks grid removed as requested */}
           </div>
