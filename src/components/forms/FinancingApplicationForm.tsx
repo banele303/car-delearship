@@ -765,7 +765,14 @@ export default function FinancingApplicationForm() {
                       styleButtonRemoveItemPosition='right'
                       onaddfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
                       onprocessfilestart={()=> setUploadingByType(u=>({...u,[d.key]:true}))}
-                      onprocessfile={(error: any, file: any)=> { setUploadingByType(u=>({...u,[d.key]:false})); if(!error && file && file.remove) { file.remove(); } }}
+                      onprocessfile={(error: any, file: any)=> { 
+                        setUploadingByType(u=>({...u,[d.key]:false})); 
+                        if(error){
+                          try { const parsed = error?.body ? JSON.parse(error.body) : null; toast.error(parsed?.message || 'Upload failed'); } catch { toast.error('Upload failed'); }
+                          return;
+                        }
+                        if(file && file.remove) { file.remove(); }
+                      }}
                       onprocessfileabort={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
                       onprocessfilerevert={()=> setUploadingByType(u=>({...u,[d.key]:false}))}
                     />
