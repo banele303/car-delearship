@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { useRouter } from 'next/navigation'
 
 interface ModernCarCardProps {
   car: {
@@ -66,6 +67,7 @@ function ModernCarCard({
   const [imgSrc, setImgSrc] = useState<string>(car.photoUrls?.[0] || "/placeholder.jpg")
   const [isHovered, setIsHovered] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const router = useRouter()
 
   const handleImageError = () => {
     console.error(`Failed to load image: ${imgSrc}`)
@@ -73,12 +75,29 @@ function ModernCarCard({
     setImgSrc("/placeholder.jpg")
   }
 
+  const targetHref = carLink || `/cars/${car.id}`
+
+  const handleNavigate = () => router.push(targetHref)
+  const handleKey: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleNavigate();
+    }
+  }
+
   return (
     <Card
-      className="group overflow-hidden transition-all duration-300 hover:shadow-md bg-white dark:bg-slate-950 md:ml-[1.8rem] border border-gray-200 dark:border-[#333] rounded-lg relative h-[180px] w-full max-w-lg mx-auto"
+      className="group overflow-hidden transition-all duration-300 hover:shadow-md bg-white dark:bg-slate-950 md:ml-[1.8rem] border border-gray-200 dark:border-[#333] rounded-lg relative h-[180px] w-full max-w-lg mx-auto cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={handleNavigate}
+      role="link"
+      tabIndex={0}
+      onKeyDown={handleKey}
+      aria-label={`${car.year} ${car.make} ${car.model}`}
     >
+      {/* Full-card invisible link overlay for semantics (non-interactive due to role on Card) */}
+      <Link href={targetHref} aria-hidden className="absolute inset-0 z-10" tabIndex={-1} />
       <div className="flex h-full">
         
         <div className="w-2/5 h-full p-2">
@@ -135,12 +154,10 @@ function ModernCarCard({
 
         
         <div className="flex-1 flex flex-col justify-between p-3">
-          <div>
-            <Link href={carLink || `/cars/${car.id}`} scroll={false} className="block">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-0.5">
-                {`${car.year} ${car.make} ${car.model}`}
-              </h2>
-            </Link>
+          <div className="relative z-20">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-0.5">
+              {`${car.year} ${car.make} ${car.model}`}
+            </h2>
 
             <div className="flex items-center text-sm text-gray-700 dark:text-white/80 mb-1">
               <MapPin className="h-3 w-3 mr-1 flex-shrink-0 text-gray-500 dark:text-gray-400" />

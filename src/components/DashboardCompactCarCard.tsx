@@ -8,6 +8,7 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { useRouter } from 'next/navigation'
 
 interface CarCardCompactProps { 
   car: { 
@@ -44,13 +45,23 @@ export default function DashboardCompactCarCard({
 }: CarCardCompactProps) { 
   const [imgSrc, setImgSrc] = useState(car.photoUrls?.[0] || "/placeholder.svg?height=300&width=300")
   const [isHovered, setIsHovered] = useState(false)
+  const router = useRouter()
+  const targetHref = carLink || `/cars/${car.id}`
+  const go = () => router.push(targetHref)
+  const onKey: React.KeyboardEventHandler<HTMLDivElement> = e => { if (e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }
 
   return (
     <Card 
-      className="flex flex-row h-auto min-h-[160px] overflow-hidden transition-all duration-300 hover:shadow-xl border border-[#333] bg-black rounded-xl"
+      className="flex flex-row h-auto min-h-[160px] overflow-hidden transition-all duration-300 hover:shadow-xl border border-[#333] bg-black rounded-xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={go}
+      role="link"
+      tabIndex={0}
+      onKeyDown={onKey}
+      aria-label={`${car.year} ${car.make} ${car.model}`}
     >
+      <Link href={targetHref} className="absolute inset-0 z-10" aria-hidden tabIndex={-1} />
       <div className="relative h-full w-1/3 min-w-[120px] overflow-hidden">
         <Image
           src={imgSrc || "/placeholder.svg"}
@@ -82,14 +93,8 @@ export default function DashboardCompactCarCard({
       <div className="relative flex w-2/3 flex-col justify-between p-3 sm:p-4 bg-black text-white">
         <div className="space-y-1.5">
           <div className="flex items-start justify-between gap-2">
-            <h2 className="line-clamp-1 text-base font-bold sm:text-lg group-hover:text-blue-400 transition-colors">
-              {carLink ? (
-                <Link href={carLink} className="hover:text-blue-400" scroll={false}>
-                  {`${car.year} ${car.make} ${car.model}`}
-                </Link>
-              ) : (
-                `${car.year} ${car.make} ${car.model}`
-              )}
+            <h2 className="line-clamp-1 text-base font-bold sm:text-lg group-hover:text-blue-400 transition-colors relative z-20">
+              {`${car.year} ${car.make} ${car.model}`}
             </h2>
             {showFavoriteButton && (
               <Button
