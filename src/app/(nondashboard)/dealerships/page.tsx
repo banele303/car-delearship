@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import FooterSection from "../home/FooterSection"; 
 
 import DealershipHero from "./dealership-hero"; 
 import FeaturesDealershipSection from "./Featured"; 
@@ -41,7 +40,7 @@ export default function DealershipsPage() {
         </div>
       </section>
 
-      <FooterSection />
+  {/* Global footer from layout renders below */}
     </div>
   );
 }

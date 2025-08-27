@@ -2,7 +2,6 @@ import React from "react";
 import HeroSection from "./HeroSection";
 // CallToActionSection removed per request
 import FAQShared from "@/components/FAQShared";
-import SiteFooter from "./SiteFooter";
 import FeaturedDealer from "./FeaturedDealer";
 import TestimonialsSection from "./TestimonialsSection";
 import FeaturedCars from "./FeaturedCars";
@@ -21,7 +20,6 @@ function Home() {
       <FeaturedDealer />
       <TestimonialsSection />
   <FAQShared />
-  <SiteFooter />
     </div>
   );
 }

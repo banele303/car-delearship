@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import FooterSection from "@/app/(nondashboard)/home/FooterSection"; 
 import { siteConfig } from "@/lib/siteConfig";
 
 export default function TermsPage() {
@@ -154,7 +153,7 @@ export default function TermsPage() {
         </div>
       </div>
 
-      <FooterSection />
+  {/* Global footer from layout renders below */}
     </div>
   );
 }
