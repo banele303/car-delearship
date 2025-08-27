@@ -62,26 +62,57 @@ export const CarForm = ({ initialData }: CarFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formRef.current) return;
-
-    const formData = new FormData(formRef.current);
-
-  selectedFiles.forEach((file) => {
-      formData.append("photos", file);
-    });
-
-    
-    if (initialData?.photoUrls) {
-      formData.append("photoUrls", JSON.stringify(previewUrls));
+    // Split: send metadata first (no photos) to avoid large multipart 413
+    const allInputs = new FormData(formRef.current);
+    const metadata = new FormData();
+    for (const [k,v] of allInputs.entries()) {
+      if (k === 'photos') continue;
+      metadata.append(k,v);
     }
-
+    toast.loading('Creating car...');
+    let createdCar: any = null;
     try {
-      await createCar(formData).unwrap();
-      toast.success("Car created successfully!");
-      router.push("/admin/cars");
-    } catch (error) {
-      toast.error("Failed to create car.");
-      console.error(error);
+      createdCar = await createCar(metadata).unwrap();
+    } catch (err:any) {
+      toast.dismiss();
+      toast.error(err?.data?.message || 'Failed to create car.');
+      console.error('Create car error:', err);
+      return;
     }
+    toast.dismiss();
+    if (!selectedFiles.length) {
+      toast.success('Car created successfully!');
+      router.push('/admin/cars');
+      return;
+    }
+    // Sequential photo uploads
+    let success = 0; let failed = 0;
+    toast.loading(`Uploading 0/${selectedFiles.length} photos...`);
+    for (let i=0;i<selectedFiles.length;i++) {
+      const f = selectedFiles[i];
+      const fd = new FormData();
+      fd.append('photo', f);
+      try {
+        const res = await fetch(`/api/cars/${createdCar.id}/photos`, { method: 'POST', body: fd });
+        if (!res.ok) {
+          failed++; console.error('Photo upload failed', await res.text());
+        } else {
+          success++;
+        }
+      } catch (e) {
+        failed++; console.error('Photo upload exception', e);
+      }
+      toast.message(`Uploading ${i+1}/${selectedFiles.length} photos...`, { description: `${success} success, ${failed} failed` });
+    }
+    toast.dismiss();
+    if (failed === 0) {
+      toast.success('Car and photos uploaded successfully.');
+    } else if (success === 0) {
+      toast.error('All photo uploads failed. You can edit the car to add photos later.');
+    } else {
+      toast.warning(`${success} photos uploaded, ${failed} failed. You can retry in edit page.` as any);
+    }
+    router.push('/admin/cars');
   };
 
   const removeImage = (index: number) => {
