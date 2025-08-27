@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import { MapPin, Phone, Clock, Mail, Car, ShieldCheck, Wrench, ThumbsUp } from "lucide-react";
+import { MapPin, Phone, Clock, Mail, Car, ShieldCheck, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Completely re-imagined single-location section
@@ -10,7 +10,7 @@ const FeaturedDealer = () => {
   const phone = "+27 68 072 0424"; // updated primary contact number
   const email = "info@advanceauto.co.za"; // placeholder business email
   const hours = [
-    { label: "Mon - Fri", value: "08:00 - 18:00" },
+    { label: "Mon - Fri", value: "08:00 - 17:00" },
     { label: "Saturday", value: "08:00 - 14:00" },
     { label: "Sunday", value: "Closed" },
   ];
@@ -18,7 +18,6 @@ const FeaturedDealer = () => {
   const highlights = [
     { icon: Car, title: "Curated Stock", desc: "Hand-selected vehicles inspected for quality." },
     { icon: ShieldCheck, title: "Trusted Service", desc: "Transparent history & reliable guidance." },
-    { icon: Wrench, title: "Maintenance Ready", desc: "Service partners & post-sale assistance." },
     { icon: ThumbsUp, title: "Flexible Deals", desc: "Financing options tailored to your needs." },
   ];
 
