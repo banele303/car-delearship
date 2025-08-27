@@ -36,14 +36,14 @@ const schema = z.object({
   housingStatus: z.string().min(1, 'Housing status required'),
   title: z.string().min(1, 'Title required'),
   initials: z.string().min(1, 'Initials required'),
-  gender: z.string().min(1, 'Gender required'),
-  dependants: z.string().min(1, 'Dependants required'),
+  gender: z.string().optional(),
+  dependants: z.string().optional(),
   // monthlyHousingPayment removed per request
-  employmentStatus: z.string().optional(),
-  employerName: z.string().optional(),
-  jobTitle: z.string().optional(),
-  employmentYears: z.string().optional(),
-  monthlyIncomeGross: z.string().optional(),
+  employmentStatus: z.string().min(1, 'Employment status required'),
+  employerName: z.string().min(1, 'Employer name required'),
+  jobTitle: z.string().min(1, 'Job title required'),
+  employmentYears: z.string().min(1, 'Years in job required'),
+  monthlyIncomeGross: z.string().min(1, 'Gross monthly income required'),
   otherIncome: z.string().optional(),
   otherIncomeSource: z.string().optional(),
   creditScoreRange: z.string().optional(),
@@ -74,7 +74,7 @@ const schema = z.object({
   periodAtPreviousAddress: z.string().optional(),
   previousAddress: z.string().optional(),
   postalAddress: z.string().optional(),
-  telephoneHome: z.string().optional(),
+  telephoneHome: z.string().min(1, 'Home phone required'),
   telephoneWork: z.string().optional(),
   fax: z.string().optional(),
   spouseName: z.string().optional(),
@@ -177,10 +177,13 @@ interface FieldProps { label: string; name: keyof FinancingPublicForm; type?: st
 
 // Required field names (excluding declaration checkboxes handled elsewhere)
 const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
-  // First 15 inputs
-  'firstName','lastName','email','phone','dateOfBirth','idNumber','address','city','state','postalCode','housingStatus','title','initials','gender','dependants',
+  // First 15 inputs (gender & dependants made optional per request)
+  'firstName','lastName','email','phone','dateOfBirth','idNumber','address','city','state','postalCode','housingStatus','title','initials',
   // Next of kin required fields
   'nextOfKinName','nextOfKinRelationship','nextOfKinAddress','nextOfKinCell',
+  'telephoneHome',
+  // Employment line now required
+  'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross',
   // Existing vehicle required fields
   'vehicleCondition','cashPrice','vehicleMake','vehicleModel'
 ]);
@@ -616,6 +619,28 @@ export default function FinancingApplicationForm() {
     return () => document.removeEventListener('blur', blurListener, true);
   }, []);
 
+  // Auto-sum expenses into totalMonthlyHouseholdExpenses
+  const expenseKeys: (keyof FinancingPublicForm)[] = [
+    'expenseRentBond','expenseRatesUtilities','expenseVehicleInstalments','expensePersonalLoans','expenseCreditCardRepayment','expenseFurniture','expenseClothing','expenseOverdraft','expenseInsurance','expenseTelephone','expenseTransport','expenseFoodEntertainment','expenseEducation','expenseMaintenance','expenseHousehold','expenseOther'
+  ];
+  useEffect(() => {
+    let sum = 0;
+    for (const k of expenseKeys) {
+      const raw = (form as any)[k];
+      if (raw) {
+        const num = parseFloat(String(raw).replace(/[^0-9.]/g,''));
+        if (!isNaN(num)) sum += num;
+      }
+    }
+    const newVal = sum > 0 ? String(sum.toFixed(2)) : '';
+    if (form.totalMonthlyHouseholdExpenses !== newVal) {
+      setForm(prev => ({ ...prev, totalMonthlyHouseholdExpenses: newVal }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    form.expenseRentBond,form.expenseRatesUtilities,form.expenseVehicleInstalments,form.expensePersonalLoans,form.expenseCreditCardRepayment,form.expenseFurniture,form.expenseClothing,form.expenseOverdraft,form.expenseInsurance,form.expenseTelephone,form.expenseTransport,form.expenseFoodEntertainment,form.expenseEducation,form.expenseMaintenance,form.expenseHousehold,form.expenseOther
+  ]);
+
   // Document requirements (restored full list + payslip variants) with small upload zones
   const docRequirements = [
     { key: 'id_doc', question: "Valid id document - no copies (if you don't have a valid id you need to get a temporary one)", uploadLabel: 'Upload ID Copy', required: true, max: 2, hint: 'Clear photos (front & back).' },
@@ -828,7 +853,7 @@ export default function FinancingApplicationForm() {
             <TextField label='Period at Previous Address' name='periodAtPreviousAddress' defaultValue={form.periodAtPreviousAddress||''} />
             <TextField label='Previous Address' name='previousAddress' defaultValue={form.previousAddress||''} colSpan='md:col-span-2' />
             <TextField label='Postal Address' name='postalAddress' defaultValue={form.postalAddress||''} colSpan='md:col-span-2' />
-            <TextField label='Telephone (Home)' name='telephoneHome' defaultValue={form.telephoneHome||''} />
+            <TextField label='Cell Phone (Home)' name='telephoneHome' defaultValue={form.telephoneHome||''} />
             <TextField label='Telephone (Work)' name='telephoneWork' defaultValue={form.telephoneWork||''} />
             <TextField label='Fax' name='fax' defaultValue={form.fax||''} />
             <TextField label='Spouse Name' name='spouseName' defaultValue={form.spouseName||''} />
@@ -871,6 +896,32 @@ export default function FinancingApplicationForm() {
             <TextField label='Exact Credit Score' name='creditScore' defaultValue={form.creditScore||''} />
           </div>
         </div>
+      </Section>
+
+      <Section id='expenses' title='Monthly Household Expenses' desc='Enter average monthly amounts (R). Total auto-calculates.'>
+        <div className='grid md:grid-cols-4 gap-4'>
+          <TextField label='Rent / Bond' name='expenseRentBond' defaultValue={form.expenseRentBond||''} />
+          <TextField label='Rates & Utilities' name='expenseRatesUtilities' defaultValue={form.expenseRatesUtilities||''} />
+          <TextField label='Vehicle Instalments' name='expenseVehicleInstalments' defaultValue={form.expenseVehicleInstalments||''} />
+          <TextField label='Personal Loans' name='expensePersonalLoans' defaultValue={form.expensePersonalLoans||''} />
+          <TextField label='Credit Card Repayments' name='expenseCreditCardRepayment' defaultValue={form.expenseCreditCardRepayment||''} />
+          <TextField label='Furniture' name='expenseFurniture' defaultValue={form.expenseFurniture||''} />
+            <TextField label='Clothing' name='expenseClothing' defaultValue={form.expenseClothing||''} />
+          <TextField label='Overdraft' name='expenseOverdraft' defaultValue={form.expenseOverdraft||''} />
+          <TextField label='Insurance' name='expenseInsurance' defaultValue={form.expenseInsurance||''} />
+          <TextField label='Telephone' name='expenseTelephone' defaultValue={form.expenseTelephone||''} />
+          <TextField label='Transport' name='expenseTransport' defaultValue={form.expenseTransport||''} />
+          <TextField label='Food & Entertainment' name='expenseFoodEntertainment' defaultValue={form.expenseFoodEntertainment||''} />
+          <TextField label='Education' name='expenseEducation' defaultValue={form.expenseEducation||''} />
+          <TextField label='Maintenance (Alimony etc.)' name='expenseMaintenance' defaultValue={form.expenseMaintenance||''} />
+          <TextField label='Household / Domestic' name='expenseHousehold' defaultValue={form.expenseHousehold||''} />
+          <TextField label='Other' name='expenseOther' defaultValue={form.expenseOther||''} />
+          <div className='md:col-span-4 mt-2 p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm flex items-center justify-between'>
+            <span className='font-medium'>Total Monthly Household Expenses</span>
+            <span className='font-semibold text-slate-800 dark:text-slate-100'>R {form.totalMonthlyHouseholdExpenses || '0.00'}</span>
+          </div>
+        </div>
+        <input type='hidden' name='totalMonthlyHouseholdExpenses' value={form.totalMonthlyHouseholdExpenses || ''} />
       </Section>
 
   {/* Employment & Income section removed per request */}
