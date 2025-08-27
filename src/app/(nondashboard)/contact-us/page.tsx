@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Phone, Mail, MapPin, Send } from "lucide-react";
-import FooterSection from "@/app/(nondashboard)/home/FooterSection"; 
+// FooterSection import removed (using global/site footer only)
 
 export default function ContactUsPage() {
   const [formData, setFormData] = useState({
@@ -291,7 +291,7 @@ export default function ContactUsPage() {
         </div>
       </section>
       
-      <FooterSection />
+  {/* Global footer rendered elsewhere; removed duplicate footer */}
     </div>
   );
 }

@@ -876,15 +876,16 @@ export default function FinancingApplicationForm() {
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Work & Income Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
             <div>
-              <Label className='text-sm font-medium'>Employment Status</Label>
+              <Label className='text-sm font-medium flex items-center gap-1'>Employment Status<span className='text-red-500'>*</span></Label>
               <Select value={form.employmentStatus||''} onValueChange={onChangeHandlers.employmentStatus}>
-                <SelectTrigger className='mt-1'><SelectValue placeholder='Select' /></SelectTrigger>
+                <SelectTrigger className={'mt-1 ' + (errors.employmentStatus ? 'border-red-500 focus-visible:ring-red-500' : '')}><SelectValue placeholder='Select' /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value='full_time'>Full-Time</SelectItem>
                   <SelectItem value='part_time'>Part-Time</SelectItem>
                   <SelectItem value='self_employed'>Self-Employed</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.employmentStatus && <p className='mt-1 text-xs text-red-600'>{errors.employmentStatus}</p>}
             </div>
             <TextField label='Employer Name' name='employerName' defaultValue={form.employerName||''} />
             <TextField label='Job Title' name='jobTitle' defaultValue={form.jobTitle||''} />
