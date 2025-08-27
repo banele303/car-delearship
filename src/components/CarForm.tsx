@@ -254,7 +254,7 @@ export const CarForm = ({ initialData }: CarFormProps) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Fuel
+              Petrol
             </label>
             <select
               name="fuelType"
@@ -262,7 +262,7 @@ export const CarForm = ({ initialData }: CarFormProps) => {
               required
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
-              <option value="FUEL">Fuel</option>
+              <option value="FUEL">Petrol</option>
               <option value="DIESEL">Diesel</option>
               <option value="HYBRID">Hybrid</option>
               <option value="ELECTRIC">Electric</option>
