@@ -336,51 +336,67 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
             return;
         }
 
-        
-  // Build legacy multipart form
-        const fd = new FormData();
-        fd.append('make', formData.make);
-        fd.append('model', formData.model);
-        fd.append('year', String(formData.year));
-        fd.append('price', formData.price || '0');
-        fd.append('vin', formData.vin);
-        fd.append('carType', formData.carType);
-  fd.append('fuelType', formData.fuelType === 'FUEL' ? 'FUEL' : formData.fuelType);
-        fd.append('condition', formData.condition);
-        fd.append('transmission', formData.transmission);
-        fd.append('engine', formData.engine);
-        fd.append('exteriorColor', formData.exteriorColor);
-        fd.append('interiorColor', formData.interiorColor);
-        fd.append('mileage', formData.mileage || '0');
-        fd.append('description', formData.description);
-  fd.append('features', JSON.stringify(selectedFeatures));
-        if (hasDealership) fd.append('dealershipId', formData.dealershipId);
-        if (formData.employeeId) fd.append('employeeId', formData.employeeId);
-        fd.append('status', formData.status);
-        fd.append('featured', formData.featured ? 'true' : 'false');
-        photoFiles.forEach(f=>fd.append('photos', f));
-  const carResponse = await fetch('/api/cars', {
+        // Step 1: create car without photos
+        const meta = new FormData();
+        meta.append('make', formData.make);
+        meta.append('model', formData.model);
+        meta.append('year', String(formData.year));
+        meta.append('price', formData.price || '0');
+        meta.append('vin', formData.vin);
+        meta.append('carType', formData.carType);
+        meta.append('fuelType', formData.fuelType === 'FUEL' ? 'FUEL' : formData.fuelType);
+        meta.append('condition', formData.condition);
+        meta.append('transmission', formData.transmission);
+        meta.append('engine', formData.engine);
+        meta.append('exteriorColor', formData.exteriorColor);
+        meta.append('interiorColor', formData.interiorColor);
+        meta.append('mileage', formData.mileage || '0');
+        meta.append('description', formData.description);
+        meta.append('features', JSON.stringify(selectedFeatures));
+        if (hasDealership) meta.append('dealershipId', formData.dealershipId);
+        if (formData.employeeId) meta.append('employeeId', formData.employeeId);
+        meta.append('status', formData.status);
+        meta.append('featured', formData.featured ? 'true' : 'false');
+
+        const createResp = await fetch('/api/cars', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
-          body: fd
+          body: meta
         });
-  if (!carResponse.ok) {
-          const raw = await carResponse.text();
+        if (!createResp.ok) {
+          const raw = await createResp.text();
           let message = raw;
-          try {
-            const parsed = JSON.parse(raw);
-            message = parsed.message || parsed.error || raw;
-          } catch {
-            if (carResponse.status === 413) {
-              message = 'Upload too large (413) after increasing limits. Try fewer or smaller images.';
-            }
-          }
+          try { const parsed = JSON.parse(raw); message = parsed.message || parsed.error || raw; } catch {}
           throw new Error(message.slice(0,300));
         }
+        const created: CarResponse = await createResp.json();
 
-  const car: CarResponse = await carResponse.json();
+        if (!photoFiles.length) {
+          toast.success('Car added successfully!');
+          router.push('/admin/cars');
+          return;
+        }
 
-        toast.success('Car added successfully!');
+        // Step 2: sequential photo uploads
+        let success = 0; let failed = 0;
+        for (let i=0;i<photoFiles.length;i++) {
+          const f = photoFiles[i];
+          const fdPhoto = new FormData();
+            fdPhoto.append('photo', f);
+          const res = await fetch(`/api/cars/${created.id}/photos`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fdPhoto
+          });
+          if (res.ok) success++; else { failed++; }
+        }
+        if (failed === 0) {
+          toast.success('Car and photos added successfully!');
+        } else if (success === 0) {
+          toast.error('Car created but all photo uploads failed. Edit later to add images.');
+        } else {
+          toast.warning(`${success} photos uploaded, ${failed} failed. You can add the rest via edit.` as any);
+        }
         router.push('/admin/cars');
   } catch (error) {
         console.error('Error adding car:', error);
