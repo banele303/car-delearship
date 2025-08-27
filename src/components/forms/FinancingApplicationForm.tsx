@@ -17,22 +17,27 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 const schema = z.object({
-  // Made optional after removing from UI
+  // Finance calculation fields (kept optional in UI)
   loanAmount: z.string().optional(),
   termMonths: z.string().optional(),
   interestRate: z.string().optional(),
   monthlyPayment: z.string().optional(),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  email: z.preprocess(v => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string().email().optional()),
-  phone: z.preprocess(v => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string().min(5).optional()),
-  dateOfBirth: z.string().optional(),
-  idNumber: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  postalCode: z.string().optional(),
-  housingStatus: z.string().optional(),
+  // FIRST 15 INPUTS NOW REQUIRED
+  firstName: z.string().min(1, 'First name required'),
+  lastName: z.string().min(1, 'Last name required'),
+  email: z.string().email('Valid email required'),
+  phone: z.string().min(5, 'Phone required'),
+  dateOfBirth: z.string().min(1, 'Date of birth required'),
+  idNumber: z.string().min(1, 'ID Number required'),
+  address: z.string().min(1, 'Address required'),
+  city: z.string().min(1, 'City required'),
+  state: z.string().min(1, 'State / Province required'),
+  postalCode: z.string().min(1, 'Postal Code required'),
+  housingStatus: z.string().min(1, 'Housing status required'),
+  title: z.string().min(1, 'Title required'),
+  initials: z.string().min(1, 'Initials required'),
+  gender: z.string().min(1, 'Gender required'),
+  dependants: z.string().min(1, 'Dependants required'),
   // monthlyHousingPayment removed per request
   employmentStatus: z.string().optional(),
   employerName: z.string().optional(),
@@ -63,10 +68,6 @@ const schema = z.object({
   vehicleTransmission: z.string().optional(),
   vehicleType: z.string().optional(),
   // balloonResidual & vehicleExtras removed per request
-  title: z.string().optional(),
-  initials: z.string().optional(),
-  gender: z.string().optional(),
-  dependants: z.string().optional(),
   maritalStatus: z.string().optional(),
   dateMarried: z.string().optional(),
   periodAtAddress: z.string().optional(),
@@ -79,10 +80,11 @@ const schema = z.object({
   spouseName: z.string().optional(),
   spouseId: z.string().optional(),
   spouseCell: z.string().optional(),
-  nextOfKinName: z.string().optional(),
-  nextOfKinRelationship: z.string().optional(),
-  nextOfKinAddress: z.string().optional(),
-  nextOfKinCell: z.string().optional(),
+  // NEXT OF KIN FIELDS NOW REQUIRED
+  nextOfKinName: z.string().min(1, 'Next of Kin name required'),
+  nextOfKinRelationship: z.string().min(1, 'Relationship required'),
+  nextOfKinAddress: z.string().min(1, 'Next of Kin address required'),
+  nextOfKinCell: z.string().min(1, 'Next of Kin cell required'),
   bondHolder: z.string().optional(),
   bondOutstandingAmount: z.string().optional(),
   propertyValue: z.string().optional(),
@@ -175,27 +177,56 @@ interface FieldProps { label: string; name: keyof FinancingPublicForm; type?: st
 
 // Required field names (excluding declaration checkboxes handled elsewhere)
 const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
-  'firstName','lastName',
+  // First 15 inputs
+  'firstName','lastName','email','phone','dateOfBirth','idNumber','address','city','state','postalCode','housingStatus','title','initials','gender','dependants',
+  // Next of kin required fields
+  'nextOfKinName','nextOfKinRelationship','nextOfKinAddress','nextOfKinCell',
+  // Existing vehicle required fields
   'vehicleCondition','cashPrice','vehicleMake','vehicleModel'
 ]);
+
+// Date field auto-detection
+const DATE_FIELDS = new Set<keyof FinancingPublicForm>(['dateOfBirth','dateMarried','propertyPurchaseDate','salaryDate']);
+// Phone fields for normalization
+const PHONE_FIELDS = new Set<keyof FinancingPublicForm>(['phone','telephoneHome','telephoneWork','spouseCell','nextOfKinCell']);
 
 const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholder, colSpan, uncontrolled = true, defaultValue = '', value, onChange }) => {
   const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) onChange(e.target.value);
   }, [onChange]);
   const required = REQUIRED_FIELDS.has(name);
+  const err = (typeof window !== 'undefined' && (window as any).__finErrors) ? (window as any).__finErrors[name] : undefined;
+  const effectiveType = DATE_FIELDS.has(name) ? 'date' : type;
   return (
     <div className={colSpan || ''}>
-      <Label className='text-sm font-medium' htmlFor={name}>{label}{required && <span className='text-red-500'> *</span>}</Label>
+      <Label className='text-sm font-medium flex items-center gap-1' htmlFor={name}>{label}{required && <span className='text-red-500'>*</span>}</Label>
       <Input
         id={name}
         name={name}
         data-financing-field
-        type={type}
+        data-phone={PHONE_FIELDS.has(name) ? 'true' : undefined}
+        type={effectiveType}
         placeholder={placeholder}
         {...(uncontrolled ? { defaultValue } : { value: value ?? '', onChange: handleChange })}
-        className='mt-1'
+        onBlur={(e) => {
+          // Phone normalization
+          if (PHONE_FIELDS.has(name)) {
+            const raw = e.target.value;
+            const digits = raw.replace(/[^0-9]/g,'');
+            let intl = digits;
+            if (intl.startsWith('0')) intl = '27' + intl.slice(1);
+            if (!intl.startsWith('27')) intl = '27' + intl; // force ZA country code
+            const pretty = '+' + intl.replace(/^27(\d{2})(\d{3})(\d{4})$/, '27 $1 $2 $3');
+            // Fallback if pattern mismatch
+            e.target.value = pretty.startsWith('+27 ') ? pretty : '+' + intl;
+          }
+          if (typeof window !== 'undefined' && (window as any).__validateFinField) {
+            (window as any).__validateFinField(name, (e.target as HTMLInputElement).value);
+          }
+        }}
+        className={'mt-1 ' + (err ? 'border-red-500 focus-visible:ring-red-500' : '')}
       />
+      {err && <p className='mt-1 text-xs text-red-600'>{err}</p>}
     </div>
   );
 });
@@ -212,6 +243,37 @@ if (typeof window !== 'undefined') {
 
 export default function FinancingApplicationForm() {
   const [form, setForm] = useState<FinancingPublicForm>(defaultValues);
+  // Store only keys that currently have an error; omit key to represent no error
+  const [errors, setErrors] = useState<Partial<Record<keyof FinancingPublicForm, string>>>({});
+  // Expose errors for TextField lookup (avoid prop drilling large form)
+  useEffect(() => { if (typeof window !== 'undefined') { (window as any).__finErrors = errors; } }, [errors]);
+  // Field validator (partial); runs full schema but filters for field path
+  const validateField = React.useCallback((name: keyof FinancingPublicForm, value: any) => {
+    try {
+      const candidate: any = { ...form, [name]: value };
+      const res = schema.safeParse(candidate);
+      if (res.success) {
+        setErrors(prev => {
+          if (prev[name]) {
+            const { [name]: _, ...rest } = prev;
+            return rest;
+          }
+            return prev;
+        });
+      } else {
+        const issue = res.error.issues.find(i => i.path[0] === name);
+        if (issue) {
+          setErrors(prev => ({ ...prev, [name]: issue.message || 'Invalid' }));
+        } else {
+          setErrors(prev => {
+            if (prev[name]) { const { [name]: _, ...rest } = prev; return rest; }
+            return prev;
+          });
+        }
+      }
+    } catch {}
+  }, [form]);
+  useEffect(() => { if (typeof window !== 'undefined') { (window as any).__validateFinField = validateField; } }, [validateField]);
   const formRef = useRef<HTMLFormElement | null>(null);
   // Track last focused input name to auto-restore if unexpected blur happens
   const lastFocusedRef = useRef<HTMLInputElement | null>(null);
@@ -762,7 +824,7 @@ export default function FinancingApplicationForm() {
             <TextField label='Dependants' name='dependants' defaultValue={form.dependants||''} />
             <TextField label='Marital Status' name='maritalStatus' defaultValue={form.maritalStatus||''} />
             <TextField label='Date Married' name='dateMarried' defaultValue={form.dateMarried||''} />
-            <TextField label='Period at Address' name='periodAtAddress' defaultValue={form.periodAtAddress||''} />
+            <TextField label='Period at Current Address' name='periodAtAddress' defaultValue={form.periodAtAddress||''} />
             <TextField label='Period at Previous Address' name='periodAtPreviousAddress' defaultValue={form.periodAtPreviousAddress||''} />
             <TextField label='Previous Address' name='previousAddress' defaultValue={form.previousAddress||''} colSpan='md:col-span-2' />
             <TextField label='Postal Address' name='postalAddress' defaultValue={form.postalAddress||''} colSpan='md:col-span-2' />

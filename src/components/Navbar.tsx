@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Menu, X, Phone } from "lucide-react";
 import { NAVBAR_HEIGHT } from "@/lib/constants";
+import { siteConfig } from "@/lib/siteConfig";
 
 const links = [
   { href: "/", label: "Home" },
@@ -55,10 +56,10 @@ export default function Navbar() {
   <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-6" style={{ height: NAVBAR_HEIGHT }}>
         {/* Left: Logo */}
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2" aria-label="SaCar Home">
+      <Link href="/" className="flex items-center gap-2" aria-label={`${siteConfig.brand.name} Home`}>
             <Image
               src="/Advance_Auto_logoo.png"
-              alt="SaCar Dealership Logo"
+        alt={`${siteConfig.brand.name} Logo`}
               width={220}
               height={80}
               priority

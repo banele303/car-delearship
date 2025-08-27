@@ -2,6 +2,7 @@
 
 import React from "react";
 import FooterSection from "@/app/(nondashboard)/home/FooterSection"; 
+import { siteConfig } from "@/lib/siteConfig";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -91,7 +92,7 @@ export default function PrivacyPolicyPage() {
           <p className="mb-6">To exercise any of these rights, please contact us using the details provided below.</p>
 
           <h2 className="text-2xl font-bold text-slate-800 mb-6">6. Cookies and Tracking Technologies</h2>
-          <p className="mb-2">SaCar Dealership uses cookies and other tracking technologies to enhance your browsing experience.</p>
+          <p className="mb-2">{siteConfig.brand.name} uses cookies and other tracking technologies to enhance your browsing experience.</p>
           <p className="mb-2">Cookies are small files stored on your device that help us remember your preferences, analyze site usage, and improve our services.</p>
           <p className="mb-6">You can control cookie settings through your browser, but disabling cookies may affect your ability to use certain features of our website.</p>
 
@@ -112,9 +113,9 @@ export default function PrivacyPolicyPage() {
           <h2 className="text-2xl font-bold text-slate-800 mb-6">10. Contact Us</h2>
           <p className="mb-4">If you have any questions, concerns, or requests regarding this Privacy Policy or how we handle your personal information, please contact us at:</p>
           <div className="mb-6">
-            <p>SaCar Dealership</p>
-            <p>Email: info@sacar.com</p>
-            <p>Office: 123 Car Avenue, Johannesburg, Gauteng, South Africa</p>
+            <p>{siteConfig.brand.name}</p>
+            <p>Email: {siteConfig.contact.emailGeneral}</p>
+            <p>Office: {siteConfig.contact.addressLine}</p>
           </div>
         </div>
       </div>

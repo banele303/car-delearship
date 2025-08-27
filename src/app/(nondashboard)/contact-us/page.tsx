@@ -57,9 +57,9 @@ export default function ContactUsPage() {
         
         
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center">Contact SaCar Dealership</h1> 
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center">Contact Advance Auto</h1> 
           <p className="text-lg md:text-xl max-w-2xl text-center">
-            Have questions about our cars or services? We&apos;re here to help you find your dream car.
+            Have questions about our inventory, financing, or trade-ins? The Advance Auto team is here to help.
           </p> 
         </div>
       </section>
@@ -78,8 +78,8 @@ export default function ContactUsPage() {
                 </div>
                 <div>
                   <h3 className="font-medium text-slate-800 text-lg">Phone</h3>
-                  <p className="text-slate-600 mt-1">+27 11 123 4567</p> 
-                  <p className="text-slate-600">Monday to Friday, 8am to 5pm</p>
+                  <p className="text-slate-600 mt-1">+27 68 072 0424</p> 
+                  <p className="text-slate-600">Mon - Fri 08:00–18:00 | Sat 08:00–14:00</p>
                 </div>
               </div>
               
@@ -89,7 +89,7 @@ export default function ContactUsPage() {
                 </div>
                 <div>
                   <h3 className="font-medium text-slate-800 text-lg">Email</h3>
-                  <p className="text-slate-600 mt-1">info@sacar.com</p> 
+                  <p className="text-slate-600 mt-1">info@advanceauto.co.za</p> 
                   <p className="text-slate-600">We&apos;ll respond as soon as possible</p>
                 </div>
               </div>
@@ -118,7 +118,7 @@ export default function ContactUsPage() {
             
             <div className="h-[300px] rounded-xl overflow-hidden shadow-md mt-8 relative group">
               <iframe
-                title="SaCar Dealership Location Map"
+                title="Advance Auto Dealership Location Map"
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3579.502550063525!2d28.00395!3d-26.29845!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1ef6f7f5c9c2b5b1%3A0x0000000000000000!2s2A%20Amanda%20Ave%2C%20Gleneagles%2C%20Johannesburg%20South%2C%202091%2C%20South%20Africa!5e0!3m2!1sen!2sza!4v1724544000000!5m2!1sen!2sza"
                 width="100%"
                 height="100%"
@@ -196,7 +196,7 @@ export default function ContactUsPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder="+27 11 123 4567"
+                      placeholder="+27 68 072 0424"
                       className="w-full"
                     />
                   </div>

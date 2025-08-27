@@ -1,5 +1,6 @@
 import Link from "next/link";
 import React from "react";
+import { siteConfig } from "@/lib/siteConfig";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFacebook,
@@ -17,7 +18,7 @@ const FooterSection = () => {
           
           <div className="col-span-1 md:col-span-1">
             <Link href="/" className="text-2xl font-bold text-[#00acee] mb-4 block" scroll={false}>
-              SaCar Dealership
+              {siteConfig.brand.name}
             </Link>
             <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
               South Africa&apos;s premier car dealership network, providing quality vehicles and exceptional service since 2008.
@@ -37,8 +38,8 @@ const FooterSection = () => {
               </p>
               <p className="text-gray-700 dark:text-gray-300">
                 <span className="font-medium">Email:</span>{' '}
-                <a href="mailto:info@sacar.com" className="hover:text-[#00acee] transition-colors" aria-label="Email SaCar Dealership">
-                  info@sacar.com
+                <a href={`mailto:${siteConfig.contact.emailGeneral}`} className="hover:text-[#00acee] transition-colors" aria-label={`Email ${siteConfig.brand.name}`}>
+                  {siteConfig.contact.emailGeneral}
                 </a>
               </p>
               <p className="text-gray-700 dark:text-gray-300 leading-snug">
@@ -104,7 +105,7 @@ const FooterSection = () => {
               </a>
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              © 2025 SaCar Dealership. All rights reserved.
+              © 2025 {siteConfig.brand.name}. All rights reserved.
             </div>
           </div>
         </div>

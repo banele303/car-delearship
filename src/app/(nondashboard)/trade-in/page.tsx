@@ -547,7 +547,7 @@ export default function TradeInPage() {
               className="border-white text-white hover:bg-white hover:text-[#00acee]"
             >
               <Phone className="mr-2 h-4 w-4" />
-              Call (011) 123-4567
+              Call +27 68 072 0424
             </Button>
           </div>
         </div>
@@ -566,11 +566,11 @@ export default function TradeInPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <div className="flex items-center gap-2">
                 <Phone className="h-5 w-5 text-[#00acee]" />
-                <span className="font-semibold">(011) 123-4567</span>
+                <span className="font-semibold">+27 68 072 0424</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-[#00acee]" />
-                <span className="font-semibold">tradein@sacar.co.za</span>
+                <span className="font-semibold">tradein@advanceauto.co.za</span>
               </div>
             </div>
           </div>
