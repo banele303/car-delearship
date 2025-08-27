@@ -431,7 +431,14 @@ const InventoryContent = () => {
         ) : (
           <div className="space-y-4">
             {filteredCars.map((car) => (
-              <Card key={car.id} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={car.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleViewDetails(car.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleViewDetails(car.id); } }}
+              >
                 <CardContent className="p-6">
                   <div className="flex gap-6">
                     <div className="w-32 h-24 bg-gray-200 rounded-lg overflow-hidden">
@@ -453,14 +460,14 @@ const InventoryContent = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleViewDetails(car.id)}
+                            onClick={(e) => { e.stopPropagation(); handleViewDetails(car.id); }}
                           >
                             View Details
                           </Button>
                           <Button 
                             size="sm" 
                             className="bg-[#00acee]"
-                            onClick={() => handleScheduleTestDrive(car.id)}
+                            onClick={(e) => { e.stopPropagation(); handleScheduleTestDrive(car.id); }}
                           >
                             Test Drive
                           </Button>

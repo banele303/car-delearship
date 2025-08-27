@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Car, Calendar, Fuel, Gauge, Heart, Eye, Phone } from "lucide-react";
@@ -61,13 +62,22 @@ const CarCard: React.FC<CarCardProps> = ({
     }
   };
 
+  const router = useRouter();
+  const goToDetails = () => {
+    if (onViewDetails) onViewDetails(id); else router.push(`/cars/${id}`);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -5 }}
       transition={{ duration: 0.3 }}
-      className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group border border-gray-200 dark:border-gray-700"
+      className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group border border-gray-200 dark:border-gray-700 cursor-pointer"
+      onClick={goToDetails}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e)=>{ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToDetails(); } }}
     >
       
       <div className="relative h-48 overflow-hidden rounded-t-2xl">
@@ -88,7 +98,7 @@ const CarCard: React.FC<CarCardProps> = ({
         
         <div className="absolute top-3 right-3">
           <button
-            onClick={() => onFavoriteToggle?.(id)}
+            onClick={(e) => { e.stopPropagation(); onFavoriteToggle?.(id); }}
             className={`p-2 rounded-full shadow-md transition-all duration-200 ${
               isFavorited 
                 ? 'bg-red-500 text-white' 
@@ -179,7 +189,7 @@ const CarCard: React.FC<CarCardProps> = ({
           <Button
             variant="outline"
             size="lg"
-            onClick={() => onViewDetails?.(id)}
+            onClick={(e) => { e.stopPropagation(); onViewDetails ? onViewDetails(id) : router.push(`/cars/${id}`); }}
             className="w-full border-[#00acee] text-[#00acee] hover:bg-[#00acee] hover:text-white transition-colors font-bold py-2 rounded-xl shadow-md hover:shadow-lg"
           >
             <Eye size={18} className="mr-2" />
@@ -187,7 +197,7 @@ const CarCard: React.FC<CarCardProps> = ({
           </Button>
           <Button
             size="lg"
-            onClick={() => onScheduleTestDrive?.(id)}
+            onClick={(e) => { e.stopPropagation(); onScheduleTestDrive?.(id); }}
             className="w-full bg-[#00acee] hover:bg-[#0099d4] text-white font-bold py-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
           >
             <Phone size={18} className="mr-2" />
