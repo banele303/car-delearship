@@ -16,7 +16,7 @@ const links = [
   { href: "/gallery", label: "Gallery" },
   { href: "/inventory", label: "Showroom" },
   { href: "/financing", label: "Finance Application" },
-  { href: "/contact-us", label: "Contact us" },
+  { href: "/contact-us", label: "Contact Us" },
 ];
 
 export default function Navbar() {

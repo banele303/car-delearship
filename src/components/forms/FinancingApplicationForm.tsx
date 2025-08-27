@@ -977,23 +977,23 @@ export default function FinancingApplicationForm() {
 
       {/* Added declarations as requested */}
       <div className='space-y-6 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-5'>
-        <div className='space-y-5 text-sm leading-relaxed text-slate-700 dark:text-slate-300'>
-          <div className='flex items-start gap-3'>
+        <div className='space-y-7 text-sm leading-[1.8] text-slate-700 dark:text-slate-300'>
+          <div className='flex items-start gap-4'>
             <Checkbox id='legalCapacityConfirm' checked={form.legalCapacityConfirm} onCheckedChange={onChangeHandlers.legalCapacityConfirmChecked} />
-            <Label htmlFor='legalCapacityConfirm' className='font-normal cursor-pointer'>
-              I confirm that I am not a minor, I have never been declared mentally unfit by a court, I am not subject to an administration order, I do not have any current application pending for debt restructuring or alleviation, I am not under sequestration, I do not have any current debt rearrangement in existance, I have not previously applied for a debt re-arrangement, I do not have any applications pending for credit, nor opened quotations as envisaged in section 92 of the National Credit Act.
+            <Label htmlFor='legalCapacityConfirm' className='font-normal cursor-pointer leading-[1.75]'>
+              I confirm that I am not a minor; I have never been declared mentally unfit by a court; I am not subject to an administration order; I do not have any current application pending for debt restructuring or alleviation; I am not under sequestration; I do not have any current debt rearrangement in existence; I have not previously applied for a debt re‑arrangement; I do not have any applications pending for credit, nor opened quotations as envisaged in section 92 of the National Credit Act.
             </Label>
           </div>
-          <div className='flex items-start gap-3'>
+          <div className='flex items-start gap-4'>
             <Checkbox id='creditRecordDeclaration' checked={form.creditRecordDeclaration} onCheckedChange={onChangeHandlers.creditRecordDeclarationChecked} />
-            <Label htmlFor='creditRecordDeclaration' className='font-normal cursor-pointer'>
-              Declaration by client - I hereby give consent to FNI services to make enquiries about my credit record th any credit agency and to obtain whatever information relating to me they might require. I also expressly give consent that the result of my credit record enquiry may be shared by FNI services, with any third parties they deem fit to share with. I also give consent herewith that the authorised institution may submit my vehicle finance application to any of the credit providers they have access to.
+            <Label htmlFor='creditRecordDeclaration' className='font-normal cursor-pointer leading-[1.75]'>
+              Declaration by client – I hereby give consent to FNI services to make enquiries about my credit record with any credit agency and to obtain whatever information relating to me they might require. I also expressly give consent that the result of my credit record enquiry may be shared by FNI services with any third parties they deem fit. I also give consent that the authorised institution may submit my vehicle finance application to any of the credit providers they have access to.
             </Label>
           </div>
-          <div className='flex items-start gap-3'>
+          <div className='flex items-start gap-4'>
             <Checkbox id='marketingCommunicationConsent' checked={form.marketingCommunicationConsent} onCheckedChange={onChangeHandlers.marketingCommunicationConsentChecked} />
-            <Label htmlFor='marketingCommunicationConsent' className='font-normal cursor-pointer'>
-              I hereby grant FNI services the right to communicate with me through any electronic/written media or verbally in order to make available to me, their product offering, including product offerings by their various service providers and partners. I further confirm that FNI services may share my details with third party product and service providers for marketing purposes. I confirm that should I no longer wish to recieve such offerings, I must put such a request, in writing, to FNI services. I confirm that should i not wish to any longer recieve any product oferings or communications from third parties that i shall communicate such a request to the said third party directly.
+            <Label htmlFor='marketingCommunicationConsent' className='font-normal cursor-pointer leading-[1.75]'>
+              I hereby grant FNI services the right to communicate with me through any electronic / written media or verbally regarding their product offerings, including offerings by their service providers and partners. I further confirm that FNI services may share my details with third‑party product and service providers for marketing purposes. I understand I may opt out at any time by submitting a written request to FNI services or directly to any third party contacting me.
             </Label>
           </div>
         </div>
