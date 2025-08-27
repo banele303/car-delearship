@@ -387,25 +387,8 @@ export default function EditCarPage() {
         }
     });
 
-    if (newCarPhotoFiles) {
-      // Final sanity size check
-      let totalBytes = 0; let tooBig: string | null = null;
-      Array.from(newCarPhotoFiles).forEach(file => {
-        totalBytes += file.size;
-        if (file.size / (1024*1024) > CAR_UPLOAD_SINGLE_MAX_MB && !tooBig) tooBig = file.name;
-      });
-      if (tooBig) {
-        toast.dismiss();
-        toast.error(`${tooBig} exceeds ${CAR_UPLOAD_SINGLE_MAX_MB}MB.`);
-        return;
-      }
-      if (CAR_UPLOAD_TOTAL_MAX_MB > 0 && (totalBytes/(1024*1024)) > CAR_UPLOAD_TOTAL_MAX_MB) {
-        toast.dismiss();
-        toast.error(`Total new images exceed ${CAR_UPLOAD_TOTAL_MAX_MB}MB.`);
-        return;
-      }
-      Array.from(newCarPhotoFiles).forEach(file => formData.append('photos', file));
-    }
+  // For update we send ONLY metadata first (no new photos) to avoid large multipart
+  // New photos will be uploaded sequentially afterward via /api/cars/:id/photos
     formData.append("replacePhotos", String(replaceCarPhotosFlag));
 
     
@@ -417,14 +400,30 @@ export default function EditCarPage() {
     }
 
     try {
-      await updateCar({ id: carIdString, carData: formData as any }).unwrap(); 
+      await updateCar({ id: carIdString, carData: formData as any }).unwrap();
+      // Sequentially upload any new photos
+      let success = 0; let failed = 0; const list = newCarPhotoFiles ? Array.from(newCarPhotoFiles) : [];
+      if (list.length) {
+        toast.message(`Uploading 0/${list.length} photos...`);
+        for (let i=0;i<list.length;i++) {
+          const f = list[i];
+          // size validation again (defensive)
+            const mb = f.size/(1024*1024);
+            if (mb > CAR_UPLOAD_SINGLE_MAX_MB) { failed++; continue; }
+          const fdP = new FormData(); fdP.append('photo', f);
+          try {
+            const r = await fetch(`/api/cars/${carIdString}/photos`, { method:'POST', body: fdP });
+            if (r.ok) success++; else failed++;
+          } catch { failed++; }
+          toast.message(`Uploading ${i+1}/${list.length} photos...`, { description: `${success} ok / ${failed} failed` });
+        }
+      }
       toast.dismiss();
-      toast.success("Car updated successfully!");
-      
-      await refetchCar(); 
-      
-      setNewCarPhotoFiles(null);
-      setCarPhotosMarkedForDelete([]);
+      if (failed === 0) toast.success(list.length ? 'Car & photos updated.' : 'Car updated successfully!');
+      else if (success === 0) toast.error('Car updated, but photo uploads failed. Retry later.');
+      else toast.warning(`${success} photos uploaded, ${failed} failed.` as any);
+      await refetchCar();
+      setNewCarPhotoFiles(null); setCarPhotosMarkedForDelete([]);
     } catch (error: any) {
       toast.dismiss();
       const status = error?.status || error?.originalStatus || error?.data?.status;

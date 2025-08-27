@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Plus, XCircle, Car } from "lucide-react";
+import { concurrentUpload } from "@/lib/concurrentUploads";
 import { configureAdminAuth, fetchAuthSession } from "../../../admin/adminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,8 @@ export default function AddCarPage() {
   const router = useRouter();
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{total:number;completed:number;success:number;failed:number;inFlight:number;currentFile?:string}|null>(null);
+  const [uploading, setUploading] = useState(false);
 
   
   const [formData, setFormData] = useState({
@@ -377,26 +380,28 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
           return;
         }
 
-        // Step 2: sequential photo uploads
-        let success = 0; let failed = 0;
-        for (let i=0;i<photoFiles.length;i++) {
-          const f = photoFiles[i];
+        // Step 2: concurrent photo uploads with retry
+        setUploading(true);
+        const results = await concurrentUpload(photoFiles, async (file) => {
           const fdPhoto = new FormData();
-            fdPhoto.append('photo', f);
-          const res = await fetch(`/api/cars/${created.id}/photos`, {
+          fdPhoto.append('photo', file);
+          return await fetch(`/api/cars/${created.id}/photos`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: fdPhoto
           });
-          if (res.ok) success++; else { failed++; }
-        }
-        if (failed === 0) {
-          toast.success('Car and photos added successfully!');
-        } else if (success === 0) {
-          toast.error('Car created but all photo uploads failed. Edit later to add images.');
-        } else {
-          toast.warning(`${success} photos uploaded, ${failed} failed. You can add the rest via edit.` as any);
-        }
+        }, {
+          concurrency: 3,
+          retries: 2,
+          baseDelayMs: 500,
+          onProgress: (p) => setUploadProgress(p)
+        });
+        setUploading(false);
+        const success = results.filter(r=>r.success).length;
+        const failed = results.length - success;
+        if (failed === 0) toast.success('Car and photos added successfully!');
+        else if (success === 0) toast.error('Car created but all photo uploads failed. Edit later to add images.');
+        else toast.warning(`${success} photos uploaded, ${failed} failed. You can add the rest via edit.` as any);
         router.push('/admin/cars');
   } catch (error) {
         console.error('Error adding car:', error);
@@ -854,12 +859,17 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
           </Button>
           <Button 
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || uploading}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isLoading ? (
               <>
                 <span className="animate-spin mr-2">⏳</span> Saving...
+              </>
+            ) : uploading && uploadProgress ? (
+              <>
+                <span className="animate-pulse mr-2">⬆️</span>
+                Uploading {uploadProgress.completed}/{uploadProgress.total}
               </>
             ) : (
               <>
@@ -869,6 +879,11 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
             )}
           </Button>
         </div>
+        {uploadProgress && (
+          <div className="w-full bg-gray-200 h-2 rounded overflow-hidden">
+            <div className="h-full bg-blue-600 transition-all" style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }} />
+          </div>
+        )}
       </form>
     </div>
   );

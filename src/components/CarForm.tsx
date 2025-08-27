@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { concurrentUpload } from "@/lib/concurrentUploads";
 import { batchCompress } from "@/lib/imageCompression";
 import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, CAR_UPLOAD_MAX_FILES } from "@/config/uploadLimits";
 import { toast } from "sonner";
@@ -23,6 +24,8 @@ export const CarForm = ({ initialData }: CarFormProps) => {
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState<{done:number,total:number,name:string}|null>(null);
   const router = useRouter();
+  const [uploadProgress, setUploadProgress] = useState<{total:number;completed:number;success:number;failed:number;inFlight:number;currentFile?:string}|null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
   const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB;
@@ -85,33 +88,29 @@ export const CarForm = ({ initialData }: CarFormProps) => {
       router.push('/admin/cars');
       return;
     }
-    // Sequential photo uploads
-    let success = 0; let failed = 0;
-    toast.loading(`Uploading 0/${selectedFiles.length} photos...`);
-    for (let i=0;i<selectedFiles.length;i++) {
-      const f = selectedFiles[i];
+    // Concurrent photo uploads with retry
+    setUploading(true);
+    toast.loading(`Uploading photos...`);
+    const results = await concurrentUpload(selectedFiles, async (file) => {
       const fd = new FormData();
-      fd.append('photo', f);
-      try {
-        const res = await fetch(`/api/cars/${createdCar.id}/photos`, { method: 'POST', body: fd });
-        if (!res.ok) {
-          failed++; console.error('Photo upload failed', await res.text());
-        } else {
-          success++;
-        }
-      } catch (e) {
-        failed++; console.error('Photo upload exception', e);
+      fd.append('photo', file);
+      return await fetch(`/api/cars/${createdCar.id}/photos`, { method: 'POST', body: fd });
+    }, {
+      concurrency: 3,
+      retries: 2,
+      baseDelayMs: 500,
+      onProgress: (p) => {
+        setUploadProgress(p);
+        toast.message(`Uploading ${p.completed}/${p.total}`, { description: `${p.success} succeeded • ${p.failed} failed${p.currentFile?` • ${p.currentFile}`:''}` });
       }
-      toast.message(`Uploading ${i+1}/${selectedFiles.length} photos...`, { description: `${success} success, ${failed} failed` });
-    }
+    });
     toast.dismiss();
-    if (failed === 0) {
-      toast.success('Car and photos uploaded successfully.');
-    } else if (success === 0) {
-      toast.error('All photo uploads failed. You can edit the car to add photos later.');
-    } else {
-      toast.warning(`${success} photos uploaded, ${failed} failed. You can retry in edit page.` as any);
-    }
+    setUploading(false);
+    const success = results.filter(r=>r.success).length;
+    const failed = results.length - success;
+    if (failed === 0) toast.success('Car and photos uploaded successfully.');
+    else if (success === 0) toast.error('All photo uploads failed. Edit later to retry.');
+    else toast.warning(`${success} photos uploaded, ${failed} failed. You can retry in edit page.` as any);
     router.push('/admin/cars');
   };
 
@@ -436,12 +435,26 @@ export const CarForm = ({ initialData }: CarFormProps) => {
         </button>
         <button
           type="submit"
-          disabled={isSubmitting || isCompressing}
+          disabled={isSubmitting || isCompressing || uploading}
           className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-.sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
-          {isCompressing ? `Compressing ${compressionProgress?.done || 0}/${compressionProgress?.total || 0}` : isSubmitting ? "Saving..." : "Create Car"}
+          {isCompressing
+            ? `Compressing ${compressionProgress?.done || 0}/${compressionProgress?.total || 0}`
+            : isSubmitting
+              ? "Saving..."
+              : uploading && uploadProgress
+                ? `Uploading ${uploadProgress.completed}/${uploadProgress.total}`
+                : "Create Car"}
         </button>
       </div>
+      {uploadProgress && (
+        <div className="w-full bg-gray-200 h-2 rounded overflow-hidden">
+          <div
+            className="h-full bg-indigo-600 transition-all"
+            style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
+          />
+        </div>
+      )}
     </form>
   );
 };
