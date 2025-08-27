@@ -257,6 +257,9 @@ export default function FinancingApplicationForm() {
         console.log("Loaded car details from localStorage:", carDetails);
         
         // Update the form with car details
+        // Normalize legacy / alternative fuel type values to PETROL before populating the form
+        const rawFuel: string | undefined = carDetails.fuelType;
+        const normalizedFuel = rawFuel === 'GASOLINE' || rawFuel === 'FUEL' ? 'PETROL' : rawFuel;
         setForm(prev => ({
           ...prev,
           vehicleMake: carDetails.make || prev.vehicleMake,
@@ -270,7 +273,7 @@ export default function FinancingApplicationForm() {
           vehicleKM: (carDetails.mileage != null && carDetails.mileage !== undefined)
             ? String(carDetails.mileage)
             : prev.vehicleKM,
-          vehicleFuelType: carDetails.fuelType || prev.vehicleFuelType,
+          vehicleFuelType: normalizedFuel || prev.vehicleFuelType,
           vehicleTransmission: carDetails.transmission || prev.vehicleTransmission,
           vehicleType: carDetails.carType || prev.vehicleType
         }));
