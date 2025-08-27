@@ -2,11 +2,12 @@
 
 import { useState, useRef } from "react";
 import { batchCompress } from "@/lib/imageCompression";
+import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, CAR_UPLOAD_MAX_FILES } from "@/config/uploadLimits";
+import { toast } from "sonner";
 import { Car } from "@/types/prismaTypes"; 
 import Image from "next/image";
 import { useCreateCarMutation } from "@/state/api";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 interface CarFormProps {
   initialData?: Car;
@@ -23,9 +24,29 @@ export const CarForm = ({ initialData }: CarFormProps) => {
   const [compressionProgress, setCompressionProgress] = useState<{done:number,total:number,name:string}|null>(null);
   const router = useRouter();
 
+  const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
+  const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB;
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    // Pre-validate count + sizes before compression
+    if (selectedFiles.length + files.length > CAR_UPLOAD_MAX_FILES) {
+      toast.error(`Too many photos. Limit is ${CAR_UPLOAD_MAX_FILES}.`);
+      return;
+    }
+    // Pre-validate sizes before compression
+    for (const f of files) {
+      const mb = f.size / (1024 * 1024);
+      if (mb > MAX_SINGLE_MB) {
+        toast.error(`File ${f.name} is ${(mb).toFixed(1)}MB > ${MAX_SINGLE_MB}MB limit.`);
+        return;
+      }
+    }
+    const combinedBytes = [...selectedFiles, ...files].reduce((a,f)=>a+f.size,0);
+    if (combinedBytes / (1024*1024) > MAX_TOTAL_MB) {
+      toast.error(`Total selected size exceeds ${MAX_TOTAL_MB}MB. Remove some images.`);
+      return;
+    }
     setIsCompressing(true);
     setCompressionProgress({done:0,total:files.length,name:''});
     const compressed = await batchCompress(files, (done,total,name)=>{
@@ -44,7 +65,7 @@ export const CarForm = ({ initialData }: CarFormProps) => {
 
     const formData = new FormData(formRef.current);
 
-    selectedFiles.forEach((file) => {
+  selectedFiles.forEach((file) => {
       formData.append("photos", file);
     });
 

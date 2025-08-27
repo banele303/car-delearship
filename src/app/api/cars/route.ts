@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
+import { CAR_UPLOAD_MAX_FILES, CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, describeCarUploadLimits } from "@/config/uploadLimits";
 
 // Add a GET handler to retrieve all cars
 export async function GET(req: NextRequest) {
@@ -107,14 +108,11 @@ export async function POST(req: NextRequest) {
     if (carData.fuelType === 'FUEL') {
       carData.fuelType = 'GASOLINE';
     }
-    const photos = formData.getAll('photos') as File[];
-  const MAX_FILES = Number(process.env.CAR_UPLOAD_MAX_FILES || 50);
-  // Increased default single file limit (was 15MB) – override via env if needed
-  const MAX_SINGLE_MB = Number(process.env.CAR_UPLOAD_SINGLE_MAX_MB || 25);
-  // Allow disabling the total size cap by setting env CAR_UPLOAD_TOTAL_MAX_MB=0
-  const rawTotal = process.env.CAR_UPLOAD_TOTAL_MAX_MB;
-  // Increased default total limit (was 120MB) – set CAR_UPLOAD_TOTAL_MAX_MB=0 to disable
-  const MAX_TOTAL_MB = rawTotal === '0' ? 0 : Number(rawTotal || 250);
+  const photos = formData.getAll('photos') as File[];
+  const MAX_FILES = CAR_UPLOAD_MAX_FILES;
+  const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
+  const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB;
+  console.log('[CAR_UPLOAD_DEBUG][CREATE] photos:', photos.length, describeCarUploadLimits());
     if (photos.length > MAX_FILES) {
       return NextResponse.json({ message: `Too many photos: ${photos.length} > ${MAX_FILES}` }, { status: 400 });
     }
@@ -128,7 +126,7 @@ export async function POST(req: NextRequest) {
     }
     const totalMb = totalBytes / (1024*1024);
     if (MAX_TOTAL_MB > 0 && totalMb > MAX_TOTAL_MB) {
-      return NextResponse.json({ message: `Total upload ${totalMb.toFixed(1)}MB exceeds ${MAX_TOTAL_MB}MB limit` }, { status: 413 });
+      return NextResponse.json({ message: `Total upload ${totalMb.toFixed(1)}MB exceeds ${MAX_TOTAL_MB}MB limit`, totalMb, MAX_TOTAL_MB }, { status: 413, headers: { 'x-car-upload-total-mb': totalMb.toFixed(2), 'x-car-upload-max-total-mb': String(MAX_TOTAL_MB), 'x-car-upload-max-single-mb': String(MAX_SINGLE_MB) } });
     }
     const photoUrls: string[] = [];
     for (const photo of photos) {
@@ -176,7 +174,12 @@ export async function POST(req: NextRequest) {
     }
     try {
       const newCar = await prisma.car.create({ data: carData as any });
-      return NextResponse.json(newCar, { status: 201 });
+      return NextResponse.json(newCar, { status: 201, headers: {
+        'x-car-upload-files': String(photos.length),
+        'x-car-upload-total-mb': totalMb.toFixed(2),
+        'x-car-upload-max-single-mb': String(MAX_SINGLE_MB),
+        'x-car-upload-max-total-mb': String(MAX_TOTAL_MB)
+      }});
     } catch (prismaError: any) {
       if (prismaError.code === 'P2002' && prismaError.meta?.target?.includes('vin')) {
         return NextResponse.json({ message: 'A car with this VIN already exists. Please use a unique VIN.' }, { status: 409 });

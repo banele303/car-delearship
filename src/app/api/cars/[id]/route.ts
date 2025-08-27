@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { S3Client, DeleteObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { verifyAuth } from '@/lib/auth';
+import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, describeCarUploadLimits } from '@/config/uploadLimits';
 import { Prisma } from '@prisma/client';
 
 // Configure S3 client
@@ -186,7 +187,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
       } catch {}
     }
-    const newFiles: File[] = formData.getAll('photos') as File[];
+  const newFiles: File[] = formData.getAll('photos') as File[];
+  const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
+  const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB;
+  console.log('[CAR_UPLOAD_DEBUG][UPDATE]', { newCount: newFiles.length, ...describeCarUploadLimits() });
+    let totalBytes = 0;
+    for (const nf of newFiles) {
+      totalBytes += nf.size;
+      const mb = nf.size / (1024*1024);
+      if (mb > MAX_SINGLE_MB) {
+        return NextResponse.json({ message: `File ${nf.name} is ${mb.toFixed(1)}MB > ${MAX_SINGLE_MB}MB limit` }, { status: 400 });
+      }
+    }
+    if (MAX_TOTAL_MB > 0) {
+      const totalMb = totalBytes / (1024*1024);
+      if (totalMb > MAX_TOTAL_MB) {
+        return NextResponse.json({ message: `Total new upload ${totalMb.toFixed(1)}MB exceeds ${MAX_TOTAL_MB}MB limit. Upload fewer or smaller images.` }, { status: 413 });
+      }
+    }
     let uploadedNew: string[] = [];
     if (newFiles.length) {
       uploadedNew = await Promise.all(newFiles.map(async f => {
@@ -224,8 +242,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       data,
       include: { dealership: true, employee: true },
     });
-
-    return NextResponse.json(updatedCar);
+    return NextResponse.json(updatedCar, { headers: {
+      'x-car-upload-new-files': String(newFiles.length),
+      'x-car-upload-max-single-mb': String(MAX_SINGLE_MB),
+      'x-car-upload-max-total-mb': String(MAX_TOTAL_MB)
+    }});
   } catch (err: any) {
     console.error("Error updating car:", err);
     return NextResponse.json({ message: `Error updating car: ${err.message}` }, { status: 500 });

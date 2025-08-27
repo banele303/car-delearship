@@ -101,6 +101,15 @@ export const api = createApi({
 
           clearTimeout(timeoutId);
 
+          // If upstream rejected due to payload too large, synthesize friendly JSON
+          if (response.status === 413) {
+            return new Response(JSON.stringify({
+              error: true,
+              status: 413,
+              message: 'Upload too large. Reduce number/size of images or compress before retrying.',
+              hint: 'Try fewer images at once or upload in smaller batches.'
+            }), { status: 413, headers: response.headers });
+          }
           // Clone the response before reading it
           const clonedResponse = response.clone();
 
