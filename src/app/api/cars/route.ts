@@ -109,10 +109,12 @@ export async function POST(req: NextRequest) {
     }
     const photos = formData.getAll('photos') as File[];
   const MAX_FILES = Number(process.env.CAR_UPLOAD_MAX_FILES || 50);
-  const MAX_SINGLE_MB = Number(process.env.CAR_UPLOAD_SINGLE_MAX_MB || 15);
+  // Increased default single file limit (was 15MB) – override via env if needed
+  const MAX_SINGLE_MB = Number(process.env.CAR_UPLOAD_SINGLE_MAX_MB || 25);
   // Allow disabling the total size cap by setting env CAR_UPLOAD_TOTAL_MAX_MB=0
   const rawTotal = process.env.CAR_UPLOAD_TOTAL_MAX_MB;
-  const MAX_TOTAL_MB = rawTotal === '0' ? 0 : Number(rawTotal || 120);
+  // Increased default total limit (was 120MB) – set CAR_UPLOAD_TOTAL_MAX_MB=0 to disable
+  const MAX_TOTAL_MB = rawTotal === '0' ? 0 : Number(rawTotal || 250);
     if (photos.length > MAX_FILES) {
       return NextResponse.json({ message: `Too many photos: ${photos.length} > ${MAX_FILES}` }, { status: 400 });
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { batchCompress } from "@/lib/imageCompression";
 import { Car } from "@/types/prismaTypes"; 
 import Image from "next/image";
 import { useCreateCarMutation } from "@/state/api";
@@ -18,13 +19,22 @@ export const CarForm = ({ initialData }: CarFormProps) => {
     initialData?.photoUrls || []
   );
   const [createCar, { isLoading: isSubmitting }] = useCreateCarMutation();
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState<{done:number,total:number,name:string}|null>(null);
   const router = useRouter();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setSelectedFiles(files);
-
-    const newPreviewUrls = files.map((file) => URL.createObjectURL(file));
+    if (!files.length) return;
+    setIsCompressing(true);
+    setCompressionProgress({done:0,total:files.length,name:''});
+    const compressed = await batchCompress(files, (done,total,name)=>{
+      setCompressionProgress({done,total,name});
+    }, { maxWidth: 1920, maxHeight: 1920, quality: 0.82 });
+    setIsCompressing(false);
+    setCompressionProgress(null);
+    setSelectedFiles(compressed);
+    const newPreviewUrls = compressed.map((file) => URL.createObjectURL(file));
     setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
   };
 
@@ -374,10 +384,10 @@ export const CarForm = ({ initialData }: CarFormProps) => {
         </button>
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isCompressing}
           className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-.sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
-          {isSubmitting ? "Saving..." : "Create Car"}
+          {isCompressing ? `Compressing ${compressionProgress?.done || 0}/${compressionProgress?.total || 0}` : isSubmitting ? "Saving..." : "Create Car"}
         </button>
       </div>
     </form>
