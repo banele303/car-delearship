@@ -1,7 +1,23 @@
 "use client";
 import React from 'react';
 import Link from 'next/link';
-import { Mail, Phone, MapPin, Facebook, Instagram, Youtube } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Instagram } from 'lucide-react';
+
+// Minimal TikTok icon (monochrome) since lucide-react doesn't export one yet
+const TikTokIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 256 256"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="M232 97.7c-24.6 0-48.2-7.5-61.9-22.6V170a86 86 0 1 1-86-86 88 88 0 0 1 12.4.9V121a50.9 50.9 0 0 0-12.4-1.6 49 49 0 1 0 49 49V24h38.6a62.4 62.4 0 0 0 .9 11.1c2.6 16.2 11.3 29.9 24.4 39.1 10.5 7.4 24 12 34.9 12Z" />
+  </svg>
+);
 
 const year = new Date().getFullYear();
 
@@ -39,9 +55,9 @@ export default function Footer() {
             <div>
               <h3 className="text-sm font-semibold tracking-wide text-white uppercase mb-4">Follow</h3>
               <div className="flex items-center gap-4 text-gray-400">
-                <a href="#" aria-label="Facebook" className="hover:text-white"><Facebook size={20} /></a>
+                <a href="https://www.facebook.com/share/1Dzk6oHqXE/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-white"><Facebook size={20} /></a>
                 <a href="#" aria-label="Instagram" className="hover:text-white"><Instagram size={20} /></a>
-                <a href="#" aria-label="YouTube" className="hover:text-white"><Youtube size={20} /></a>
+                <a href="https://www.tiktok.com/@adv1auto?_t=ZS-8zEF81vzNFC&_r=1" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-white"><TikTokIcon size={20} /></a>
               </div>
             </div>
         </div>
