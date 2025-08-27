@@ -694,38 +694,41 @@ export default function FinancingApplicationForm() {
     const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
     const [uploadingByType, setUploadingByType] = useState<Record<string, boolean>>({});
     const createServerConfig = (docType: string) => ({
-      process: (fieldName: string, file: any, metadata: any, load: any, error: any, progress: any, abort: any) => {
+      process: (_fieldName: string, file: any, _metadata: any, load: any, error: any, _progress: any, abort: any) => {
         const controller = new AbortController();
         const fd = new FormData();
         fd.append('file', file, file.name);
-        fetch(`/api/uploads/financing?docType=${encodeURIComponent(docType)}`, {
-          method: 'POST',
-          body: fd,
-          signal: controller.signal,
-        }).then(async (r) => {
-          let json: any = {};
-          try { json = await r.json(); } catch {}
-          if (!r.ok) {
-            error(json.message || 'Upload failed');
-            toast.error(json.message || 'Upload failed');
-            return;
-          }
-          const files = json.files || [];
-            if (files.length) {
-              setUploadedByType(prev => ({ ...prev, [docType]: [...(prev[docType]||[]), ...files] }));
-            }
-          load(files[0]?.storedName || file.name);
-        }).catch((e) => {
-          if (controller.signal.aborted) return;
-          error('Network error');
-          toast.error('Network error');
-        });
-        return {
-          abort: () => {
-            controller.abort();
-            abort();
-          }
+        const primary = `/api/uploads/financing?docType=${encodeURIComponent(docType)}`;
+        const fallback = `/api/financing-uploads?docType=${encodeURIComponent(docType)}`;
+
+        const attempt = (url: string, isFallback = false) => {
+          fetch(url, { method: 'POST', body: fd, signal: controller.signal })
+            .then(async (r) => {
+              let json: any = {};
+              try { json = await r.json(); } catch {}
+              if (r.status === 405 && !isFallback) {
+                // Try alternate route
+                return attempt(fallback, true);
+              }
+              if (!r.ok) {
+                error(json.message || 'Upload failed');
+                toast.error(json.message || 'Upload failed');
+                return;
+              }
+              const files = json.files || [];
+              if (files.length) {
+                setUploadedByType(prev => ({ ...prev, [docType]: [...(prev[docType]||[]), ...files] }));
+              }
+              load(files[0]?.storedName || file.name);
+            })
+            .catch((e) => {
+              if (controller.signal.aborted) return;
+              error('Network error');
+              toast.error('Network error');
+            });
         };
+        attempt(primary);
+        return { abort: () => { controller.abort(); abort(); } };
       },
       revert: null,
     }) as any;
