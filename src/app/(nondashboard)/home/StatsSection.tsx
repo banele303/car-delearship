@@ -5,34 +5,7 @@ import { motion } from "framer-motion";
 import { Car, Users, Award, MapPin } from "lucide-react";
 
 const StatsSection = () => {
-  const [dynamicStats, setDynamicStats] = useState({
-    vehicles: "500+"
-  });
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        
-        const carsResponse = await fetch('/api/cars');
-        if (carsResponse.ok) {
-          const cars = await carsResponse.json();
-          const vehicleCount = cars.length;
-          setDynamicStats(prev => ({
-            ...prev,
-            vehicles: vehicleCount > 0 ? `${vehicleCount}+` : "500+"
-          }));
-        }
-
-        
-  // Removed dealerships fetch since dealership locations card was removed
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-        
-      }
-    };
-
-    fetchStats();
-  }, []);
+  // Static stats per request (vehicles fixed at 20+, customers at 50+)
 
   const parseValue = (val: string) => {
     const match = val.match(/(\d+[\.]?\d*)/);
@@ -40,8 +13,8 @@ const StatsSection = () => {
   };
 
   const stats = [
-    { key: 'vehicles', icon: Car, raw: dynamicStats.vehicles, label: 'Premium Vehicles', description: 'Quality cars in our inventory' },
-    { key: 'customers', icon: Users, raw: '10000+', label: 'Happy Customers', description: 'Satisfied with our service' },
+    { key: 'vehicles', icon: Car, raw: '20+', label: 'Vehicles', description: 'Quality cars in our inventory' },
+    { key: 'customers', icon: Users, raw: '50+', label: 'Happy Customers', description: 'Satisfied with our service' },
   ].map(s => ({
     ...s,
     target: parseValue(s.raw.toString()),
