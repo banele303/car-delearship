@@ -40,6 +40,8 @@ import { CarFormData, carSchema } from "@/lib/schemas";
 import { CarCondition, CarType, FuelType, Transmission, CarStatus } from "@/lib/constants"; 
 import { ApiCar } from "@/lib/schemas"; 
 import { useGetCarQuery, useUpdateCarMutation, useDeleteCarMutation } from "@/state/api"; 
+import { batchCompress } from '@/lib/imageCompression';
+import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, CAR_UPLOAD_MAX_FILES } from '@/config/uploadLimits';
 import { CreateFormFieldt } from "@/components/CreateFormFieldT";
 
 
@@ -328,8 +330,40 @@ export default function EditCarPage() {
     }
   }, [isCarError, isLoadingCar, router]);
 
-  const handleCarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => { 
-    setNewCarPhotoFiles(e.target.files);
+  const handleCarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => { 
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    if (files.length > CAR_UPLOAD_MAX_FILES) {
+      toast.error(`Too many photos. Limit is ${CAR_UPLOAD_MAX_FILES}.`);
+      return;
+    }
+    // Pre-size validation
+    let totalBytes = 0;
+    for (const f of Array.from(files)) {
+      const mb = f.size / (1024*1024);
+      totalBytes += f.size;
+      if (mb > CAR_UPLOAD_SINGLE_MAX_MB) {
+        toast.error(`${f.name} is ${mb.toFixed(1)}MB > ${CAR_UPLOAD_SINGLE_MAX_MB}MB limit.`);
+        return;
+      }
+    }
+    if (CAR_UPLOAD_TOTAL_MAX_MB > 0 && (totalBytes / (1024*1024)) > CAR_UPLOAD_TOTAL_MAX_MB) {
+      toast.error(`Selected images total exceeds ${CAR_UPLOAD_TOTAL_MAX_MB}MB limit.`);
+      return;
+    }
+    toast.loading('Optimizing images...');
+    const compressed = await batchCompress(Array.from(files), undefined, { maxWidth: 1920, maxHeight: 1920, quality: 0.82 });
+    toast.dismiss();
+    // Re-evaluate total size after compression
+    const postBytes = compressed.reduce((a,f)=>a+f.size,0);
+    if (CAR_UPLOAD_TOTAL_MAX_MB > 0 && (postBytes / (1024*1024)) > CAR_UPLOAD_TOTAL_MAX_MB) {
+      toast.error(`Compressed images still exceed ${CAR_UPLOAD_TOTAL_MAX_MB}MB.`);
+      return;
+    }
+    // Convert compressed File[] back to a FileList-like object not needed; we'll handle directly during submit
+    const dt = new DataTransfer();
+    compressed.forEach(f=>dt.items.add(f));
+    setNewCarPhotoFiles(dt.files);
   };
 
   const toggleCarPhotoForDelete = (url: string) => { 
@@ -354,7 +388,23 @@ export default function EditCarPage() {
     });
 
     if (newCarPhotoFiles) {
-      Array.from(newCarPhotoFiles).forEach(file => formData.append("photos", file));
+      // Final sanity size check
+      let totalBytes = 0; let tooBig: string | null = null;
+      Array.from(newCarPhotoFiles).forEach(file => {
+        totalBytes += file.size;
+        if (file.size / (1024*1024) > CAR_UPLOAD_SINGLE_MAX_MB && !tooBig) tooBig = file.name;
+      });
+      if (tooBig) {
+        toast.dismiss();
+        toast.error(`${tooBig} exceeds ${CAR_UPLOAD_SINGLE_MAX_MB}MB.`);
+        return;
+      }
+      if (CAR_UPLOAD_TOTAL_MAX_MB > 0 && (totalBytes/(1024*1024)) > CAR_UPLOAD_TOTAL_MAX_MB) {
+        toast.dismiss();
+        toast.error(`Total new images exceed ${CAR_UPLOAD_TOTAL_MAX_MB}MB.`);
+        return;
+      }
+      Array.from(newCarPhotoFiles).forEach(file => formData.append('photos', file));
     }
     formData.append("replacePhotos", String(replaceCarPhotosFlag));
 
@@ -377,7 +427,12 @@ export default function EditCarPage() {
       setCarPhotosMarkedForDelete([]);
     } catch (error: any) {
       toast.dismiss();
-      toast.error(error?.data?.message || "Failed to update car.");
+      const status = error?.status || error?.originalStatus || error?.data?.status;
+      if (status === 413) {
+        toast.error('Upload too large. Try fewer or smaller images.');
+      } else {
+        toast.error(error?.data?.message || 'Failed to update car.');
+      }
       console.error('Error updating car:', error);
     }
   };
