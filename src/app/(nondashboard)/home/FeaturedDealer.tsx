@@ -40,7 +40,7 @@ const FeaturedDealer = () => {
           <span className="inline-flex items-center gap-2 rounded-full bg-[#00A211]/10 text-[#00780d] dark:text-[#38d752] px-4 py-1 text-xs font-semibold tracking-wide mb-5">
             <MapPin size={14} /> Our Showroom
           </span>
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 dark:from-emerald-300 dark:via-green-300 dark:to-emerald-200">
+          <h2 className="text-2xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 dark:from-emerald-300 dark:via-green-300 dark:to-emerald-200 md:whitespace-nowrap">
             Visit Advance Auto Johannesburg South
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-gray-600 dark:text-gray-300">
