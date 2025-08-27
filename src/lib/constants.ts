@@ -210,16 +210,16 @@ export enum CarType {
 }
 
 export enum FuelType {
-  FUEL = "FUEL", // renamed from GASOLINE
+  PETROL = "PETROL", // renamed from GASOLINE / FUEL
   DIESEL = "DIESEL",
   ELECTRIC = "ELECTRIC",
   HYBRID = "HYBRID",
 }
 
-// Normalize legacy values (e.g., existing DB rows still using 'GASOLINE')
+// Transitional normalizer: accept legacy values (GASOLINE, FUEL) and map to PETROL
 export const normalizeFuelType = (v: string | null | undefined): FuelType | undefined => {
   if (!v) return undefined;
-  if (v === 'GASOLINE') return FuelType.FUEL;
+  if (v === 'GASOLINE' || v === 'FUEL') return FuelType.PETROL;
   return (FuelType as any)[v] as FuelType | undefined;
 };
 

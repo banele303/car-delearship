@@ -22,6 +22,31 @@ const FooterSection = () => {
             <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
               South Africa&apos;s premier car dealership network, providing quality vehicles and exceptional service since 2008.
             </p>
+            <div className="space-y-2 text-sm">
+              <p className="text-gray-700 dark:text-gray-300">
+                <span className="font-medium">Phone:</span>{' '}
+                <a href="tel:+27680720424" className="hover:text-[#00acee] transition-colors" aria-label="Call SaCar Dealership">
+                  068 072 0424
+                </a>
+              </p>
+              <p className="text-gray-700 dark:text-gray-300">
+                <span className="font-medium">WhatsApp:</span>{' '}
+                <a href="https://wa.me/27680720424?text=Hi%20I%27m%20interested%20in%20a%20vehicle" target="_blank" rel="noopener noreferrer" className="hover:text-[#00acee] transition-colors" aria-label="Chat on WhatsApp">
+                  068 072 0424
+                </a>
+              </p>
+              <p className="text-gray-700 dark:text-gray-300">
+                <span className="font-medium">Email:</span>{' '}
+                <a href="mailto:info@sacar.com" className="hover:text-[#00acee] transition-colors" aria-label="Email SaCar Dealership">
+                  info@sacar.com
+                </a>
+              </p>
+              <p className="text-gray-700 dark:text-gray-300 leading-snug">
+                <span className="font-medium">Address:</span><br />
+                2A Amanda Ave, Gleneagles<br />Johannesburg South, 2091
+              </p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">Mon–Fri 08:00–17:00 • Sat 09:00–13:00</p>
+            </div>
           </div>
 
           

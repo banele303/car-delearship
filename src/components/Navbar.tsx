@@ -14,8 +14,8 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/gallery", label: "Gallery" },
   { href: "/inventory", label: "Showroom" },
-  { href: "/financing", label: "Financing Application" },
-  { href: "/contact-us", label: "Contact" },
+  { href: "/financing", label: "Finance Application" },
+  { href: "/contact-us", label: "Contact us" },
 ];
 
 export default function Navbar() {

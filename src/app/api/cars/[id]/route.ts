@@ -232,9 +232,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       finalPhotos = [...keptExisting, ...uploadedNew];
     }
     data.photoUrls = finalPhotos;
-    // TEMP ENUM COMPAT: map frontend renamed FUEL to legacy DB enum GASOLINE
-    if (data.fuelType === 'FUEL') {
-      data.fuelType = 'GASOLINE';
+    // Enum migration: map legacy GASOLINE or interim FUEL to PETROL
+    if (data.fuelType === 'GASOLINE' || data.fuelType === 'FUEL') {
+      data.fuelType = 'PETROL';
     }
 
     const updatedCar = await prisma.car.update({

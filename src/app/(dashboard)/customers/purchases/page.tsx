@@ -11,6 +11,7 @@ import {
 } from "@/state/api";
 import { Car, DollarSign } from "lucide-react"; // Updated icons
 import React from "react";
+import { normalizeFuelType } from '@/lib/constants';
 
 // Changed component name
 const Purchases = () => {
@@ -66,7 +67,7 @@ const Purchases = () => {
             // Convert enum values to strings
             condition: car.condition || 'USED',
             carType: car.carType || 'SEDAN',
-            fuelType: (car.fuelType === 'GASOLINE' ? 'FUEL' : car.fuelType) || 'FUEL',
+            fuelType: (normalizeFuelType(car.fuelType as any) || car.fuelType || 'PETROL'),
             transmission: car.transmission || 'AUTOMATIC',
             // Ensure string properties exist
             engine: car.engine || '',

@@ -295,7 +295,7 @@ enum CarType {
 
 // Re-introduced HYDROGEN to mirror existing DB enum values. Removing it while rows still referenced it triggers runtime errors.
 enum FuelType {
-  GASOLINE
+  PETROL // renamed from GASOLINE
   DIESEL
   HYBRID
   ELECTRIC

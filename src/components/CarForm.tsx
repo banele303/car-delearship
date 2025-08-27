@@ -6,6 +6,7 @@ import { batchCompress } from "@/lib/imageCompression";
 import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, CAR_UPLOAD_MAX_FILES } from "@/config/uploadLimits";
 import { toast } from "sonner";
 import { Car } from "@/types/prismaTypes"; 
+import { normalizeFuelType } from '@/lib/constants';
 import Image from "next/image";
 import { useCreateCarMutation } from "@/state/api";
 import { useRouter } from "next/navigation";
@@ -254,15 +255,15 @@ export const CarForm = ({ initialData }: CarFormProps) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Fuel
+              Petrol
             </label>
             <select
               name="fuelType"
-              defaultValue={initialData?.fuelType}
+              defaultValue={normalizeFuelType(initialData?.fuelType as any) || initialData?.fuelType || 'PETROL'}
               required
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
-              <option value="FUEL">Petrol</option>
+              <option value="PETROL">Petrol</option>
               <option value="DIESEL">Diesel</option>
               <option value="HYBRID">Hybrid</option>
               <option value="ELECTRIC">Electric</option>

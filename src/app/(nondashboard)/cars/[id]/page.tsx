@@ -315,8 +315,8 @@ const CarDetailPage = () => {
                   </div>
                   <div className="text-center group">
                     <Fuel className="h-8 w-8 text-[#00A211] mx-auto mb-2 transition-transform group-hover:scale-110" />
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Fuel</p>
-                    <p className="font-semibold">{car.fuelType === 'GASOLINE' || car.fuelType === 'FUEL' ? 'Fuel' : car.fuelType}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Petrol</p>
+                    <p className="font-semibold">{(car.fuelType === 'GASOLINE' || car.fuelType === 'FUEL') ? 'PETROL' : car.fuelType}</p>
                   </div>
                   <div className="text-center group">
                     <Car className="h-8 w-8 text-[#00A211] mx-auto mb-2 transition-transform group-hover:scale-110" />

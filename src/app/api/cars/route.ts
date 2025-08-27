@@ -104,9 +104,9 @@ export async function POST(req: NextRequest) {
         seen.add(k); return true;
       });
     }
-    // TEMP ENUM COMPAT: map renamed frontend value FUEL back to legacy DB enum GASOLINE
-    if (carData.fuelType === 'FUEL') {
-      carData.fuelType = 'GASOLINE';
+    // Enum migration: accept legacy GASOLINE or interim FUEL and map to PETROL
+    if (carData.fuelType === 'GASOLINE' || carData.fuelType === 'FUEL') {
+      carData.fuelType = 'PETROL';
     }
   const photos = formData.getAll('photos') as File[];
   const MAX_FILES = CAR_UPLOAD_MAX_FILES;

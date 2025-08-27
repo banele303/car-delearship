@@ -267,7 +267,7 @@ export default function EditCarPage() {
       mileage: 0,
       condition: CarCondition.NEW,
       carType: CarType.SEDAN,
-  fuelType: FuelType.FUEL,
+  fuelType: FuelType.PETROL,
       transmission: Transmission.AUTOMATIC,
       engine: "",
       exteriorColor: "",
@@ -281,9 +281,9 @@ export default function EditCarPage() {
 
   // Normalize possible legacy API values (e.g., 'GASOLINE') to current FuelType enum
   const normalizeFuelType = (value: unknown): FuelType => {
-    if (value === 'GASOLINE') return FuelType.FUEL;
+    if (value === 'GASOLINE' || value === 'FUEL') return FuelType.PETROL;
     if (Object.values(FuelType).includes(value as FuelType)) return value as FuelType;
-    return FuelType.FUEL;
+    return FuelType.PETROL;
   };
 
   useEffect(() => {
