@@ -36,14 +36,14 @@ export default function ReferralCalloutSection() {
             <div className="absolute -top-24 -left-12 w-72 h-72 rounded-full bg-white/20 blur-3xl" />
             <div className="absolute bottom-0 right-0 w-[24rem] h-[24rem] rounded-full bg-white/10 blur-3xl" />
           </div>
-          <div className="relative grid gap-14 lg:grid-cols-2 items-center">
+          <div className="relative grid gap-14 place-items-center">
             {/* Left copy */}
           <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
             viewport={{ once: true }}
-            className="space-y-6"
+            className="space-y-6 text-center max-w-3xl mx-auto"
           >
             <span className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-4 py-1.5 rounded-full text-xs tracking-wide font-semibold uppercase">
               <Share2 size={14} /> Referral Program
@@ -51,12 +51,10 @@ export default function ReferralCalloutSection() {
       <h2 id="referral-heading" className="text-3xl md:text-4xl font-bold leading-tight">
         Earn up to R1 000 for Every Successful Referral
       </h2>
-            <p className="text-white/90 text-lg max-w-lg leading-relaxed">
+            <p className="text-white/90 text-lg max-w-2xl leading-relaxed mx-auto">
               Love what we do? Turn your network into opportunity. Refer a buyer who completes a financed vehicle purchase and receive a generous reward. There&apos;s no cap—keep earning with every deal.
             </p>
-            <ul className="space-y-3 text-sm text-white/85">
-                <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-white" /> Paid out within 7 days after a qualifying purchase is finalized.</li>
-            </ul>
+            <p className="text-sm text-white/85 max-w-xl mx-auto">Paid out within 7 days after a qualifying purchase is finalized.</p>
             {/* Action buttons removed per request */}
           </motion.div>
             {/* Right perks grid removed as requested */}
