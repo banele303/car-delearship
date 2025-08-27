@@ -93,10 +93,10 @@ export default function GallerySection({ compact=false, initialCategory='all' }:
         <div className={cn("flex flex-col gap-6 mb-10", compact ? 'md:flex-col md:items-start' : 'md:flex-row md:items-end md:justify-between')}>
           <div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3 flex items-center gap-3">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 ring-4 ring-blue-500/20">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--primary))] text-white shadow-lg shadow-[hsl(var(--primary))]/30 ring-4 ring-[hsl(var(--primary))]/30">
                 <ImageIcon className="h-6 w-6" />
               </span>
-              {compact ? 'Gallery' : 'Explore Our Gallery'}
+              Gallery
             </h2>
             {!compact && <p className="text-gray-600 dark:text-slate-400 max-w-2xl"></p>}
           </div>
@@ -109,12 +109,17 @@ export default function GallerySection({ compact=false, initialCategory='all' }:
                     size="sm"
                     variant={activeCategory === cat.key ? 'default' : 'outline'}
                     onClick={() => setActiveCategory(cat.key)}
-                    className={cn('rounded-full px-4 text-xs font-medium transition-all', activeCategory === cat.key ? 'bg-blue-600 hover:bg-blue-700 text-white shadow shadow-blue-500/30' : 'bg-white/70 dark:bg-slate-800/60 backdrop-blur border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400')}
+                    className={cn(
+                      'rounded-full px-4 text-xs font-medium transition-all',
+                      activeCategory === cat.key
+                        ? 'bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-white shadow shadow-[hsl(var(--primary))]/40'
+                        : 'bg-white/70 dark:bg-slate-800/60 backdrop-blur border border-slate-200 dark:border-slate-700 hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))] dark:hover:text-[hsl(var(--primary))]'
+                    )}
                   >{cat.label}<span className="ml-1 text-[10px] opacity-70">{cat.count}</span></Button>
                 ))}
               </div>
               <div className="flex gap-2">
-                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search" className="h-9 rounded-full border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search" className="h-9 rounded-full border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]" />
                 <Button variant="outline" size="sm" onClick={()=>setLayout(l=>l==='grid'?'masonry':'grid')} className="rounded-full">{layout==='grid'?'Masonry':'Grid'}</Button>
               </div>
             </div>

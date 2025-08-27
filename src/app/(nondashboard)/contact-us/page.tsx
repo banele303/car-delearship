@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import FAQShared from "@/components/FAQShared";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Phone, Mail, MapPin, Send } from "lucide-react";
+import { motion } from "framer-motion";
 // FooterSection import removed (using global/site footer only)
 
 export default function ContactUsPage() {
@@ -45,22 +47,68 @@ export default function ContactUsPage() {
   return (
     <div className="min-h-screen">
       
-      <section className="relative h-[40vh] md:h-[50vh] bg-gradient-to-br from-blue-600 to-blue-800 overflow-hidden">
-        
+      <section className="relative h-[52vh] md:h-[58vh] lg:h-[60vh] overflow-hidden" aria-labelledby="contact-hero-heading">
+        {/* Background image reused from About Us for brand consistency */}
         <Image
-          src="/landing-splash.jpg" 
-          alt="Contact Us"
+          src="/about-image.jpeg"
+          alt="Advance Auto showroom background"
           fill
-          className="object-cover object-center opacity-40"
+          className="object-cover object-center scale-105" 
           priority
+          sizes="100vw"
         />
-        
-        
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center">Contact Advance Auto</h1> 
-          <p className="text-lg md:text-xl max-w-2xl text-center">
-            Have questions about our inventory, financing, or trade-ins? The Advance Auto team is here to help.
-          </p> 
+        {/* Layered gradients & subtle radial glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-black/60" />
+        <div className="absolute inset-0 opacity-[0.18] bg-[radial-gradient(circle_at_30%_35%,hsl(var(--primary))_0%,transparent_60%)]" />
+        <div className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-20 bg-[linear-gradient(115deg,rgba(255,255,255,0.15)_0%,rgba(255,255,255,0)_40%)]" />
+        {/* Animated foreground content */}
+        <div className="absolute inset-0 flex items-center justify-center px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className="relative max-w-3xl w-full"
+          >
+            <div className="relative rounded-3xl border border-white/10 bg-white/10 backdrop-blur-xl px-6 py-10 md:px-10 md:py-14 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.45)] overflow-hidden">
+              {/* Accent ring / glow */}
+              <div className="absolute -inset-px rounded-3xl ring-1 ring-white/15" />
+              <div className="absolute -top-16 -right-10 w-72 h-72 bg-[hsl(var(--primary))]/30 blur-3xl rounded-full opacity-30" />
+              <div className="absolute -bottom-24 -left-16 w-96 h-96 bg-blue-500/25 blur-3xl rounded-full opacity-25" />
+              <motion.h1
+                id="contact-hero-heading"
+                className="relative text-center text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(90deg,#fff,rgba(255,255,255,0.7))] drop-shadow"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.7 }}
+              >
+                Contact <span className="text-[hsl(var(--primary))]">Advance Auto</span>
+              </motion.h1>
+              <motion.p
+                className="relative mt-5 text-center text-base md:text-lg text-white/85 leading-relaxed max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.7 }}
+              >
+                Questions about vehicles, financing, trade-ins or documentation? Our team is ready to help you move forward with confidence.
+              </motion.p>
+              <motion.div
+                className="relative mt-8 flex flex-wrap items-center justify-center gap-3 text-xs font-medium"
+                initial="hidden"
+                animate="show"
+                variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+              >
+                {['Fast Response','Transparent Advice','Nationwide Clients','Trusted Since 2024'].map(tag => (
+                  <motion.span
+                    key={tag}
+                    variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                    className="px-3 py-1 rounded-full bg-white/10 text-white/90 backdrop-blur-sm border border-white/15"
+                  >
+                    {tag}
+                  </motion.span>
+                ))}
+              </motion.div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -254,42 +302,9 @@ export default function ContactUsPage() {
       </section>
 
       
-      <section className="py-16 px-4 bg-slate-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">Frequently Asked Questions</h2>
-            <p className="text-slate-600 max-w-2xl mx-auto">
-              Find answers to the most common questions about buying a car and our services.
-            </p> 
-          </div>
-          
-          <div className="space-y-6">
-            {[
-              {
-                question: "How can I browse your car inventory?",
-                answer: "You can browse our full inventory by visiting the 'Inventory' section of our website. Use the search and filter options to find the perfect car for your needs."
-              },
-              {
-                question: "What financing options do you offer?",
-                answer: "We offer a variety of financing solutions, including traditional car loans and lease options. Our finance team can help you find the best rates and terms to fit your budget. Visit our 'Financing' page for more details."
-              },
-              {
-                question: "How do I schedule a test drive?",
-                answer: "You can schedule a test drive directly from any car's detail page or by contacting us through this form. Let us know which car you're interested in and your preferred time."
-              },
-              {
-                question: "Do you accept trade-ins?",
-                answer: "Yes, we do! We offer competitive trade-in values for your current vehicle. You can get an estimate on our 'Trade-In' page or during your visit to our dealership."
-              }
-            ].map((faq, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-medium text-slate-800 mb-2">{faq.question}</h3>
-                <p className="text-slate-600">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <div className="bg-slate-50">
+  <FAQShared />
+      </div>
       
   {/* Global footer rendered elsewhere; removed duplicate footer */}
     </div>
