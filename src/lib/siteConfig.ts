@@ -13,7 +13,7 @@ export const siteConfig = {
     emailTradeIn: 'tradein@advanceauto.co.za',
     addressLine: '2A Amanda Ave, Gleneagles, Johannesburg South, 2091',
     hours: {
-      weekday: '08:00–18:00',
+      weekday: '08:00–17:00',
       saturday: '08:00–14:00',
       sunday: 'Closed'
     }

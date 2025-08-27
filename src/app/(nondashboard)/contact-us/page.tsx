@@ -97,7 +97,7 @@ export default function ContactUsPage() {
                 animate="show"
                 variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
               >
-                {['Fast Response','Transparent Advice','Nationwide Clients','Trusted Since 2024'].map(tag => (
+                {['Fast Response','Transparent Advice','Nationwide Clients'].map(tag => (
                   <motion.span
                     key={tag}
                     variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
@@ -127,7 +127,7 @@ export default function ContactUsPage() {
                 <div>
                   <h3 className="font-medium text-slate-800 text-lg">Phone</h3>
                   <p className="text-slate-600 mt-1">+27 68 072 0424</p> 
-                  <p className="text-slate-600">Mon - Fri 08:00–18:00 | Sat 08:00–14:00</p>
+                  <p className="text-slate-600">Mon - Fri 08:00–17:00 | Sat 08:00–14:00</p>
                 </div>
               </div>
               
