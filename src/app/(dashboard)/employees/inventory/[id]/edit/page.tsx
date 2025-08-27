@@ -259,7 +259,7 @@ export default function EditCarPage() {
   const carForm = useCarForm<CarFormData>({
     resolver: zodCarResolver(carSchema),
     defaultValues: {
-      vin: "",
+  // vin retained for display only
       make: "",
       model: "",
       year: new Date().getFullYear(),
@@ -271,7 +271,7 @@ export default function EditCarPage() {
       transmission: Transmission.AUTOMATIC,
       engine: "",
       exteriorColor: "",
-      interiorColor: "",
+  // interiorColor deprecated
       description: "",
       features: [],
       status: CarStatus.AVAILABLE,
@@ -298,7 +298,7 @@ export default function EditCarPage() {
         condition: fetchedCarData.condition || CarCondition.NEW,
         engine: fetchedCarData.engine || "",
         exteriorColor: fetchedCarData.exteriorColor || "",
-        interiorColor: fetchedCarData.interiorColor || "",
+  // interiorColor deprecated
         description: fetchedCarData.description || "",
         features: fetchedCarData.features || [],
         status: fetchedCarData.status || CarStatus.AVAILABLE,
@@ -526,7 +526,7 @@ export default function EditCarPage() {
             
             <FormSection title="Basic Information" icon={<Car size={20} />} defaultOpen={true}> 
               <div className="space-y-6">
-                <CreateFormFieldt name="vin" label="VIN" control={carForm.control} placeholder="Enter Vehicle Identification Number" />
+                <p className="text-xs text-slate-500 dark:text-slate-400">VIN: <span className="font-mono">{fetchedCarData?.vin || '—'}</span></p>
                 <CreateFormFieldt name="make" label="Make" control={carForm.control} placeholder="e.g., Toyota" />
                 <CreateFormFieldt name="model" label="Model" control={carForm.control} placeholder="e.g., Camry" />
                 <CreateFormFieldt name="year" label="Year" type="number" control={carForm.control} placeholder="e.g., 2023" />
@@ -544,7 +544,7 @@ export default function EditCarPage() {
                 <CreateFormFieldt name="transmission" label="Transmission" type="select" control={carForm.control} options={Object.values(Transmission).map(trans => ({ value: trans, label: trans.replace(/_/g, ' ') }))} />
                 <CreateFormFieldt name="engine" label="Engine (Optional)" control={carForm.control} placeholder="e.g., 2.0L Turbo" />
                 <CreateFormFieldt name="exteriorColor" label="Exterior Color (Optional)" control={carForm.control} placeholder="e.g., Blue" />
-                <CreateFormFieldt name="interiorColor" label="Interior Color (Optional)" control={carForm.control} placeholder="e.g., Black Leather" />
+                {/* interiorColor removed */}
               </div>
               <CreateFormFieldt name="description" label="Description" type="textarea" control={carForm.control} placeholder="Provide a detailed description of the car..." inputClassName="min-h-[150px]" />
             </FormSection>

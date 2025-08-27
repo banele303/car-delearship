@@ -34,14 +34,14 @@ export default function AddCarPage() {
     model: "",
     year: new Date().getFullYear(),
     price: "",
-    vin: "",
+    // vin removed (generated on backend)
     carType: "SEDAN",
   fuelType: "PETROL",
     condition: "USED",
     transmission: "AUTOMATIC",
     engine: "",
     exteriorColor: "",
-    interiorColor: "",
+    // interiorColor removed per requirement
     mileage: "",
     description: "",
     dealershipId: "",
@@ -211,14 +211,14 @@ interface CarFormData {
     model: string;
     year: number;
     price: string;
-    vin: string;
+    vin: string; // retained in type for compatibility
     carType: CarType;
     fuelType: FuelType;
     condition: CarCondition;
     transmission: Transmission;
     engine: string;
     exteriorColor: string;
-    interiorColor: string;
+    interiorColor: string; // legacy field (not collected on create)
     mileage: string;
     description: string;
     dealershipId: string;
@@ -345,14 +345,14 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
         meta.append('model', formData.model);
         meta.append('year', String(formData.year));
         meta.append('price', formData.price || '0');
-        meta.append('vin', formData.vin);
+  // meta.append('vin', formData.vin); // omitted (server will generate)
         meta.append('carType', formData.carType);
   meta.append('fuelType', formData.fuelType === 'PETROL' ? 'PETROL' : formData.fuelType);
         meta.append('condition', formData.condition);
         meta.append('transmission', formData.transmission);
         meta.append('engine', formData.engine);
         meta.append('exteriorColor', formData.exteriorColor);
-        meta.append('interiorColor', formData.interiorColor);
+  // meta.append('interiorColor', formData.interiorColor); // omitted (deprecated)
         meta.append('mileage', formData.mileage || '0');
         meta.append('description', formData.description);
         meta.append('features', JSON.stringify(selectedFeatures));
@@ -617,17 +617,6 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="interiorColor">Interior Color</Label>
-                <Input 
-                  id="interiorColor" 
-                  name="interiorColor"
-                  value={formData.interiorColor}
-                  onChange={handleChange}
-                  placeholder="e.g. Black, Beige, Gray"
-                  required
-                />
-              </div>
             </div>
 
             {/* Extras / Features */}
@@ -668,18 +657,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="vin">VIN</Label>
-              <Input 
-                id="vin" 
-                name="vin"
-                value={formData.vin}
-                onChange={handleChange}
-                placeholder="Vehicle Identification Number"
-                required
-              />
-            </div>
-
+            {/* VIN & Interior Color removed (server-generated / deprecated) */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea 

@@ -180,7 +180,7 @@ const NewCar = () => {
   const form = useForm<CarFormData>({
     resolver: zodResolver(carSchema), 
     defaultValues: {
-      vin: "",
+  // vin auto-generated server-side
       make: "",
       model: "",
       year: new Date().getFullYear(),
@@ -191,7 +191,7 @@ const NewCar = () => {
   fuelType: FuelType.PETROL,
       transmission: Transmission.AUTOMATIC,
       exteriorColor: "",
-      interiorColor: "",
+  // interiorColor deprecated
       description: "",
       features: [],
       photoUrls: [],
@@ -209,8 +209,7 @@ const NewCar = () => {
     
     switch(step) {
       case 1: 
-        isValid = typeof formState.vin === 'string' && formState.vin.trim() !== '' &&
-                  typeof formState.make === 'string' && formState.make.trim() !== '' &&
+  isValid = typeof formState.make === 'string' && formState.make.trim() !== '' &&
                   typeof formState.model === 'string' && formState.model.trim() !== '' &&
                   Number(formState.year) > 1900 &&
                   Number(formState.price) > 0 &&
@@ -522,13 +521,7 @@ const NewCar = () => {
                 onStepClick={goToStep}
               >
                 <div className="space-y-6">
-                  <CreateFormField
-                    name="vin"
-                    label="VIN"
-                    labelClassName={labelStyle}
-                    inputClassName={inputStyle}
-                    placeholder="Enter Vehicle Identification Number"
-                  />
+                  <p className="text-xs text-gray-400">VIN will be auto-generated after creation.</p>
                   <CreateFormField
                     name="make"
                     label="Make"
@@ -648,13 +641,7 @@ const NewCar = () => {
                     inputClassName={inputStyle}
                     placeholder="e.g., Blue"
                   />
-                  <CreateFormField
-                    name="interiorColor"
-                    label="Interior Color (Optional)"
-                    labelClassName={labelStyle}
-                    inputClassName={inputStyle}
-                    placeholder="e.g., Black Leather"
-                  />
+                  {/* interiorColor removed */}
                   <CreateFormField
                     name="description"
                     label="Description"

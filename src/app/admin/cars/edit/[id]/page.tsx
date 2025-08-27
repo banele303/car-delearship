@@ -99,20 +99,19 @@ export default function EditCarPage({ params }: PageProps) {
     model: "",
     year: new Date().getFullYear(),
     price: "",
-    vin: "",
+    vin: "", // vin retained in data but not editable
     carType: "SEDAN",
-  fuelType: "FUEL",
+    fuelType: "FUEL",
     condition: "USED",
     transmission: "AUTOMATIC",
     engine: "",
     exteriorColor: "",
-    interiorColor: "",
     mileage: "",
     description: "",
     dealershipId: "",
     employeeId: "",
     status: "AVAILABLE",
-  featured: false,
+    featured: false,
   });
 
   const [dealerships, setDealerships] = useState<Dealership[]>([]);
@@ -158,14 +157,14 @@ export default function EditCarPage({ params }: PageProps) {
         model: carData.model,
         year: carData.year,
         price: carData.price.toString(),
-        vin: carData.vin,
+  vin: carData.vin,
         carType: carData.carType,
         fuelType: carData.fuelType,
         condition: carData.condition,
         transmission: carData.transmission,
         engine: carData.engine,
         exteriorColor: carData.exteriorColor,
-        interiorColor: carData.interiorColor,
+  // interiorColor deprecated
         mileage: carData.mileage.toString(),
         description: carData.description || "",
         dealershipId: carData.dealershipId.toString(),
@@ -560,18 +559,8 @@ export default function EditCarPage({ params }: PageProps) {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="interiorColor">Interior Color</Label>
-                <Input 
-                  id="interiorColor" 
-                  name="interiorColor"
-                  value={formData.interiorColor}
-                  onChange={handleChange}
-                  placeholder="e.g. Black, Beige, Gray"
-                  required
-                />
-              </div>
             </div>
+            <p className="text-xs text-slate-500 -mt-2">VIN auto-generated: <span className="font-mono">{car?.vin}</span></p>
 
             {/* Extras / Features */}
             <div className="space-y-3">
@@ -611,17 +600,7 @@ export default function EditCarPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="vin">VIN</Label>
-              <Input 
-                id="vin" 
-                name="vin"
-                value={formData.vin}
-                onChange={handleChange}
-                placeholder="Vehicle Identification Number"
-                required
-              />
-            </div>
+            {/* VIN not editable */}
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>

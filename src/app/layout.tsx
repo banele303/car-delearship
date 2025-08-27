@@ -25,6 +25,8 @@ import "@aws-amplify/ui-react/styles.css";
 import Providers from "./providers";
 import ConditionalFloatingWhatsApp from "@/components/ConditionalFloatingWhatsApp";
 import Footer from "@/components/Footer";
+import { usePathname } from 'next/navigation';
+import React from 'react';
 
 export const metadata: Metadata = {
   title: "Advance Auto Trader - Your Dream Car Awaits",
@@ -34,21 +36,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function ConditionalFooter() {
+  const pathname = usePathname();
+  if (!pathname) return null;
+  const hide = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
+  if (hide) return null;
+  return <Footer />;
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} ${montserrat.variable} ${outfit.variable} font-sans antialiased`} suppressHydrationWarning>
-  <Providers>
-    <div className="flex min-h-screen flex-col">
-      <main className="flex-1">{children}</main>
-      <Footer />
-      <ConditionalFloatingWhatsApp />
-    </div>
-  </Providers>
+        <Providers>
+          <div className="flex min-h-screen flex-col">
+            <main className="flex-1">{children}</main>
+            <ConditionalFooter />
+            <ConditionalFloatingWhatsApp />
+          </div>
+        </Providers>
         <Toaster 
           position="bottom-right"
           closeButton
