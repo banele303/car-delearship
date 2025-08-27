@@ -22,6 +22,9 @@ interface CarWithRelations {
   photoUrls?: string[]; features?: string[]; dealershipId: number; averageRating?: number;
   dealership?: { phoneNumber?: string } | null;
 }
+const CONTACT_NUMBER_DISPLAY = "068 072 0424"; // user-provided display format
+const CONTACT_NUMBER_RAW = "0680720424"; // sanitized digits for links
+
 const CarDetailPage = () => {
   const params = useParams();
   const router = useRouter();
@@ -463,7 +466,7 @@ const CarDetailPage = () => {
                             className="col-span-1 bg-[#0079d6] hover:bg-[#006ac0] text-white font-semibold flex items-center justify-center gap-2"
                           >
                             <Phone className="h-4 w-4" />
-                            <span className="text-sm">{showNumber ? (((car as any).dealership?.phoneNumber) || 'N/A') : 'Show number'}</span>
+                            <span className="text-sm">{showNumber ? CONTACT_NUMBER_DISPLAY : 'Show number'}</span>
                           </Button>
                           <Button
                             type="button"
@@ -476,8 +479,8 @@ const CarDetailPage = () => {
                           <Button
                             type="button"
                             onClick={() => {
-                              const phone = ((car as any).dealership?.phoneNumber)?.replace(/[^\d+]/g,'');
-                              const url = phone ? `https://wa.me/${phone.startsWith('+')?phone.substring(1):phone}?text=${encodeURIComponent('Hi, I am interested in the '+car.year+' '+car.make+' '+car.model)}` : `https://wa.me/?text=${encodeURIComponent('Hi, I am interested in the '+car.year+' '+car.make+' '+car.model)}`;
+                              const waNumber = CONTACT_NUMBER_RAW; // use provided number
+                              const url = `https://wa.me/${waNumber}?text=${encodeURIComponent('Hi, I am interested in the '+car.year+' '+car.make+' '+car.model)}`;
                               window.open(url,'_blank','noopener');
                             }}
                             className="col-span-2 bg-[#0a5c48] hover:bg-[#084c3c] text-white font-semibold flex items-center justify-center gap-2"
