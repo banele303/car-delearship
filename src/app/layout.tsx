@@ -24,6 +24,7 @@ const outfit = Outfit({
 import "@aws-amplify/ui-react/styles.css";
 import Providers from "./providers";
 import ConditionalFloatingWhatsApp from "@/components/ConditionalFloatingWhatsApp";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Advanced Auto Trader - Your Dream Car Awaits",
@@ -41,7 +42,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} ${montserrat.variable} ${outfit.variable} font-sans antialiased`} suppressHydrationWarning>
-  <Providers>{children}<ConditionalFloatingWhatsApp /></Providers>
+  <Providers>
+    <div className="flex min-h-screen flex-col">
+      <main className="flex-1">{children}</main>
+      <Footer />
+      <ConditionalFloatingWhatsApp />
+    </div>
+  </Providers>
         <Toaster 
           position="bottom-right"
           closeButton

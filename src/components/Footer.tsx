@@ -21,10 +21,11 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-white uppercase mb-4">Explore</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/cars" className="hover:text-white">All Vehicles</Link></li>
-              <li><Link href="/financing" className="hover:text-white">Financing</Link></li>
-              <li><Link href="/contact-us" className="hover:text-white">Contact</Link></li>
-              <li><Link href="/blog" className="hover:text-white">Blog</Link></li>
+              <li><Link href="/" className="hover:text-white">Home</Link></li>
+              <li><Link href="/gallery" className="hover:text-white">Gallery</Link></li>
+              <li><Link href="/inventory" className="hover:text-white">Showroom</Link></li>
+              <li><Link href="/financing" className="hover:text-white">Finance Application</Link></li>
+              <li><Link href="/contact-us" className="hover:text-white">Contact Us</Link></li>
             </ul>
           </div>
           <div>
@@ -46,7 +47,7 @@ export default function Footer() {
         </div>
         <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
           <p>&copy; {year} Advance Auto. All rights reserved.</p>
-          <p>Powered by Advance Auto Dealership Platform</p>
+         
         </div>
       </div>
     </footer>
