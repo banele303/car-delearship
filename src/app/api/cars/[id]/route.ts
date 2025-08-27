@@ -88,7 +88,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: "Invalid car ID" }, { status: 400 });
     }
     
-    const car = await prisma.car.findUnique({
+  const car = await prisma.car.findUnique({
       where: { id },
       include: { dealership: true, employee: true, reviews: true },
     });
@@ -97,7 +97,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: "Car not found" }, { status: 404 });
     }
     
-    return NextResponse.json(car);
+  // Normalize legacy fuel type before returning
+  const normalized = String(car.fuelType) === 'GASOLINE' ? { ...car, fuelType: 'PETROL' } : car;
+  return NextResponse.json(normalized, { headers: { 'x-fueltype-normalized': String(car.fuelType) === 'GASOLINE' ? 'true' : 'false' } });
   } catch (err: any) {
     console.error("Error retrieving car:", err);
     return NextResponse.json({ message: `Error retrieving car: ${err.message}` }, { status: 500 });

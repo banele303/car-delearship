@@ -295,7 +295,10 @@ enum CarType {
 
 // Re-introduced HYDROGEN to mirror existing DB enum values. Removing it while rows still referenced it triggers runtime errors.
 enum FuelType {
-  PETROL // renamed from GASOLINE
+  // LEGACY: Some existing rows still store GASOLINE. Keep temporarily so Prisma can read them.
+  GASOLINE
+  // PREFERRED: Use PETROL going forward (forms + UI). Migration plan: update rows then remove GASOLINE.
+  PETROL
   DIESEL
   HYBRID
   ELECTRIC

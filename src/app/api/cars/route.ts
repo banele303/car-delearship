@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
       take,
       orderBy: { updatedAt: orderDir },
     });
-    return NextResponse.json(cars, { headers: { 'x-query-time': String(Date.now() - started) } });
+    // Normalize legacy enum values (GASOLINE -> PETROL) without mutating DB
+  const normalized = cars.map(c => (String(c.fuelType) === 'GASOLINE' ? { ...c, fuelType: 'PETROL' } : c));
+    return NextResponse.json(normalized, { headers: { 'x-query-time': String(Date.now() - started), 'x-fueltype-normalized': 'true' } });
   } catch (error: any) {
     // Attempt a fallback if failure might be due to schema drift (e.g. missing featured column)
     const msg = error?.message || String(error);
