@@ -146,7 +146,65 @@ export default function FinancingApplicationsPage() {
       
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="block md:hidden p-4 space-y-4">
+            {isLoading ? (
+              [...Array(4)].map((_,i)=>(
+                <div key={i} className="border rounded-lg p-4 space-y-2 animate-pulse">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
+                </div>
+              ))
+            ) : applications.length === 0 ? (
+              <p className="text-center text-sm text-gray-500 py-8">{searchTerm || statusFilter !== 'all' ? 'No applications match your search criteria' : 'No financing applications found'}</p>
+            ) : (
+              applications.map(app => (
+                <div key={app.id} className="border rounded-lg p-4 bg-white dark:bg-gray-900 shadow-sm">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{app.customerName}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{app.carModel}</p>
+                    </div>
+                    {getStatusBadge(app.status)}
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400">Date</p>
+                      <p className="font-medium">{new Date(app.applicationDate).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400">Amount</p>
+                      <p className="font-medium">R{app.amount.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400">Credit</p>
+                      <p className="font-medium flex items-center gap-1">
+                        <span className={`h-2 w-2 rounded-full ${getCreditScoreColor(app.creditScore)}`}></span>
+                        {app.creditScore}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <Button variant="outline" size="sm" asChild className="w-full mt-1">
+                        <Link href={`/admin/financing/applications/${app.id}`}>View Details</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+            {!isLoading && applications.length > 0 && (
+              <div className="pt-2">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalApplications}
+                  itemsPerPage={applicationsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -209,17 +267,19 @@ export default function FinancingApplicationsPage() {
             </Table>
           </div>
           
-          {!isLoading && applications.length > 0 && (
-            <div className="py-4">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalApplications}
-                itemsPerPage={applicationsPerPage}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          )}
+          <div className="hidden md:block">
+            {!isLoading && applications.length > 0 && (
+              <div className="py-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalApplications}
+                  itemsPerPage={applicationsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

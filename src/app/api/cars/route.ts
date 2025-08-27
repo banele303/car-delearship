@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
     const featureBuffer: string[] = [];
     for (const [key, value] of formData.entries()) {
       if (key === 'photos') continue;
+      if (key === 'vin') continue; // ignore client-sent vin (we will generate)
+      if (key === 'interiorColor') continue; // interiorColor no longer collected
       if (key === 'features') {
         const raw = String(value).trim();
         if (!raw) continue;
@@ -173,6 +175,13 @@ export async function POST(req: NextRequest) {
       }
     } else if (carData.employeeId === '') {
       delete carData.employeeId;
+    }
+    // Auto-generate VIN if not provided (17-char alphanumeric excluding I,O,Q)
+    if (!carData.vin) {
+      const alphabet = 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789';
+      let gen = '';
+      for (let i=0;i<17;i++) gen += alphabet[Math.floor(Math.random()*alphabet.length)];
+      carData.vin = gen;
     }
     try {
       const newCar = await prisma.car.create({ data: carData as any });

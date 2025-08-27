@@ -126,18 +126,7 @@ export const CarForm = ({ initialData }: CarFormProps) => {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Car Information</h3>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              VIN
-            </label>
-            <input
-              type="text"
-              name="vin"
-              defaultValue={initialData?.vin}
-              required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-          </div>
+          {/* VIN removed: now auto-generated on backend */}
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -313,17 +302,7 @@ export const CarForm = ({ initialData }: CarFormProps) => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Interior Color
-            </label>
-            <input
-              type="text"
-              name="interiorColor"
-              defaultValue={initialData?.interiorColor}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-          </div>
+          {/* Interior Color removed per requirement */}
 
           <div>
             <label className="block text-sm font-medium text-gray-700">

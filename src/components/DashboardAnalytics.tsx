@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { 
   Car, 
@@ -38,114 +38,52 @@ interface DashboardAnalyticsProps {
 
 const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ userRole = "admin" }) => {
   
-  const salesData = [
-    { month: 'Jan', sales: 45, revenue: 2250000 },
-    { month: 'Feb', sales: 52, revenue: 2600000 },
-    { month: 'Mar', sales: 48, revenue: 2400000 },
-    { month: 'Apr', sales: 61, revenue: 3050000 },
-    { month: 'May', sales: 55, revenue: 2750000 },
-    { month: 'Jun', sales: 67, revenue: 3350000 },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [salesData, setSalesData] = useState<{ month:string; sales:number; revenue:number }[]>([]);
+  const [inventoryData, setInventoryData] = useState<{ category:string; count:number; color:string }[]>([]);
+  const [inquiryData, setInquiryData] = useState<{ day:string; inquiries:number; testDrives:number }[]>([]);
+  const [topPerformers, setTopPerformers] = useState<{ name:string; sales:number; revenue:number }[]>([]);
+  const [stats, setStats] = useState<any>(null);
 
-  const inventoryData = [
-    { category: 'Sedans', count: 85, color: '#00acee' },
-    { category: 'SUVs', count: 120, color: '#0099d4' },
-    { category: 'Luxury', count: 45, color: '#0066cc' },
-    { category: 'Electric', count: 30, color: '#004499' },
-    { category: 'Sports', count: 25, color: '#003366' },
-  ];
+  useEffect(() => {
+    const fetchSummary = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/analytics/summary');
+        if (!res.ok) throw new Error('Failed to fetch analytics summary');
+        const data = await res.json();
+        setStats(data.stats);
+        setSalesData(data.salesTrend);
+        setInventoryData(data.inventoryDistribution);
+        setInquiryData(data.weeklyActivity);
+        setTopPerformers(data.topPerformers);
+      } catch (e:any) {
+        setError(e.message || 'Error loading analytics');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSummary();
+  }, []);
 
-  const inquiryData = [
-    { day: 'Mon', inquiries: 12, testDrives: 8 },
-    { day: 'Tue', inquiries: 15, testDrives: 10 },
-    { day: 'Wed', inquiries: 18, testDrives: 12 },
-    { day: 'Thu', inquiries: 14, testDrives: 9 },
-    { day: 'Fri', inquiries: 22, testDrives: 15 },
-    { day: 'Sat', inquiries: 28, testDrives: 20 },
-    { day: 'Sun', inquiries: 16, testDrives: 11 },
-  ];
+  const formatCurrency = (value: number) => {
+    if (value >= 1_000_000) return `R${(value/1_000_000).toFixed(2)}M`;
+    if (value >= 1_000) return `R${(value/1_000).toFixed(1)}k`;
+    return `R${value.toFixed(0)}`;
+  };
 
-  const topPerformers = [
-    { name: 'John Smith', sales: 12, revenue: 850000 },
-    { name: 'Sarah Johnson', sales: 10, revenue: 720000 },
-    { name: 'Mike Wilson', sales: 9, revenue: 680000 },
-    { name: 'Emma Davis', sales: 8, revenue: 590000 },
-  ];
-
-  const statsCards = [
-    {
-      title: "Total Cars",
-      value: "325",
-      change: "+5.2%",
-      changeType: "positive" as const,
-      icon: Car,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-900/20"
-    },
-    {
-      title: "Monthly Sales",
-      value: "67",
-      change: "+12.5%",
-      changeType: "positive" as const,
-      icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-900/20"
-    },
-    {
-      title: "Revenue (This Month)",
-      value: "R3.35M",
-      change: "+8.1%",
-      changeType: "positive" as const,
-      icon: DollarSign,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50 dark:bg-emerald-900/20"
-    },
-    {
-      title: "Active Customers",
-      value: "1,247",
-      change: "+3.2%",
-      changeType: "positive" as const,
-      icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50 dark:bg-purple-900/20"
-    },
-    {
-      title: "Test Drives (Week)",
-      value: "85",
-      change: "+15.3%",
-      changeType: "positive" as const,
-      icon: Calendar,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50 dark:bg-orange-900/20"
-    },
-    {
-      title: "Inquiries (Week)",
-      value: "125",
-      change: "+7.8%",
-      changeType: "positive" as const,
-      icon: Phone,
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50 dark:bg-cyan-900/20"
-    },
-    {
-      title: "Financing Apps",
-      value: "42",
-      change: "+22.1%",
-      changeType: "positive" as const,
-      icon: CreditCard,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50 dark:bg-indigo-900/20"
-    },
-    {
-      title: "Customer Rating",
-      value: "4.8/5",
-      change: "+0.2",
-      changeType: "positive" as const,
-      icon: Award,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50 dark:bg-yellow-900/20"
-    },
-  ];
+  const statsCards = stats ? [
+    { title: 'Total Cars', value: stats.totalCars.toString(), change: '', changeType: 'positive' as const, icon: Car, color:'text-blue-600', bgColor:'bg-blue-50 dark:bg-blue-900/20' },
+    { title: 'Monthly Sales', value: stats.monthlySales.toString(), change: '', changeType: 'positive' as const, icon: TrendingUp, color:'text-green-600', bgColor:'bg-green-50 dark:bg-green-900/20' },
+    { title: 'Revenue (This Month)', value: formatCurrency(stats.monthlyRevenue), change: '', changeType: 'positive' as const, icon: DollarSign, color:'text-emerald-600', bgColor:'bg-emerald-50 dark:bg-emerald-900/20' },
+    { title: 'Active Customers', value: stats.activeCustomers.toString(), change: '', changeType: 'positive' as const, icon: Users, color:'text-purple-600', bgColor:'bg-purple-50 dark:bg-purple-900/20' },
+    { title: 'Test Drives (Week)', value: stats.weekTestDrives.toString(), change: '', changeType: 'positive' as const, icon: Calendar, color:'text-orange-600', bgColor:'bg-orange-50 dark:bg-orange-900/20' },
+    { title: 'Inquiries (Week)', value: stats.weekInquiries.toString(), change: '', changeType: 'positive' as const, icon: Phone, color:'text-cyan-600', bgColor:'bg-cyan-50 dark:bg-cyan-900/20' },
+    { title: 'Financing Apps', value: stats.financingApplications.toString(), change: '', changeType: 'positive' as const, icon: CreditCard, color:'text-indigo-600', bgColor:'bg-indigo-50 dark:bg-indigo-900/20' },
+    { title: 'Customer Rating', value: `${stats.avgRating}/5`, change: '', changeType: 'positive' as const, icon: Award, color:'text-yellow-600', bgColor:'bg-yellow-50 dark:bg-yellow-900/20' },
+  ] : [];
 
   return (
     <div className="space-y-6">
@@ -160,8 +98,21 @@ const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ userRole = "adm
       </div>
 
       
+      {error && (
+        <div className="p-4 rounded-md bg-red-50 text-red-600 border border-red-200 text-sm">{error}</div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsCards.map((stat, index) => (
+        {loading && statsCards.length === 0 && Array.from({length:8}).map((_,i)=>(
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6 h-32 flex flex-col justify-between">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+              <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-1/2" />
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/5" />
+            </CardContent>
+          </Card>
+        ))}
+        {!loading && statsCards.map((stat, index) => (
           <motion.div
             key={stat.title}
             initial={{ opacity: 0, y: 20 }}
@@ -183,7 +134,7 @@ const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ userRole = "adm
                         ? 'text-green-600' 
                         : 'text-red-600'
                     }`}>
-                      {stat.change} from last period
+                      {stat.change && `${stat.change} from last period`}
                     </p>
                   </div>
                   <div className={`p-3 rounded-full ${stat.bgColor}`}>
@@ -319,7 +270,7 @@ const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ userRole = "adm
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {topPerformers.map((performer, index) => (
+    {topPerformers.map((performer, index) => (
                   <div key={performer.name} className="flex items-center justify-between">
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">
@@ -331,7 +282,7 @@ const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ userRole = "adm
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-[#00acee]">
-                        R{(performer.revenue / 1000).toFixed(0)}k
+      {performer.revenue >= 1_000_000 ? `R${(performer.revenue/1_000_000).toFixed(2)}M` : `R${(performer.revenue/1000).toFixed(0)}k`}
                       </p>
                       <Progress 
                         value={(performer.sales / 15) * 100} 
