@@ -24,8 +24,7 @@ const outfit = Outfit({
 import "@aws-amplify/ui-react/styles.css";
 import Providers from "./providers";
 import ConditionalFloatingWhatsApp from "@/components/ConditionalFloatingWhatsApp";
-import Footer from "@/components/Footer";
-import { usePathname } from 'next/navigation';
+import ConditionalFooter from "@/components/ConditionalFooter";
 import React from 'react';
 
 export const metadata: Metadata = {
@@ -36,13 +35,7 @@ export const metadata: Metadata = {
   },
 };
 
-function ConditionalFooter() {
-  const pathname = usePathname();
-  if (!pathname) return null;
-  const hide = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
-  if (hide) return null;
-  return <Footer />;
-}
+// Footer visibility handled in client component to avoid hooks in server layout.
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

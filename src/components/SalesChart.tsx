@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { useGetSalesQuery } from "@/state/api";
 import { useTheme } from "next-themes";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,70 +32,65 @@ const SalesChart = () => {
   const isDarkTheme = theme === "dark";
   
   
-  const generateSampleData = () => {
-    const months = 12;
-    const now = new Date();
-    const data = [];
-    
-    const baseSales = 20000;
-    const variance = 8000;
-    
-    for (let i = months - 1; i >= 0; i--) {
-      const date = subMonths(now, i);
-      const month = format(date, 'MMM');
-      const formattedDate = format(date, 'MMM yyyy');
-      
-      
-      let sales = baseSales + Math.sin(i/2) * variance + Math.random() * (variance/2);
-      
-      
-      if (month === 'Jun' || month === 'Jul' || month === 'Aug') {
-        sales *= 1.2;
-      }
-      
-      
-      if (month === 'Dec') {
-        sales *= 1.3;
-      }
-      
-      const profit = sales * (0.12 + Math.random() * 0.08); 
-      const units = Math.round(sales / 35000); 
-      
-      data.push({
-        name: formattedDate,
-        shortName: month,
-        sales: Math.round(sales),
-        profit: Math.round(profit),
-        units: units
-      });
-    }
-    return data;
+  // Determine how many months to include based on selected period
+  const periodMonths: { [key: string]: number } = {
+    '1m': 1,
+    '3m': 3,
+    '6m': 6,
+    '1y': 12,
+    'all': 0 // 0 will mean all time
   };
 
   
-  const filterDataByPeriod = (data: any[]) => {
-    if (timePeriod === 'all') return data;
-    
-    const periodMonths: { [key: string]: number } = {
-      '1m': 1,
-      '3m': 3,
-      '6m': 6,
-      '1y': 12
-    };
-    
-    const months = periodMonths[timePeriod];
-    return data.slice(-months);
-  };
+  const chartData = useMemo(() => {
+    if (!sales || sales.length === 0) return [];
 
-  const chartData = (sales && sales.length > 0)
-    ? sales.map((sale: any) => ({
-        name: new Date(sale.saleDate).toLocaleDateString(),
-        shortName: format(new Date(sale.saleDate), 'MMM'),
-        sales: sale.salePrice,
-        profit: Math.round(sale.salePrice * 0.15), // Assuming 15% profit margin
-        units: 1,
-      }))
-    : filterDataByPeriod(generateSampleData());
+    // Filter by period date threshold (except 'all')
+    const months = periodMonths[timePeriod];
+    let filtered = sales as any[];
+    if (months && months > 0) {
+      const threshold = subMonths(new Date(), months - 1); // include current month
+      filtered = filtered.filter(s => new Date(s.saleDate) >= threshold);
+    }
+
+    // Group by month (MMM yyyy)
+    const map = new Map<string, { sales: number; profit: number; units: number; date: Date }>();
+    filtered.forEach((sale: any) => {
+      const dt = new Date(sale.saleDate);
+      const key = format(dt, 'MMM yyyy');
+      if (!map.has(key)) {
+        map.set(key, { sales: 0, profit: 0, units: 0, date: new Date(dt.getFullYear(), dt.getMonth(), 1) });
+      }
+      const agg = map.get(key)!;
+      const price = Number(sale.salePrice) || 0;
+      agg.sales += price;
+      agg.profit += price * 0.15; // assumed margin
+      agg.units += 1;
+    });
+
+    // Ensure continuity for months range (when not 'all') by injecting zeros
+    if (months && months > 0) {
+      for (let i = months - 1; i >= 0; i--) {
+        const d = subMonths(new Date(), i);
+        const key = format(d, 'MMM yyyy');
+        if (!map.has(key)) {
+          map.set(key, { sales: 0, profit: 0, units: 0, date: new Date(d.getFullYear(), d.getMonth(), 1) });
+        }
+      }
+    }
+
+    const rows = Array.from(map.entries())
+      .sort((a, b) => a[1].date.getTime() - b[1].date.getTime())
+      .map(([key, val]) => ({
+        name: key,
+        shortName: format(val.date, 'MMM'),
+        sales: Math.round(val.sales),
+        profit: Math.round(val.profit),
+        units: val.units
+      }));
+
+    return rows;
+  }, [sales, timePeriod]);
   
   
   const totalSales = chartData.reduce((sum, item) => sum + item.sales, 0);
@@ -122,6 +117,37 @@ const SalesChart = () => {
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (chartData.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <Tabs defaultValue={chartType} onValueChange={setChartType} className="w-full sm:w-auto">
+            <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+              <TabsTrigger value="line">Line</TabsTrigger>
+              <TabsTrigger value="bar">Bar</TabsTrigger>
+              <TabsTrigger value="area">Area</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Select value={timePeriod} onValueChange={setTimePeriod}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1m">Last Month</SelectItem>
+              <SelectItem value="3m">Last 3 Months</SelectItem>
+              <SelectItem value="6m">Last 6 Months</SelectItem>
+              <SelectItem value="1y">Last Year</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-8 text-center">
+          <p className="text-sm text-muted-foreground">No sales data for the selected period.</p>
         </div>
       </div>
     );
