@@ -107,7 +107,13 @@ const FeaturedCars = () => {
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {paginatedCars.map((car: any, index: number) => (
             <motion.div key={car.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: index * 0.1 }} viewport={{ once: true }}
-              className="group bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:border-[#00A211]/50 transition-all duration-300">
+              className="group bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:border-[#00A211]/50 transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#00A211]/40"
+              onClick={() => router.push(`/cars/${car.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); router.push(`/cars/${car.id}`); } }}
+              aria-label={`View details for ${car.year} ${car.make} ${car.model}`}
+            >
               <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-700">
                 <Image src={Array.isArray(car.photoUrls) && car.photoUrls.length > 0 ? car.photoUrls[0] : "/placeholder.jpg"} alt={`${car.make} ${car.model}`} fill sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover" />
                 {Array.isArray(car.photoUrls) && car.photoUrls.length > 0 && (
@@ -118,14 +124,8 @@ const FeaturedCars = () => {
               </div>
 
               <div className="p-5">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white leading-snug line-clamp-2">
-                  <Link
-                    href={`/cars/${car.id}`}
-                    aria-label={`View details for ${car.year} ${car.make} ${car.model}`}
-                    className="block hover:text-[#00A211] focus:outline-none focus:ring-2 focus:ring-[#00A211]/40 rounded-sm transition-colors"
-                  >
-                    {car.year} {car.make} {car.model}
-                  </Link>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-[#00A211] transition-colors">
+                  {car.year} {car.make} {car.model}
                 </h3>
                 <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
                   {formatPrice(car.price)}
@@ -146,7 +146,7 @@ const FeaturedCars = () => {
                 <div className="mt-4">
                   <Button
                     className="w-full h-11 bg-[#00A211] hover:brightness-110 text-white rounded-xl font-semibold"
-                    onClick={() => handleReserveCar(car)}
+                    onClick={(e) => { e.stopPropagation(); handleReserveCar(car); }}
                   >
                     Book Now
                   </Button>
