@@ -28,10 +28,6 @@ export default function AboutUsSection() {
                 priority
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0" />
-              <div className="absolute bottom-4 left-4 text-white drop-shadow">
-                <p className="text-sm font-medium tracking-wide uppercase">Since 2024</p>
-                <p className="text-xs text-emerald-100">Driven by trust & service</p>
-              </div>
             </div>
           </motion.div>
           {/* Content side with updated text only */}
@@ -53,20 +49,9 @@ export default function AboutUsSection() {
               Come to Advance Auto for best service and customer experience!!!
             </p>
             <p className="font-semibold text-gray-800 dark:text-gray-200 text-lg">Advance Auto<br/>Cars You Can Trust</p>
-            <div className="grid sm:grid-cols-3 gap-5 pt-4">
-              {[
-                { label: 'Vehicles Curated', value: '500+' },
-                { label: 'Customer Rating', value: '4.9★' },
-                { label: 'Avg. Delivery Time', value: '48h' }
-              ].map(stat => (
-                <div key={stat.label} className="rounded-xl border border-[hsl(var(--primary))]/30 bg-[hsl(var(--primary))]/5 dark:bg-[hsl(var(--primary))]/10 px-4 py-5 backdrop-blur-sm">
-                  <p className="text-xl font-semibold text-[hsl(var(--primary))] dark:text-[hsl(var(--primary))]">{stat.value}</p>
-                  <p className="text-[11px] tracking-wide uppercase font-medium text-[hsl(var(--primary))]/70 dark:text-[hsl(var(--primary))]/60">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="pt-4 flex flex-wrap gap-3 text-xs font-medium">
-              {['Transparent Pricing','Multi‑Point Inspection','Flexible Finance','After‑Sale Support'].map(tag => (
+            {/* Removed stats cards and specific tags per request */}
+            <div className="pt-2 flex flex-wrap gap-3 text-xs font-medium">
+              {['Transparent Pricing','Flexible Finance','After‑Sale Support'].map(tag => (
                 <span key={tag} className="px-3 py-1 rounded-full bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] dark:bg-[hsl(var(--primary))]/15 dark:text-[hsl(var(--primary))] border border-[hsl(var(--primary))]/30">{tag}</span>
               ))}
             </div>
