@@ -27,8 +27,8 @@ import ConditionalFloatingWhatsApp from "@/components/ConditionalFloatingWhatsAp
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Advanced Auto Trader - Your Dream Car Awaits",
-  description: "Find your next car at Advanced Auto Trader. Browse new and used cars, schedule test drives, and get financing options.",
+  title: "Advance Auto Trader - Your Dream Car Awaits",
+  description: "Find your next car at Advance Auto Trader. Browse new and used cars, schedule test drives, and get financing options.",
   icons: {
     icon: '/favicon.ico',
   },

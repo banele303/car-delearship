@@ -2,8 +2,8 @@ import React from "react";
 import GallerySection from "../home/GallerySection";
 
 export const metadata = {
-  title: "Gallery | Advanced Auto Trader",
-  description: "Explore our vehicle and brand gallery at Advanced Auto Trader.",
+  title: "Gallery | Advance Auto Trader",
+  description: "Explore our vehicle and brand gallery at Advance Auto Trader.",
 };
 
 export default function GalleryPage() {
