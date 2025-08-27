@@ -49,8 +49,8 @@ export default function Navbar() {
 
   return (
     <header className={cn(
-      "fixed top-0 inset-x-0 z-40 transition-colors",
-      scrolled ? "backdrop-blur-xl bg-white/80 dark:bg-slate-900/70 border-b border-slate-200 dark:border-slate-800" : "bg-transparent"
+      "fixed top-0 inset-x-0 z-40 transition-colors backdrop-blur-xl border-b",
+      "bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800"
     )}>
   <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-6" style={{ height: NAVBAR_HEIGHT }}>
         {/* Left: Logo */}
@@ -129,10 +129,10 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Toggle menu"
-            className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-md border border-slate-300 dark:border-slate-700 bg-transparent hover:bg-white/10 transition text-white"
+            className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 transition text-slate-700 dark:text-slate-200"
             onClick={() => setOpen(o => !o)}
           >
-            {open ? <X className="h-5 w-5 text-white" /> : <Menu className="h-5 w-5 text-white" />}
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>

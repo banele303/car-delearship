@@ -36,7 +36,7 @@ export default function FinancingPage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Application Form</h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">Provide all requested information to speed up review. Fields marked as optional can be left blank.</p>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">Provide all requested information to speed up review. Fields marked with <span className="text-red-500 font-semibold">*</span> are required.</p>
           </div>
           <div id="financing-form-root">
             <FinancingApplicationForm />

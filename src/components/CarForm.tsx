@@ -254,7 +254,7 @@ export const CarForm = ({ initialData }: CarFormProps) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Petrol
+              Fuel
             </label>
             <select
               name="fuelType"

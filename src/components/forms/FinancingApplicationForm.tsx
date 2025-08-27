@@ -17,8 +17,9 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 const schema = z.object({
-  loanAmount: z.string().min(1),
-  termMonths: z.string().min(1),
+  // Made optional after removing from UI
+  loanAmount: z.string().optional(),
+  termMonths: z.string().optional(),
   interestRate: z.string().optional(),
   monthlyPayment: z.string().optional(),
   firstName: z.string().min(1),
@@ -61,8 +62,6 @@ const schema = z.object({
   vehicleFuelType: z.string().optional(),
   vehicleTransmission: z.string().optional(),
   vehicleType: z.string().optional(),
-  serviceAndDelivery: z.string().optional(),
-  licenseFee: z.string().optional(),
   // balloonResidual & vehicleExtras removed per request
   title: z.string().optional(),
   initials: z.string().optional(),
@@ -158,7 +157,7 @@ const defaultValues: FinancingPublicForm = {
   creditScore: '', annualIncome: '',
   hasTradeIn: false, tradeInDetails: '',
   consentCreditCheck: false, agreeTerms: false,
-  vehicleCondition: '', cashPrice: '', vehicleMake: '', vehicleModel: '', vehicleMMCode: '', vehicleKM: '', serviceAndDelivery: '', licenseFee: '',
+  vehicleCondition: '', cashPrice: '', vehicleMake: '', vehicleModel: '', vehicleMMCode: '', vehicleKM: '',
   vehicleFuelType: '', vehicleTransmission: '', vehicleType: '',
   title: '', initials: '', gender: '', dependants: '', maritalStatus: '', dateMarried: '', periodAtAddress: '', periodAtPreviousAddress: '', previousAddress: '', postalAddress: '', telephoneHome: '', telephoneWork: '', fax: '', spouseName: '', spouseId: '', spouseCell: '', nextOfKinName: '', nextOfKinRelationship: '', nextOfKinAddress: '', nextOfKinCell: '',
   bondHolder: '', bondOutstandingAmount: '', propertyValue: '', propertyInstalmentMonthly: '', propertyPurchasePrice: '', propertyPurchaseDate: '', propertyRegisteredInName: '',
@@ -176,7 +175,7 @@ interface FieldProps { label: string; name: keyof FinancingPublicForm; type?: st
 
 // Required field names (excluding declaration checkboxes handled elsewhere)
 const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
-  'loanAmount','termMonths','firstName','lastName',
+  'firstName','lastName',
   'vehicleCondition','cashPrice','vehicleMake','vehicleModel'
 ]);
 
@@ -184,11 +183,10 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
   const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) onChange(e.target.value);
   }, [onChange]);
-  const isOptional = !REQUIRED_FIELDS.has(name);
-  const displayLabel = isOptional && !/optional/i.test(label) ? `${label} (optional)` : label;
+  const required = REQUIRED_FIELDS.has(name);
   return (
     <div className={colSpan || ''}>
-      <Label className='text-sm font-medium' htmlFor={name}>{displayLabel}</Label>
+      <Label className='text-sm font-medium' htmlFor={name}>{label}{required && <span className='text-red-500'> *</span>}</Label>
       <Input
         id={name}
         name={name}
@@ -332,8 +330,6 @@ export default function FinancingApplicationForm() {
   tradeInDetails: (v: string) => handleFieldUpdate('tradeInDetails', v),
   vehicleKM: (v: string) => handleFieldUpdate('vehicleKM', v),
   vehicleMMCode: (v: string) => handleFieldUpdate('vehicleMMCode', v),
-  serviceAndDelivery: (v: string) => handleFieldUpdate('serviceAndDelivery', v),
-  licenseFee: (v: string) => handleFieldUpdate('licenseFee', v),
   vehicleMake: (v: string) => handleFieldUpdate('vehicleMake', v),
   vehicleModel: (v: string) => handleFieldUpdate('vehicleModel', v),
   cashPrice: (v: string) => handleFieldUpdate('cashPrice', v),
@@ -739,7 +735,7 @@ export default function FinancingApplicationForm() {
           <TextField label='State/Province' name='state' defaultValue={form.state||''} />
           <TextField label='Postal Code' name='postalCode' defaultValue={form.postalCode||''} />
           <div>
-            <Label className='text-sm font-medium'>Housing Status (optional)</Label>
+            <Label className='text-sm font-medium'>Housing Status</Label>
             <Select value={form.housingStatus||''} onValueChange={onChangeHandlers.housingStatus}>
               <SelectTrigger className='mt-1'><SelectValue placeholder='Select' /></SelectTrigger>
               <SelectContent>
@@ -790,7 +786,7 @@ export default function FinancingApplicationForm() {
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Work & Income Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
             <div>
-              <Label className='text-sm font-medium'>Employment Status (optional)</Label>
+              <Label className='text-sm font-medium'>Employment Status</Label>
               <Select value={form.employmentStatus||''} onValueChange={onChangeHandlers.employmentStatus}>
                 <SelectTrigger className='mt-1'><SelectValue placeholder='Select' /></SelectTrigger>
                 <SelectContent>
@@ -807,31 +803,14 @@ export default function FinancingApplicationForm() {
             <TextField label='Other Monthly Income (R)' name='otherIncome' defaultValue={form.otherIncome||''} />
             <TextField label='Other Income Source' name='otherIncomeSource' defaultValue={form.otherIncomeSource||''} />
             <TextField label='Annual Income (R)' name='annualIncome' defaultValue={form.annualIncome||''} />
-            <TextField label='Exact Credit Score (Optional)' name='creditScore' defaultValue={form.creditScore||''} />
+            <TextField label='Exact Credit Score' name='creditScore' defaultValue={form.creditScore||''} />
           </div>
         </div>
       </Section>
 
   {/* Employment & Income section removed per request */}
 
-      <Section id='vehicle' title='Vehicle & Financing' desc='Structure & trade / vehicle details'>
-        <div className='grid md:grid-cols-4 gap-4'>
-          {/* Required financing fields moved from removed Loan Snapshot section */}
-          <TextField label='Desired Loan Amount (R)' name='loanAmount' defaultValue={form.loanAmount||''} />
-          <TextField label='Term (Months)' name='termMonths' defaultValue={form.termMonths||''} />
-          <TextField label='Planned Down Payment (R)' name='downPaymentAmount' defaultValue={form.downPaymentAmount||''} />
-          {/* Preferred Contact Method removed */}
-          <div className='flex items-center gap-3 pt-6'>
-            <Checkbox id='hasTradeIn' checked={form.hasTradeIn} onCheckedChange={onChangeHandlers.hasTradeInChecked} />
-            <Label htmlFor='hasTradeIn' className='text-sm font-medium'>I have a vehicle to trade in (optional)</Label>
-          </div>
-        </div>
-        {form.hasTradeIn && (
-          <div className='mt-4'>
-            <Label className='text-sm font-medium'>Trade-In Details (optional)</Label>
-            <Textarea value={form.tradeInDetails||''} onChange={onChangeHandlers.tradeInDetailsTextarea} placeholder='Vehicle year, make, model, mileage, condition...' className='mt-1' />
-          </div>
-        )}
+  <Section id='vehicle' title='Vehicle Details' desc='Provide vehicle specifics for the application'>
         <div className='mt-6 border-t pt-6'>
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Vehicle / Goods Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
@@ -844,8 +823,7 @@ export default function FinancingApplicationForm() {
             <TextField label='Fuel Type' name='vehicleFuelType' defaultValue={form.vehicleFuelType||''} />
             <TextField label='Transmission' name='vehicleTransmission' defaultValue={form.vehicleTransmission||''} />
             <TextField label='Body / Type' name='vehicleType' defaultValue={form.vehicleType||''} />
-            <TextField label='Service & Delivery' name='serviceAndDelivery' defaultValue={form.serviceAndDelivery||''} />
-            <TextField label='License Fee' name='licenseFee' defaultValue={form.licenseFee||''} />
+            {/* Service & Delivery and License Fee removed per request */}
             {/* Balloon / Residual and Extras removed */}
           </div>
         </div>
