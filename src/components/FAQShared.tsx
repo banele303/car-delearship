@@ -8,13 +8,10 @@ export interface SharedFaqItem { q: string; a: string; }
 // Unified FAQ list (merge of home + contact unique items, deduped by question)
 export const sharedFaqs: SharedFaqItem[] = [
   { q: "Do you offer vehicle financing?", a: "Yes. We work with multiple finance partners to secure competitive rates. Submit a financing application and our team will contact you." },
-  { q: "Can you arrange a insurance and trector installation for me?", a: "Absolutely. We help you with that and the extended warranty and trector instalation" },
+  { q: "Can you arrange insurance and tracker installation for me?", a: "Absolutely. We can assist with insurance, extended warranty, and tracker installation." },
   { q: "Do you accept trade‑ins?", a: "Yes, we evaluate trade‑ins on site. Provide details in the financing form or bring the vehicle for an appraisal." },
   { q: "Are all vehicles inspected?", a: "Each vehicle undergoes a multi‑point inspection for mechanical, safety, and cosmetic standards before listing." },
   { q: "What documents do I need for finance?", a: "Typically: ID, driver’s license, recent payslips, bank statements, and proof of residence. Self‑employed clients should include business registration docs." },
-  { q: "How can I browse your car inventory?", a: "Browse the 'Inventory' section. Use search and filters to narrow results to what fits your needs." },
-  { q: "What financing options do you offer?", a: "We provide various finance solutions including traditional loans and lease options. Our finance team helps tailor terms to your budget." },
-  { q: "How do I schedule a test drive?", a: "Schedule from a vehicle's detail page or contact us via the form with your preferred date/time." },
 ];
 
 export default function FAQShared({ title = 'Frequently Asked Questions', compact = false }: { title?: string; compact?: boolean }) {
