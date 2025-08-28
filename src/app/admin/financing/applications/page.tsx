@@ -24,13 +24,13 @@ import { Search, ChevronRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 
 type FinancingApplication = {
-  id: string;
+  id: number;
   customerName: string;
   carModel: string;
   applicationDate: string;
   amount: number;
   status: 'APPROVED' | 'REJECTED' | 'PENDING';
-  creditScore: number;
+  creditScore: number | null;
 };
 
 export default function FinancingApplicationsPage() {
@@ -46,18 +46,41 @@ export default function FinancingApplicationsPage() {
     const fetchApplications = async () => {
       setIsLoading(true);
       try {
-        // In a real application, you would include pagination, search, and filter parameters
-        const res = await fetch(`/api/admin/financing/applications?page=${currentPage}&limit=${applicationsPerPage}&search=${searchTerm}&status=${statusFilter}`);
-        if (!res.ok) throw new Error('Failed to fetch applications');
-        
-        const data = await res.json();
-        
-        // In a real application, the API would return the total count for pagination
-        setApplications(data);
-        setTotalApplications(100); // Placeholder
+        const params: string[] = [];
+        if (statusFilter !== 'all') params.push(`status=${encodeURIComponent(statusFilter)}`);
+        const qs = params.length ? `?${params.join('&')}` : '';
+        const res = await fetch(`/api/financing-applications${qs}`);
+        if (!res.ok) throw new Error(`Failed to fetch applications (${res.status})`);
+        const raw = await res.json();
+
+        // Map backend shape -> UI shape
+        const mapped: FinancingApplication[] = (raw || []).map((r: any) => ({
+          id: r.id,
+          customerName: r.customer?.name || r.customer?.email || 'Unknown',
+          carModel: r.sale?.car ? `${r.sale.car.make} ${r.sale.car.model}` : 'N/A',
+          applicationDate: r.applicationDate || r.createdAt || new Date().toISOString(),
+            // Some schemas may store loanAmount as decimal string -> coerce
+          amount: typeof r.loanAmount === 'string' ? parseFloat(r.loanAmount) : Number(r.loanAmount) || 0,
+          status: r.status || 'PENDING',
+          creditScore: r.creditScore ?? null,
+        }));
+
+        // Client-side search filter (customerName / carModel)
+        const lowered = searchTerm.trim().toLowerCase();
+        const filtered = lowered
+          ? mapped.filter(m => m.customerName.toLowerCase().includes(lowered) || m.carModel.toLowerCase().includes(lowered))
+          : mapped;
+
+        setTotalApplications(filtered.length);
+
+        // Pagination slice
+        const start = (currentPage - 1) * applicationsPerPage;
+        const pageSlice = filtered.slice(start, start + applicationsPerPage);
+        setApplications(pageSlice);
       } catch (error) {
         console.error('Error fetching applications:', error);
         setApplications([]);
+        setTotalApplications(0);
       } finally {
         setIsLoading(false);
       }
@@ -71,7 +94,7 @@ export default function FinancingApplicationsPage() {
     setCurrentPage(1); // Reset to first page on new search
   };
   
-  const totalPages = Math.ceil(totalApplications / applicationsPerPage);
+  const totalPages = Math.max(1, Math.ceil(totalApplications / applicationsPerPage));
   
   const getStatusBadge = (status: string) => {
     switch(status) {
@@ -179,7 +202,7 @@ export default function FinancingApplicationsPage() {
                     <div>
                       <p className="text-gray-500 dark:text-gray-400">Credit</p>
                       <p className="font-medium flex items-center gap-1">
-                        <span className={`h-2 w-2 rounded-full ${getCreditScoreColor(app.creditScore)}`}></span>
+                        <span className={`h-2 w-2 rounded-full ${getCreditScoreColor(app.creditScore ?? 0)}`}></span>
                         {app.creditScore}
                       </p>
                     </div>
@@ -248,7 +271,7 @@ export default function FinancingApplicationsPage() {
                       <TableCell>R{app.amount.toLocaleString()}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <div className={`h-2 w-2 rounded-full ${getCreditScoreColor(app.creditScore)}`}></div>
+                          <div className={`h-2 w-2 rounded-full ${getCreditScoreColor(app.creditScore ?? 0)}`}></div>
                           <span>{app.creditScore}</span>
                         </div>
                       </TableCell>
