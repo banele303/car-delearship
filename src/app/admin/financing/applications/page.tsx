@@ -31,6 +31,7 @@ type FinancingApplication = {
   amount: number;
   status: 'APPROVED' | 'REJECTED' | 'PENDING';
   creditScore: number | null;
+  documentCount: number;
 };
 
 export default function FinancingApplicationsPage() {
@@ -63,6 +64,7 @@ export default function FinancingApplicationsPage() {
           amount: typeof r.loanAmount === 'string' ? parseFloat(r.loanAmount) : Number(r.loanAmount) || 0,
           status: r.status || 'PENDING',
           creditScore: r.creditScore ?? null,
+          documentCount: Array.isArray(r.documents) ? r.documents.length : 0,
         }));
 
         // Client-side search filter (customerName / carModel)
@@ -236,6 +238,7 @@ export default function FinancingApplicationsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Credit Score</TableHead>
+                  <TableHead>Docs</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
@@ -275,6 +278,7 @@ export default function FinancingApplicationsPage() {
                           <span>{app.creditScore}</span>
                         </div>
                       </TableCell>
+                      <TableCell><span className='text-xs font-medium'>{app.documentCount}</span></TableCell>
                       <TableCell>{getStatusBadge(app.status)}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" asChild>

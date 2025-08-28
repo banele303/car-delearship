@@ -643,13 +643,13 @@ export default function FinancingApplicationForm() {
 
   // Document requirements (restored full list + payslip variants) with small upload zones
   const docRequirements = [
-    { key: 'id_doc', question: "Valid id document - no copies (if you don't have a valid id you need to get a temporary one)", uploadLabel: 'Upload ID Copy', required: true, max: 2, hint: 'Clear photos (front & back).' },
-    { key: 'drivers_license', question: "Valid driver's license (if you don't have a valid driver's license you need to get a temporary one and attach a copy as well as the receipt to the deal)", uploadLabel: 'Upload Drivers License Copy', required: true, max: 2, hint: 'Both sides.' },
-    { key: 'payslip_latest', question: 'If you receive the same salary every month you need to get the latest payslip', uploadLabel: 'Upload Latest Payslip', required: false, max: 2, hint: 'Most recent payslip.' },
-    { key: 'payslips_3_months', question: 'If you earn commission / extras and income differs get the latest three months payslips', uploadLabel: 'Upload Latest 3 Payslips', required: false, max: 6, hint: 'Last 3 months.' },
-    { key: 'bank_statements', question: 'Bank statements (latest 3 months - 6 if self‑employed)', uploadLabel: 'Upload Bank Statements', required: true, max: 6, hint: 'PDF preferred.' },
-    { key: 'proof_of_residence', question: 'Proof of residence (utility bill < 3 months old)', uploadLabel: 'Upload Proof of Residence', required: true, max: 2, hint: 'Utility / rates bill.' },
-    { key: 'self_employed_docs', question: 'Business docs (if self‑employed)', uploadLabel: 'Upload Business Docs', required: false, max: 6, hint: 'CK / tax / financials.' },
+    { key: 'id_doc', question: "Valid id document - no copies (if you don't have a valid id you need to get a temporary one)", uploadLabel: 'Upload ID Copy', required: true, hint: 'Clear photos (front & back).' },
+    { key: 'drivers_license', question: "Valid driver's license (if you don't have a valid driver's license you need to get a temporary one and attach a copy as well as the receipt to the deal)", uploadLabel: 'Upload Drivers License Copy', required: true, hint: 'Both sides.' },
+    { key: 'payslip_latest', question: 'If you receive the same salary every month you need to get the latest payslip', uploadLabel: 'Latest Payslip', required: false, hint: 'Most recent payslip.' },
+    { key: 'payslips_3_months', question: 'If you earn commission / extras and income differs get the latest 3 payslips', uploadLabel: 'Last 3 Payslips', required: false, hint: 'Upload each as file / image.' },
+    { key: 'bank_statements', question: 'Bank statements (latest 3 months - 6 if self‑employed)', uploadLabel: 'Bank Statements', required: true, hint: 'PDF preferred.' },
+    { key: 'proof_of_residence', question: 'Proof of residence (utility bill < 3 months old)', uploadLabel: 'Proof of Residence', required: true, hint: 'Utility / rates bill.' },
+    { key: 'self_employed_docs', question: 'Business docs (if self‑employed)', uploadLabel: 'Business Docs', required: false, hint: 'CK / tax / financials.' },
   ] as const;
   // Document uploads handled in isolated component to avoid re-renders that steal input focus
   const missingRequiredDocsRef = useRef<() => any[]>(() => []);
@@ -690,10 +690,10 @@ export default function FinancingApplicationForm() {
   const missingRequiredDocs = () => missingRequiredDocsRef.current();
 
   // Child component for uploads
-  const DocumentUploads: React.FC<{ docRequirements: readonly any[], register: (fn: () => any[]) => void, registerDocs: (fn: () => any[]) => void }> = React.memo(({ docRequirements, register, registerDocs }) => {
+  const DocumentUploads: React.FC<{ docRequirements: readonly any[], register: (fn: () => any[]) => void, registerDocs: (fn: () => any[]) => void, employmentStatus: string }> = React.memo(({ docRequirements, register, registerDocs, employmentStatus }) => {
     const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
     const [uploadingByType, setUploadingByType] = useState<Record<string, boolean>>({});
-    const createServerConfig = (docType: string) => ({
+  const createServerConfig = (docType: string) => ({
       process: (_fieldName: string, file: any, _metadata: any, load: any, error: any, _progress: any, abort: any) => {
         const controller = new AbortController();
         const fd = new FormData();
@@ -734,7 +734,13 @@ export default function FinancingApplicationForm() {
     }) as any;
     // Expose missing docs function to parent
     useEffect(() => {
-      register(() => docRequirements.filter(d => d.required && !(uploadedByType[d.key]?.length)));
+      register(() => {
+        // If self employed allow ONLY business docs (others optional entirely)
+        if (/self_employed/i.test(employmentStatus)) {
+          return []; // no required docs enforced
+        }
+        return docRequirements.filter(d => d.required && !(uploadedByType[d.key]?.length));
+      });
       registerDocs(() => {
         const flat: any[] = [];
         Object.entries(uploadedByType).forEach(([docType, arr]) => {
@@ -742,11 +748,11 @@ export default function FinancingApplicationForm() {
         });
         return flat;
       });
-    }, [docRequirements, uploadedByType, register, registerDocs]);
+    }, [docRequirements, uploadedByType, register, registerDocs, employmentStatus]);
     return (
       <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
         <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
-        <p className='text-xs text-slate-500 mt-1'>All required documents (<span className='text-red-500 font-semibold'>*</span>) must be uploaded before submission. Upload boxes are intentionally small.</p>
+  <p className='text-xs text-slate-500 mt-1'>Upload small files or images. Required (<span className='text-red-500 font-semibold'>*</span>) unless self‑employed (then only Business Docs optional).</p>
         <div className='mt-6 space-y-8'>
           {docRequirements.map(d => {
             const uploaded = uploadedByType[d.key]?.length || 0;
@@ -759,21 +765,21 @@ export default function FinancingApplicationForm() {
                   </p>
                 </div>
                 <div>
-                  <Label className='text-[12px] font-semibold leading-snug flex items-center justify-between mb-2'>
+                  <Label className='text-[12px] font-semibold leading-snug flex items-center justify-between mb-1'>
                     <span>{d.uploadLabel}{isReq && <span className='text-red-500'>*</span>}</span>
-                    <span className='text-[10px] font-normal text-slate-500'>{uploaded} / {d.max}</span>
+                    {uploaded > 0 && <span className='text-[10px] font-normal text-slate-500'>{uploaded} file{uploaded===1?'':'s'}</span>}
                   </Label>
                   <div className={`doc-upload-wrapper ${uploadingByType[d.key] ? 'uploading' : ''} relative rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs transition-all`}> 
                     <FilePond
                       name={`files_${d.key}`}
                       allowMultiple
-                      maxFiles={d.max}
+                      /* no explicit max; server will protect */
                       instantUpload
                       credits={false}
                       server={createServerConfig(d.key)}
                       acceptedFileTypes={['application/pdf','image/jpeg','image/png','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','text/plain','application/zip']}
-                      className='filepond--financing-compact filepond--tiny'
-                      labelIdle='<span class="text-[10px] font-medium">Upload / Drop</span>'
+                      className='filepond--financing-compact filepond--tiny max-w-[140px]'
+                      labelIdle='<span class="text-[9px] font-medium">Drop File/Image<br/>or Browse</span>'
                       imagePreviewHeight={40}
                       stylePanelAspectRatio='1:0.35'
                       styleLoadIndicatorPosition='right'
@@ -973,7 +979,7 @@ export default function FinancingApplicationForm() {
 
   {/* Consent & terms section removed per request */}
 
-  <DocumentUploads docRequirements={docRequirements} register={registerMissingDocsFn} registerDocs={registerUploadedDocsFn} />
+  <DocumentUploads employmentStatus={form.employmentStatus||''} docRequirements={docRequirements} register={registerMissingDocsFn} registerDocs={registerUploadedDocsFn} />
 
       {/* Added declarations as requested */}
       <div className='space-y-6 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-5'>

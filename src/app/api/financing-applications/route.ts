@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       whereClause.status = status;
     }
 
-    const financingApplications = await prisma.financingApplication.findMany({
+  const financingApplications = await prisma.financingApplication.findMany({
       where: whereClause,
       include: {
         customer: true,
@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
             employee: true,
             dealership: true
           }
-        }
+    },
+    documents: true
       },
       orderBy: {
         applicationDate: 'desc'
