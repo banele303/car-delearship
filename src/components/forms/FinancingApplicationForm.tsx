@@ -564,7 +564,7 @@ export default function FinancingApplicationForm() {
     collected.marketingCommunicationConsent = form.marketingCommunicationConsent;
 
     // Inline submit-time required field validation (ensures untouched empty fields surface errors)
-    const newErrors: Partial<Record<keyof FinancingPublicForm, string>> = { ...errors };
+    const newErrors: Partial<Record<keyof FinancingPublicForm, string>> = {};
     let firstMissingName: string | null = null;
     REQUIRED_FIELDS.forEach((fieldName) => {
       const val = (collected as any)[fieldName];
@@ -573,9 +573,19 @@ export default function FinancingApplicationForm() {
         if (!firstMissingName) firstMissingName = fieldName as string;
       }
     });
-    // Update error state if changed
-    const changed = Object.keys(newErrors).some(k => (errors as any)[k] !== (newErrors as any)[k]);
-    if (changed) setErrors(newErrors);
+    // Preserve only still-missing required errors; other previous errors (like schema) retained if not overridden
+    const mergedErrors: Partial<Record<keyof FinancingPublicForm, string>> = { ...errors };
+    // Remove prior 'Required' errors for fields now filled
+    Object.keys(mergedErrors).forEach(k => {
+      const key = k as keyof FinancingPublicForm;
+      if (!newErrors[key] && mergedErrors[key] === 'Required') {
+        delete mergedErrors[key];
+      }
+    });
+    // Add current missing ones
+    Object.assign(mergedErrors, newErrors);
+    const changed = JSON.stringify(mergedErrors) !== JSON.stringify(errors);
+    if (changed) setErrors(mergedErrors);
     if (firstMissingName) {
       // Scroll to first missing field
       const el = document.getElementById(firstMissingName);
