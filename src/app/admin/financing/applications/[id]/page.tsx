@@ -334,14 +334,23 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
           }
         });
         if (d.extraData) {
-          y += 10; doc.text('Additional Data (JSON)', left, y); y += lineHeight;
-          const str = JSON.stringify(d.extraData, null, 2);
-          const lines = str.split(/\n/);
-          lines.forEach(l => {
-            if (y > 760) { doc.addPage(); y = 40; }
-            doc.text(l.slice(0, 110), left + 10, y);
-            y += 12;
-          });
+          // Simplified table (text rows) for Additional Data
+          y += 10; doc.setFontSize(12); doc.text('Additional Data', left, y); y += lineHeight;
+          doc.setFontSize(10);
+          const entries = Object.entries(d.extraData as Record<string, any>);
+          const alreadyShownKeys = new Set(['firstName','lastName','email','phone','dateOfBirth','vehicleMake','vehicleModel','vehicleYear','cashPrice']);
+          const ensurePageSpace = () => { if (y > 760) { doc.addPage(); y = 40; doc.setFontSize(10); } };
+          entries
+            .filter(([k,v]) => v !== undefined && v !== null && v !== '' && !alreadyShownKeys.has(k))
+            .forEach(([key, value]) => {
+              ensurePageSpace();
+              const label = key.replace(/([A-Z])/g,' $1').replace(/_/g,' ').replace(/\s+/g,' ').trim();
+              let valStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+              if (valStr.length > 100) valStr = valStr.slice(0,100) + '…';
+              doc.text(`${label}: ${valStr}`, left + 10, y);
+              y += 12;
+            });
+          doc.setFontSize(11);
         }
       }
       if (application.documents && application.documents.length) {
