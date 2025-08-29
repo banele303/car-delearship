@@ -309,10 +309,11 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
       if (application.decisionDate) addLine('Decision Date', formatDate(application.decisionDate, { withTime: true }));
       addLine('Loan Amount', formatCurrency(application.loanAmount));
       addLine('Loan Term (Months)', application.loanTermMonths);
-      addLine('Interest Rate', formatPercent(application.interestRate, { decimals: 2 }));
+  // Interest Rate removed per request
       addLine('Monthly Payment', formatCurrency(application.monthlyPayment));
-      addLine('Credit Score', `${application.creditScore} (${creditRating.label})`);
-      if ((application as any).annualIncome) addLine('Annual Income', formatCurrency((application as any).annualIncome));
+  addLine('Credit Score', `${application.creditScore} (${creditRating.label})`);
+  if ((application as any).annualIncome) addLine('Annual Income', formatCurrency((application as any).annualIncome));
+  // NSFAS Accredited removed per request
       y += 10; doc.text('Customer', left, y); y += lineHeight;
       addLine('Name', `${application.customer.firstName || (application as any).customer?.name || ''} ${application.customer.lastName || ''}`.trim() || '-');
       addLine('Email', application.customer.email);
@@ -468,16 +469,8 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                   <p className="text-lg font-bold">{application.loanTermMonths} months</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Interest Rate</p>
-                  <p className="text-lg font-bold">{formatPercent(application.interestRate)}</p>
-                </div>
-                <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Payment</p>
                   <p className="text-lg font-bold">{formatCurrency(application.monthlyPayment)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">NSFAS Accredited</p>
-                  <p className="text-lg font-bold">{application.isNSFASAccredited ? 'Yes' : 'No'}</p>
                 </div>
                 {application.car && (
                   <>
