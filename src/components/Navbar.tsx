@@ -47,7 +47,7 @@ export default function Navbar() {
   };
 
   const handleSignOut = async () => { await signOut(); router.refresh(); };
-  const dashboardHref = pathname.startsWith('/admin') ? '/admin' : '/customers/dashboard';
+  // Dashboard button removed per request
 
   return (
     <header className={cn(
@@ -118,7 +118,6 @@ export default function Navbar() {
           {/* Theme toggle removed per request */}
           {user ? (
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => router.push(dashboardHref)}>Dashboard</Button>
               <Button size="sm" onClick={handleSignOut}>Sign out</Button>
             </div>
           ) : (
@@ -188,7 +187,6 @@ export default function Navbar() {
             </div>
             {user ? (
               <>
-                <Button variant="outline" className="justify-start" onClick={() => router.push(dashboardHref)}>Dashboard</Button>
                 <Button className="justify-start" onClick={handleSignOut}>Sign out</Button>
               </>
             ) : (
