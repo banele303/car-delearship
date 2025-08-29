@@ -470,6 +470,20 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">NSFAS Accredited</p>
                   <p className="text-lg font-bold">{application.isNSFASAccredited ? 'Yes' : 'No'}</p>
                 </div>
+                {application.car && (
+                  <>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Vehicle</p>
+                      <p className="text-lg font-bold">
+                        {application.car.year} {application.car.make} {application.car.model}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Vehicle Price</p>
+                      <p className="text-lg font-bold">{formatCurrency(application.car.price)}</p>
+                    </div>
+                  </>
+                )}
               </div>
               
                 {application.status !== 'PENDING' && application.decisionDate && (
