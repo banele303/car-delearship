@@ -109,47 +109,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Server model not ready. Try again shortly.' }, { status: 503 });
     }
 
-    // Attempt to persist full detail with extraData JSON (may fail if migration not applied yet)
+    // Attempt to persist full detail with extraData JSON (non-fatal if it fails)
     try {
-      await (prisma as any).financingApplicationDetail.create({
-        data: {
-          financingApplicationId: financingApplication.id,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-          idNumber: data.idNumber || null,
-          address: data.address || null,
-          city: data.city || null,
-          state: data.state || null,
-          postalCode: data.postalCode || null,
-          housingStatus: data.housingStatus || null,
-          monthlyHousingPayment: data.monthlyHousingPayment || null,
-          employmentStatus: data.employmentStatus || null,
-          employerName: data.employerName || null,
-          jobTitle: data.jobTitle || null,
-          employmentYears: data.employmentYears || null,
-          monthlyIncomeGross: data.monthlyIncomeGross || null,
-          otherIncome: data.otherIncome || null,
-          otherIncomeSource: data.otherIncomeSource || null,
-          creditScoreRange: data.creditScoreRange || null,
-          downPaymentAmount: data.downPaymentAmount || null,
-          preferredContactMethod: data.preferredContactMethod || null,
-          hasTradeIn: data.hasTradeIn ?? false,
-          tradeInDetails: data.tradeInDetails || null,
-          coApplicantName: data.coApplicantName || null,
-          coApplicantIncome: data.coApplicantIncome || null,
-          coApplicantRelationship: data.coApplicantRelationship || null,
-          consentCreditCheck: data.consentCreditCheck,
-          agreeTerms: data.agreeTerms,
-          extraData: restRaw && Object.keys(restRaw).length ? restRaw : null,
-        }
-      });
-    } catch (detailErr: any) {
-      const msg: string = detailErr?.message || '';
-      if (/extraData|column\s+\"?extradata\"?\s+does not exist/i.test(msg)) {
-        // Retry without extraData field for backward compatibility
+      try {
         await (prisma as any).financingApplicationDetail.create({
           data: {
             financingApplicationId: financingApplication.id,
@@ -182,11 +144,53 @@ export async function POST(req: NextRequest) {
             coApplicantRelationship: data.coApplicantRelationship || null,
             consentCreditCheck: data.consentCreditCheck,
             agreeTerms: data.agreeTerms,
+            extraData: restRaw && Object.keys(restRaw).length ? restRaw : null,
           }
         });
-      } else {
-        throw detailErr; // bubble up unexpected error
+      } catch (detailErr: any) {
+        const msg: string = detailErr?.message || '';
+        if (/extraData|column\s+\"?extradata\"?\s+does not exist/i.test(msg)) {
+          // Retry without extraData for backward compatibility
+          await (prisma as any).financingApplicationDetail.create({
+            data: {
+              financingApplicationId: financingApplication.id,
+              firstName: data.firstName,
+              lastName: data.lastName,
+              email: data.email,
+              phone: data.phone,
+              dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+              idNumber: data.idNumber || null,
+              address: data.address || null,
+              city: data.city || null,
+              state: data.state || null,
+              postalCode: data.postalCode || null,
+              housingStatus: data.housingStatus || null,
+              monthlyHousingPayment: data.monthlyHousingPayment || null,
+              employmentStatus: data.employmentStatus || null,
+              employerName: data.employerName || null,
+              jobTitle: data.jobTitle || null,
+              employmentYears: data.employmentYears || null,
+              monthlyIncomeGross: data.monthlyIncomeGross || null,
+              otherIncome: data.otherIncome || null,
+              otherIncomeSource: data.otherIncomeSource || null,
+              creditScoreRange: data.creditScoreRange || null,
+              downPaymentAmount: data.downPaymentAmount || null,
+              preferredContactMethod: data.preferredContactMethod || null,
+              hasTradeIn: data.hasTradeIn ?? false,
+              tradeInDetails: data.tradeInDetails || null,
+              coApplicantName: data.coApplicantName || null,
+              coApplicantIncome: data.coApplicantIncome || null,
+              coApplicantRelationship: data.coApplicantRelationship || null,
+              consentCreditCheck: data.consentCreditCheck,
+              agreeTerms: data.agreeTerms,
+            }
+          });
+        } else {
+          console.warn('Non-fatal financingApplicationDetail create error:', detailErr);
+        }
       }
+    } catch (outerDetailErr) {
+      console.warn('Skipped detail persistence due to unexpected error wrapper:', outerDetailErr);
     }
 
     // Optional: persist document metadata if client sent it and model exists
