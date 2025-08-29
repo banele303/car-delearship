@@ -549,6 +549,7 @@ export default function FinancingApplicationForm() {
         toast.success('Application submitted!');
         formRef.current.reset(); // clear visible inputs
         setForm(defaultValues); // reset controlled items
+  try { localStorage.removeItem('financingUploadedDocsTemp'); } catch {}
       }
     } catch (err) {
       toast.error('Network error');
@@ -693,6 +694,26 @@ export default function FinancingApplicationForm() {
   const DocumentUploads: React.FC<{ docRequirements: readonly any[], register: (fn: () => any[]) => void, registerDocs: (fn: () => any[]) => void, employmentStatus: string }> = React.memo(({ docRequirements, register, registerDocs, employmentStatus }) => {
     const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
     const [uploadingByType, setUploadingByType] = useState<Record<string, boolean>>({});
+    const STORAGE_KEY = 'financingUploadedDocsTemp';
+
+    // Hydrate previously uploaded docs (in case of submission error causing remount or navigation back)
+    useEffect(() => {
+      try {
+        const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            setUploadedByType(parsed);
+          }
+        }
+      } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Persist after every change so errors / reloads don't lose progress
+    useEffect(() => {
+      try { if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(uploadedByType)); } catch {}
+    }, [uploadedByType]);
   const createServerConfig = (docType: string) => ({
       process: (_fieldName: string, file: any, _metadata: any, load: any, error: any, _progress: any, abort: any) => {
         const controller = new AbortController();
@@ -749,12 +770,20 @@ export default function FinancingApplicationForm() {
         return flat;
       });
     }, [docRequirements, uploadedByType, register, registerDocs, employmentStatus]);
+    const displayed = /self_employed/i.test(employmentStatus)
+      ? docRequirements.filter(d => d.key === 'self_employed_docs')
+      : docRequirements;
     return (
       <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
         <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
-  <p className='text-xs text-slate-500 mt-1'>Upload small files or images. Required (<span className='text-red-500 font-semibold'>*</span>) unless self‑employed (then only Business Docs optional).</p>
+        {!/self_employed/i.test(employmentStatus) && (
+          <p className='text-xs text-slate-500 mt-1'>Upload small files or images. Items marked <span className='text-red-500 font-semibold'>*</span> are required.</p>
+        )}
+        {/self_employed/i.test(employmentStatus) && (
+          <p className='text-xs text-slate-500 mt-1'>Self‑employed: Only business documents are optional to upload now. You may proceed without other documents.</p>
+        )}
         <div className='mt-6 space-y-8'>
-          {docRequirements.map(d => {
+          {displayed.map(d => {
             const uploaded = uploadedByType[d.key]?.length || 0;
             const isReq = d.required;
             return (
