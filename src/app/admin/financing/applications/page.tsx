@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { 
   Card, 
   CardContent, 
@@ -41,16 +42,28 @@ export default function FinancingApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalApplications, setTotalApplications] = useState(0);
+  const [authError, setAuthError] = useState<string | null>(null);
   const applicationsPerPage = 10;
 
   useEffect(() => {
     const fetchApplications = async () => {
       setIsLoading(true);
       try {
+        setAuthError(null);
+        // Retrieve ID token for authorized API access
+        let token: string | undefined;
+        try {
+          const session = await fetchAuthSession();
+          token = session.tokens?.idToken?.toString();
+        } catch (e) {
+          console.warn('Unable to fetch auth session for financing applications list:', e);
+        }
         const params: string[] = [];
         if (statusFilter !== 'all') params.push(`status=${encodeURIComponent(statusFilter)}`);
         const qs = params.length ? `?${params.join('&')}` : '';
-        const res = await fetch(`/api/financing-applications${qs}`);
+        const res = await fetch(`/api/financing-applications${qs}` , {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
+        });
         if (!res.ok) throw new Error(`Failed to fetch applications (${res.status})`);
         const raw = await res.json();
 
@@ -79,8 +92,11 @@ export default function FinancingApplicationsPage() {
         const start = (currentPage - 1) * applicationsPerPage;
         const pageSlice = filtered.slice(start, start + applicationsPerPage);
         setApplications(pageSlice);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching applications:', error);
+        if (String(error.message || '').includes('401')) {
+          setAuthError('You are not authorized to view financing applications. Log in with an admin or finance role.');
+        }
         setApplications([]);
         setTotalApplications(0);
       } finally {
@@ -127,6 +143,9 @@ export default function FinancingApplicationsPage() {
           <p className="text-gray-500 dark:text-gray-400 mt-1">
             Manage and review customer financing applications
           </p>
+          {authError && (
+            <p className="mt-2 text-sm text-red-600 font-medium">{authError}</p>
+          )}
         </div>
         <Button asChild>
           <Link href="/admin/financing/applications/new">

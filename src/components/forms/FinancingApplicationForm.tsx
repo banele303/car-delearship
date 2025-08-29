@@ -300,10 +300,10 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
     maxLength={200}
     autoComplete='off'
   inputMode={ NUMERIC_INT_FIELDS.has(name) ? 'numeric' : NUMERIC_DECIMAL_FIELDS.has(name) ? 'decimal' : (effectiveType === 'date' ? undefined : 'text') }
+        // Removed strict pattern for idNumber to avoid browser regex issues on some engines
         pattern={ effectiveType === 'date' ? undefined :
           NUMERIC_INT_FIELDS.has(name) ? '\\d*' :
-          NUMERIC_DECIMAL_FIELDS.has(name) ? '^\\d*(\\.\\d{0,2})?$' :
-          name === 'idNumber' ? '^[A-Za-z0-9-]+$' : '[^<>]+' }
+          NUMERIC_DECIMAL_FIELDS.has(name) ? '^\\d*(\\.\\d{0,2})?$' : undefined }
         {...(uncontrolled ? { defaultValue } : { value: value ?? '', onChange: handleChange })}
         onInput={(e) => {
           // While typing after a submit attempt, clear existing required error once field has content
@@ -719,11 +719,32 @@ export default function FinancingApplicationForm() {
       });
       if (!res.ok) {
         const j = await res.json().catch(()=>({error:'Submission failed'}));
-        if (j.issues?.length) {
-          // Show first validation issue for clarity
-            const first = j.issues[0];
-            const msg = first?.message || j.error || 'Submission failed';
-            toast.error(msg);
+        if (Array.isArray(j.issues) && j.issues.length) {
+          const fieldErrors: Partial<Record<keyof FinancingPublicForm,string>> = {};
+          let firstField: string | null = null;
+          for (const issue of j.issues) {
+            const path0 = Array.isArray(issue.path) ? issue.path[0] : undefined;
+            if (!path0) continue;
+            if (!(path0 in defaultValues)) continue; // skip unknown
+            let msg: string = issue.message || 'Invalid value';
+            if (msg === 'Invalid email' || msg === 'Invalid email address') msg = 'Please enter a valid email address';
+            if (msg === 'Required' && (REQUIRED_MESSAGES as any)[path0]) msg = (REQUIRED_MESSAGES as any)[path0];
+            (fieldErrors as any)[path0] = msg;
+            if (!firstField) firstField = path0 as string;
+          }
+          if (Object.keys(fieldErrors).length) {
+            setErrors(prev => ({ ...prev, ...fieldErrors }));
+            if (firstField) {
+              const el = document.getElementById(firstField);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                try { (el as HTMLInputElement).focus({ preventScroll: true }); } catch {}
+              }
+            }
+            toast.error('Please fix highlighted field' + (Object.keys(fieldErrors).length > 1 ? 's' : '') + '.');
+          } else {
+            toast.error(j.error || 'Submission failed');
+          }
         } else {
           toast.error(j.error || 'Submission failed');
         }
@@ -906,8 +927,9 @@ export default function FinancingApplicationForm() {
           .replace(/_{2,}/g,'_')
           .slice(0,80);
         fd.append('file', file, safeName);
-        const primary = `/api/uploads/financing?docType=${encodeURIComponent(docType)}`;
-        const fallback = `/api/financing-uploads?docType=${encodeURIComponent(docType)}`;
+  // Use existing financing-uploads route as primary (previous /api/uploads/financing returned 405)
+  const primary = `/api/financing-uploads?docType=${encodeURIComponent(docType)}`;
+  const fallback = `/api/uploads/financing?docType=${encodeURIComponent(docType)}`; // legacy (will 405 currently)
 
         const attempt = (url: string, isFallback = false) => {
           fetch(url, { method: 'POST', body: fd, signal: controller.signal })
