@@ -30,19 +30,16 @@ import {
   ArrowLeft,
   CheckCircle, 
   XCircle, 
-  Clock,
   Car,
   User,
-  Calendar,
-  CreditCard,
   FileText,
-  DollarSign,
-  Percent,
   BarChart,
-  Clock9
+  Trash2,
+  Download
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast as sonnerToast } from 'sonner';
+import { formatCurrency, formatDate, formatPercent } from '@/lib/utils';
 
 type FinancingApplication = {
   id: number; // backend returns numeric id
@@ -91,6 +88,8 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showRawJson, setShowRawJson] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -293,38 +292,57 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
       const left = 40;
       doc.setFontSize(18);
       doc.text(`Financing Application #${application.id}`, left, y);
-      y += 30;
-      doc.setFontSize(12);
+      y += 26;
+      doc.setFontSize(14);
+      doc.text('Summary', left, y);
+      y += 10;
+      doc.setFontSize(11);
       const addLine = (label: string, value: any) => {
         const text = `${label}: ${value === null || value === undefined || value === '' ? '-' : value}`;
-        if (y > 760) { doc.addPage(); y = 40; }
+        if (y > 760) { doc.addPage(); y = 40; doc.setFontSize(11); }
         doc.text(text, left, y);
         y += lineHeight;
       };
+      const creditRating = getCreditScoreRating(application.creditScore);
       addLine('Status', application.status);
-      addLine('Application Date', new Date(application.applicationDate).toLocaleString());
-      addLine('Loan Amount', `R${application.loanAmount.toLocaleString()}`);
+      addLine('Application Date', formatDate(application.applicationDate, { withTime: true }));
+      if (application.decisionDate) addLine('Decision Date', formatDate(application.decisionDate, { withTime: true }));
+      addLine('Loan Amount', formatCurrency(application.loanAmount));
       addLine('Loan Term (Months)', application.loanTermMonths);
-      addLine('Interest Rate', `${application.interestRate}%`);
-      addLine('Monthly Payment', `R${application.monthlyPayment.toLocaleString()}`);
-      addLine('Credit Score', application.creditScore);
-      if ((application as any).annualIncome) addLine('Annual Income', `R${(application as any).annualIncome.toLocaleString()}`);
+      addLine('Interest Rate', formatPercent(application.interestRate, { decimals: 2 }));
+      addLine('Monthly Payment', formatCurrency(application.monthlyPayment));
+      addLine('Credit Score', `${application.creditScore} (${creditRating.label})`);
+      if ((application as any).annualIncome) addLine('Annual Income', formatCurrency((application as any).annualIncome));
       y += 10; doc.text('Customer', left, y); y += lineHeight;
-      addLine('Name', `${application.customer.firstName || (application as any).customer?.name || ''} ${application.customer.lastName || ''}`.trim());
+      addLine('Name', `${application.customer.firstName || (application as any).customer?.name || ''} ${application.customer.lastName || ''}`.trim() || '-');
       addLine('Email', application.customer.email);
       addLine('Phone', application.customer.phone);
-      addLine('DOB', application.customer.dateOfBirth ? new Date(application.customer.dateOfBirth).toLocaleDateString() : '-');
-      y += 10; doc.text('Vehicle', left, y); y += lineHeight;
-      addLine('Vehicle', `${application.car.year} ${application.car.make} ${application.car.model}`);
-      addLine('Price', `R${application.car.price.toLocaleString()}`);
+      addLine('DOB', formatDate(application.customer.dateOfBirth));
+      if (application.car) {
+        y += 10; doc.text('Vehicle', left, y); y += lineHeight;
+        addLine('Vehicle', `${application.car.year} ${application.car.make} ${application.car.model}`);
+        addLine('Price', formatCurrency(application.car.price));
+      }
       if ((application as any).details) {
         const d: any = (application as any).details;
         y += 10; doc.text('Extended Details', left, y); y += lineHeight;
         ['address','city','state','postalCode','housingStatus','employmentStatus','employerName','jobTitle','monthlyIncomeGross','otherIncome','coApplicantName','coApplicantIncome','coApplicantRelationship','preferredContactMethod','downPaymentAmount'].forEach(key => {
           if (d[key] !== undefined && d[key] !== null && d[key] !== '') {
-            addLine(key.replace(/([A-Z])/g,' $1'), d[key]);
+            const label = key.replace(/([A-Z])/g,' $1');
+            const isMoney = /payment|income|amount/i.test(key) && !isNaN(Number(d[key]));
+            addLine(label, isMoney ? formatCurrency(Number(d[key])) : d[key]);
           }
         });
+        if (d.extraData) {
+          y += 10; doc.text('Additional Data (JSON)', left, y); y += lineHeight;
+          const str = JSON.stringify(d.extraData, null, 2);
+          const lines = str.split(/\n/);
+          lines.forEach(l => {
+            if (y > 760) { doc.addPage(); y = 40; }
+            doc.text(l.slice(0, 110), left + 10, y);
+            y += 12;
+          });
+        }
       }
       if (application.documents && application.documents.length) {
         y += 10; doc.text('Documents', left, y); y += lineHeight;
@@ -337,6 +355,28 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
       sonnerToast.error('Failed to export PDF');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!application) return;
+    if (!confirm('Delete this financing application? This cannot be undone.')) return;
+    setIsDeleting(true);
+    try {
+      let token: string | undefined;
+      try { const session = await fetchAuthSession(); token = session.tokens?.idToken?.toString(); } catch {}
+      const res = await fetch(`/api/admin/financing/applications/${application.id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      toast.success('Application deleted');
+      router.push('/admin/financing/applications');
+    } catch (e) {
+      console.error('Delete failed', e);
+      toast.error('Failed to delete');
+    } finally {
+      setIsDeleting(false);
     }
   };
   
@@ -361,14 +401,17 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
             </span>
             <span className="mx-2 text-gray-300 dark:text-gray-700">•</span>
             <span className="text-gray-500 dark:text-gray-400">
-              Submitted on {new Date(application.applicationDate).toLocaleDateString()}
+              Submitted on {formatDate(application.applicationDate)}
             </span>
           </div>
         </div>
         
         <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
           <Button variant="outline" onClick={handleExportPdf} disabled={exporting}>
-            {exporting ? 'Exporting...' : 'Export PDF'}
+            <Download className="h-4 w-4 mr-1" /> {exporting ? 'Exporting...' : 'Export PDF'}
+          </Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+            <Trash2 className="h-4 w-4 mr-1" /> {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
           {application.status === 'PENDING' && (
             <>
@@ -405,11 +448,11 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loan Amount</p>
-                  <p className="text-lg font-bold">R{application.loanAmount.toLocaleString()}</p>
+                  <p className="text-lg font-bold">{formatCurrency(application.loanAmount)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Down Payment</p>
-                  <p className="text-lg font-bold">R{(application.downPayment ?? 0).toLocaleString()}</p>
+                  <p className="text-lg font-bold">{formatCurrency(application.downPayment ?? 0)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loan Term</p>
@@ -417,11 +460,11 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Interest Rate</p>
-                  <p className="text-lg font-bold">{application.interestRate}%</p>
+                  <p className="text-lg font-bold">{formatPercent(application.interestRate)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Payment</p>
-                  <p className="text-lg font-bold">R{application.monthlyPayment.toLocaleString()}</p>
+                  <p className="text-lg font-bold">{formatCurrency(application.monthlyPayment)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">NSFAS Accredited</p>
@@ -432,7 +475,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                 {application.status !== 'PENDING' && application.decisionDate && (
                 <div className="mt-2 pt-4 border-t">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Decision Date</p>
-                  <p className="text-base">{new Date(application.decisionDate).toLocaleDateString()}</p>
+                  <p className="text-base">{formatDate(application.decisionDate)}</p>
                   
                   {application.decisionNotes && (
                     <div className="mt-2">
@@ -469,7 +512,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Date of Birth</p>
-                    <p>{new Date(application.customer.dateOfBirth).toLocaleDateString()}</p>
+                    <p>{formatDate(application.customer.dateOfBirth)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -491,17 +534,26 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Vehicle</p>
-                    <p>{application.car.year} {application.car.make} {application.car.model}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Price</p>
-                    <p>R{application.car.price.toLocaleString()}</p>
-                  </div>
+                  {application.car ? (
+                    <>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Vehicle</p>
+                        <p>{application.car.year} {application.car.make} {application.car.model}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Price</p>
+                        <p>{formatCurrency(application.car.price)}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="col-span-2">
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Vehicle</p>
+                      <p className="text-sm text-gray-400">No vehicle linked</p>
+                    </div>
+                  )}
                 </div>
                 
-                {application.car.imageUrl && (
+                {application.car?.imageUrl && (
                   <div className="mt-4">
                     <img 
                       src={application.car.imageUrl} 
@@ -550,7 +602,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                         <div key={k} className="space-y-1">
                           <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
                           <p className="font-medium break-words">
-                            {typeof d[k] === 'boolean' ? (d[k] ? 'Yes' : 'No') : k.toLowerCase().includes('payment') || k.toLowerCase().includes('income') || k.toLowerCase().includes('amount') ? `R${Number(d[k]).toLocaleString()}` : String(d[k])}
+                            {typeof d[k] === 'boolean' ? (d[k] ? 'Yes' : 'No') : /payment|income|amount/i.test(k) && !isNaN(Number(d[k])) ? formatCurrency(Number(d[k])) : String(d[k])}
                           </p>
                         </div>
                       ));
@@ -558,8 +610,12 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                 </div>
                 {(() => { const d: any = (application as any).details; return d?.extraData ? (
                   <div className="mt-6">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Additional Data (JSON)</p>
-                    <pre className="text-xs bg-muted rounded p-3 overflow-x-auto max-h-64">{JSON.stringify(d.extraData, null, 2)}</pre>
+                    <Button size="sm" variant="outline" onClick={() => setShowRawJson(s => !s)}>
+                      {showRawJson ? 'Hide' : 'Show'} Additional Raw JSON
+                    </Button>
+                    {showRawJson && (
+                      <pre className="mt-2 text-xs bg-muted rounded p-3 overflow-x-auto max-h-64">{JSON.stringify(d.extraData, null, 2)}</pre>
+                    )}
                   </div>
                 ) : null; })()}
               </CardContent>
@@ -680,7 +736,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                 <li className="mb-6 ml-4">
                   <div className="absolute w-3 h-3 bg-blue-500 rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-900"></div>
                   <time className="mb-1 text-sm font-normal leading-none text-gray-400 dark:text-gray-500">
-                    {new Date(application.applicationDate).toLocaleDateString()}
+                    {formatDate(application.applicationDate)}
                   </time>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                     Application Submitted
@@ -693,7 +749,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                       application.status === 'APPROVED' ? 'bg-green-500' : 'bg-red-500'
                     } rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-900`}></div>
                     <time className="mb-1 text-sm font-normal leading-none text-gray-400 dark:text-gray-500">
-                      {new Date(application.decisionDate).toLocaleDateString()}
+                      {formatDate(application.decisionDate)}
                     </time>
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                       Application {application.status.toLowerCase()}

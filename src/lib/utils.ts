@@ -139,11 +139,23 @@ export const createNewUserInDatabase = async (
   }
 };
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'R',
-  }).format(amount);
+// South African Rand currency formatting (ZAR)
+export function formatCurrency(amount: number | null | undefined, opts: { fallback?: string } = {}): string {
+  if (amount === null || amount === undefined || isNaN(amount as number)) return opts.fallback ?? 'R0';
+  return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 2 }).format(amount as number);
+}
+
+export function formatDate(value: string | Date | null | undefined, opts: { withTime?: boolean; fallback?: string } = {}): string {
+  if (!value) return opts.fallback ?? '-';
+  const d = (value instanceof Date) ? value : new Date(value);
+  if (isNaN(d.getTime())) return opts.fallback ?? '-';
+  return new Intl.DateTimeFormat('en-ZA', { year: 'numeric', month: 'short', day: '2-digit', ...(opts.withTime ? { hour: '2-digit', minute: '2-digit' } : {}) }).format(d);
+}
+
+export function formatPercent(value: number | null | undefined, opts: { decimals?: number; fallback?: string } = {}): string {
+  if (value === null || value === undefined || isNaN(value)) return opts.fallback ?? '-';
+  const dec = opts.decimals ?? 2;
+  return `${Number(value).toFixed(dec)}%`;
 }
 
 
