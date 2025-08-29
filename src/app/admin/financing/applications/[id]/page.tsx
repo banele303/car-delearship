@@ -51,9 +51,9 @@ type FinancingApplication = {
   loanTermMonths: number;
   interestRate: number;
   monthlyPayment: number;
-  downPayment: number;
-  decisionDate: string | null;
-  decisionNotes: string | null;
+  downPayment?: number;
+  decisionDate?: string | null;
+  decisionNotes?: string | null;
   isNSFASAccredited: boolean;
   customer: {
     id: string;
@@ -314,7 +314,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Down Payment</p>
-                  <p className="text-lg font-bold">R{application.downPayment.toLocaleString()}</p>
+                  <p className="text-lg font-bold">R{(application.downPayment ?? 0).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loan Term</p>
@@ -334,7 +334,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                 </div>
               </div>
               
-              {application.status !== 'PENDING' && application.decisionDate && (
+                {application.status !== 'PENDING' && application.decisionDate && (
                 <div className="mt-2 pt-4 border-t">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Decision Date</p>
                   <p className="text-base">{new Date(application.decisionDate).toLocaleDateString()}</p>

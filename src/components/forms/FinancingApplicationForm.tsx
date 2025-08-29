@@ -646,7 +646,6 @@ export default function FinancingApplicationForm() {
   const docRequirements = [
     { key: 'id_doc', question: "Valid id document - no copies (if you don't have a valid id you need to get a temporary one)", uploadLabel: 'Upload ID Copy', required: true, hint: 'Clear photos (front & back).' },
     { key: 'drivers_license', question: "Valid driver's license (if you don't have a valid driver's license you need to get a temporary one and attach a copy as well as the receipt to the deal)", uploadLabel: 'Upload Drivers License Copy', required: true, hint: 'Both sides.' },
-    { key: 'payslip_latest', question: 'If you receive the same salary every month you need to get the latest payslip', uploadLabel: 'Latest Payslip', required: false, hint: 'Most recent payslip.' },
     { key: 'payslips_3_months', question: 'If you earn commission / extras and income differs get the latest 3 payslips', uploadLabel: 'Last 3 Payslips', required: false, hint: 'Upload each as file / image.' },
     { key: 'bank_statements', question: 'Bank statements (latest 3 months - 6 if self‑employed)', uploadLabel: 'Bank Statements', required: true, hint: 'PDF preferred.' },
     { key: 'proof_of_residence', question: 'Proof of residence (utility bill < 3 months old)', uploadLabel: 'Proof of Residence', required: true, hint: 'Utility / rates bill.' },
@@ -773,6 +772,18 @@ export default function FinancingApplicationForm() {
     const displayed = /self_employed/i.test(employmentStatus)
       ? docRequirements.filter(d => d.key === 'self_employed_docs')
       : docRequirements;
+    // Prune any uploaded types no longer displayed (e.g. removed payslip_latest)
+    useEffect(() => {
+      setUploadedByType(prev => {
+        const allowed = new Set(displayed.map(d => d.key));
+        let changed = false;
+        const next: Record<string, any[]> = {};
+        Object.entries(prev).forEach(([k,v]) => {
+          if (allowed.has(k)) next[k] = v; else changed = true;
+        });
+        return changed ? next : prev;
+      });
+    }, [displayed]);
     return (
       <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
         <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
