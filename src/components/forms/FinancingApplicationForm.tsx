@@ -428,40 +428,7 @@ export default function FinancingApplicationForm() {
   }, [form]);
   useEffect(() => { if (typeof window !== 'undefined') { (window as any).__validateFinField = validateField; } }, [validateField]);
   const formRef = useRef<HTMLFormElement | null>(null);
-  // Track last focused input name to auto-restore if unexpected blur happens
-  const lastFocusedRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => {
-    const handleFocusIn = (e: FocusEvent) => {
-      const t = e.target as HTMLElement;
-      if (t instanceof HTMLInputElement && t.hasAttribute('data-financing-field')) {
-        lastFocusedRef.current = t;
-      }
-    };
-    // Prevent scroll jump when interacting with document upload areas / file dialogs
-    const handleDocumentClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      // If click originated inside a FilePond / upload wrapper, skip auto-focus restore
-      if (target.closest('.doc-upload-wrapper') || target.closest('.filepond--root')) return;
-      // Only attempt to restore if body is active (no other element took focus)
-      if (document.activeElement === document.body && lastFocusedRef.current) {
-        // Extra guard: ensure last focused element is still in DOM and visible
-        const el = lastFocusedRef.current;
-        if (document.contains(el) && el.offsetParent !== null) {
-          // Use requestAnimationFrame to avoid layout thrash & potential scroll jump
-          requestAnimationFrame(() => {
-            try { el.focus({ preventScroll: true }); } catch {}
-          });
-        }
-      }
-    };
-    window.addEventListener('focusin', handleFocusIn);
-    document.addEventListener('click', handleDocumentClick);
-    return () => {
-      window.removeEventListener('focusin', handleFocusIn);
-      document.removeEventListener('click', handleDocumentClick);
-    };
-  }, []);
+  // Removed auto-refocus logic (caused unintended reopen of dropdowns / file dialogs on some interactions)
   
   // Load car details from localStorage if available
   useEffect(() => {

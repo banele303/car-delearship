@@ -579,15 +579,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                   </div>
                 )}
               </CardContent>
-              <CardFooter className="pt-0">
-                {application.car && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/inventory/${application.car.id}`}>
-                      View Vehicle Details
-                    </Link>
-                  </Button>
-                )}
-              </CardFooter>
+              {/* Vehicle details link removed per request */}
             </Card>
           </div>
         </div>
