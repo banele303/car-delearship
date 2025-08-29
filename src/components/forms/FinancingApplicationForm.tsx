@@ -177,6 +177,8 @@ interface FieldProps { label: string; name: keyof FinancingPublicForm; type?: st
 
 // Required field names (excluding declaration checkboxes handled elsewhere)
 const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
+  // Core finance numbers now enforced so backend schema passes
+  'loanAmount','termMonths',
   // First 15 inputs (gender & dependants made optional per request)
   'firstName','lastName','email','phone','dateOfBirth','idNumber','address','city','state','postalCode','housingStatus','title','initials',
   // Next of kin required fields
@@ -190,6 +192,8 @@ const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
 
 // Descriptive messages per required field
 const REQUIRED_MESSAGES: Partial<Record<keyof FinancingPublicForm, string>> = {
+  loanAmount: 'Loan amount is required',
+  termMonths: 'Term (months) is required',
   firstName: 'First name is required',
   lastName: 'Last name is required',
   email: 'Email address is required',
@@ -643,6 +647,12 @@ export default function FinancingApplicationForm() {
         collected[k] = v.trim();
       }
     });
+    // Auto-fill loanAmount from cashPrice if missing
+    if (!collected.loanAmount && collected.cashPrice) {
+      collected.loanAmount = collected.cashPrice;
+    }
+    // Default termMonths if blank
+    if (!collected.termMonths) collected.termMonths = '60';
     // Booleans from checkboxes
     collected.hasTradeIn = form.hasTradeIn;
     collected.legalCapacityConfirm = form.legalCapacityConfirm;

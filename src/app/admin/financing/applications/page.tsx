@@ -61,7 +61,8 @@ export default function FinancingApplicationsPage() {
         const params: string[] = [];
         if (statusFilter !== 'all') params.push(`status=${encodeURIComponent(statusFilter)}`);
         const qs = params.length ? `?${params.join('&')}` : '';
-        const res = await fetch(`/api/financing-applications${qs}` , {
+  // Use admin endpoint so we get consistent shaping & auth
+  const res = await fetch(`/api/admin/financing/applications${qs}` , {
           headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
         });
         if (!res.ok) throw new Error(`Failed to fetch applications (${res.status})`);
@@ -70,14 +71,13 @@ export default function FinancingApplicationsPage() {
         // Map backend shape -> UI shape
         const mapped: FinancingApplication[] = (raw || []).map((r: any) => ({
           id: r.id,
-          customerName: r.customer?.name || r.customer?.email || 'Unknown',
-          carModel: r.sale?.car ? `${r.sale.car.make} ${r.sale.car.model}` : 'N/A',
+          customerName: r.customerName || r.customer?.name || r.customerEmail || 'Unknown',
+          carModel: r.carModel || 'N/A',
           applicationDate: r.applicationDate || r.createdAt || new Date().toISOString(),
-            // Some schemas may store loanAmount as decimal string -> coerce
-          amount: typeof r.loanAmount === 'string' ? parseFloat(r.loanAmount) : Number(r.loanAmount) || 0,
+          amount: typeof r.amount === 'string' ? parseFloat(r.amount) : (r.amount ?? r.loanAmount) || 0,
           status: r.status || 'PENDING',
           creditScore: r.creditScore ?? null,
-          documentCount: Array.isArray(r.documents) ? r.documents.length : 0,
+          documentCount: typeof r.documentCount === 'number' ? r.documentCount : (Array.isArray(r.documents) ? r.documents.length : 0),
         }));
 
         // Client-side search filter (customerName / carModel)

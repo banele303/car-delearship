@@ -69,7 +69,16 @@ export async function GET(
         lastName: application.details?.lastName || (application.customer?.name?.split(' ').slice(1).join(' ') || ''),
         email: application.customer?.email || '',
         phone: application.customer?.phoneNumber || '',
-        dateOfBirth: application.details?.dateOfBirth ? application.details.dateOfBirth.toISOString() : ''
+  dateOfBirth: application.details?.dateOfBirth ? application.details.dateOfBirth.toISOString() : '',
+  address: application.details?.address || null,
+  city: application.details?.city || null,
+  state: application.details?.state || null,
+  postalCode: application.details?.postalCode || null,
+  housingStatus: application.details?.housingStatus || null,
+  employmentStatus: application.details?.employmentStatus || null,
+  employerName: application.details?.employerName || null,
+  jobTitle: application.details?.jobTitle || null,
+  monthlyIncomeGross: application.details?.monthlyIncomeGross || null
       },
       car: application.sale?.car ? {
         id: application.sale.car.id,

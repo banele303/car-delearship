@@ -4,11 +4,11 @@ import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 const publicFinancingSchema = z.object({
-  loanAmount: z.number().min(1000),
-  termMonths: z.number().min(12),
-  interestRate: z.number().min(0).max(40).optional().nullable(),
+  loanAmount: z.number().min(1), // front-end will coerce from cashPrice if blank
+  termMonths: z.number().min(1),
+  interestRate: z.number().min(0).max(60).optional().nullable(),
   monthlyPayment: z.number().min(0).optional().nullable(),
-  // Applicant
+  // Applicant (minimum required subset)
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.string().email(),
@@ -40,7 +40,7 @@ const publicFinancingSchema = z.object({
   coApplicantRelationship: z.string().optional().nullable(),
   consentCreditCheck: z.boolean().refine(v => v === true, 'Consent required'),
   agreeTerms: z.boolean().refine(v => v === true, 'Terms acceptance required'),
-});
+}).refine(d => d.loanAmount > 0 && d.termMonths > 0, { message: 'Invalid loan basics' });
 
 // Simple GET to avoid confusing 404 when hitting the endpoint directly in a browser
 export async function GET() {
@@ -54,8 +54,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Server misconfiguration: DATABASE_URL not set.' }, { status: 500 });
     }
 
-    const json = await req.json();
-    const data = publicFinancingSchema.parse(json);
+  const json = await req.json();
+  const data = publicFinancingSchema.parse(json);
+  // Preserve full raw body for extraData (excluding large documents array to limit size)
+  const { documents, ...restRaw } = json || {};
 
     // Create or find pseudo customer by email (public submission not logged in)
     let customer = await prisma.customer.findFirst({ where: { email: data.email } });
@@ -94,40 +96,85 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Server model not ready. Try again shortly.' }, { status: 503 });
     }
 
-    await (prisma as any).financingApplicationDetail.create({
-      data: {
-        financingApplicationId: financingApplication.id,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-        idNumber: data.idNumber || null,
-        address: data.address || null,
-        city: data.city || null,
-        state: data.state || null,
-        postalCode: data.postalCode || null,
-        housingStatus: data.housingStatus || null,
-        monthlyHousingPayment: data.monthlyHousingPayment || null,
-        employmentStatus: data.employmentStatus || null,
-        employerName: data.employerName || null,
-        jobTitle: data.jobTitle || null,
-        employmentYears: data.employmentYears || null,
-        monthlyIncomeGross: data.monthlyIncomeGross || null,
-        otherIncome: data.otherIncome || null,
-        otherIncomeSource: data.otherIncomeSource || null,
-        creditScoreRange: data.creditScoreRange || null,
-        downPaymentAmount: data.downPaymentAmount || null,
-        preferredContactMethod: data.preferredContactMethod || null,
-        hasTradeIn: data.hasTradeIn ?? false,
-        tradeInDetails: data.tradeInDetails || null,
-        coApplicantName: data.coApplicantName || null,
-        coApplicantIncome: data.coApplicantIncome || null,
-        coApplicantRelationship: data.coApplicantRelationship || null,
-        consentCreditCheck: data.consentCreditCheck,
-        agreeTerms: data.agreeTerms,
+    // Attempt to persist full detail with extraData JSON (may fail if migration not applied yet)
+    try {
+      await (prisma as any).financingApplicationDetail.create({
+        data: {
+          financingApplicationId: financingApplication.id,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+          idNumber: data.idNumber || null,
+          address: data.address || null,
+          city: data.city || null,
+          state: data.state || null,
+          postalCode: data.postalCode || null,
+          housingStatus: data.housingStatus || null,
+          monthlyHousingPayment: data.monthlyHousingPayment || null,
+          employmentStatus: data.employmentStatus || null,
+          employerName: data.employerName || null,
+          jobTitle: data.jobTitle || null,
+          employmentYears: data.employmentYears || null,
+          monthlyIncomeGross: data.monthlyIncomeGross || null,
+          otherIncome: data.otherIncome || null,
+          otherIncomeSource: data.otherIncomeSource || null,
+          creditScoreRange: data.creditScoreRange || null,
+          downPaymentAmount: data.downPaymentAmount || null,
+          preferredContactMethod: data.preferredContactMethod || null,
+          hasTradeIn: data.hasTradeIn ?? false,
+          tradeInDetails: data.tradeInDetails || null,
+          coApplicantName: data.coApplicantName || null,
+          coApplicantIncome: data.coApplicantIncome || null,
+          coApplicantRelationship: data.coApplicantRelationship || null,
+          consentCreditCheck: data.consentCreditCheck,
+          agreeTerms: data.agreeTerms,
+          extraData: restRaw && Object.keys(restRaw).length ? restRaw : null,
+        }
+      });
+    } catch (detailErr: any) {
+      const msg: string = detailErr?.message || '';
+      if (/extraData|column\s+\"?extradata\"?\s+does not exist/i.test(msg)) {
+        // Retry without extraData field for backward compatibility
+        await (prisma as any).financingApplicationDetail.create({
+          data: {
+            financingApplicationId: financingApplication.id,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            phone: data.phone,
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+            idNumber: data.idNumber || null,
+            address: data.address || null,
+            city: data.city || null,
+            state: data.state || null,
+            postalCode: data.postalCode || null,
+            housingStatus: data.housingStatus || null,
+            monthlyHousingPayment: data.monthlyHousingPayment || null,
+            employmentStatus: data.employmentStatus || null,
+            employerName: data.employerName || null,
+            jobTitle: data.jobTitle || null,
+            employmentYears: data.employmentYears || null,
+            monthlyIncomeGross: data.monthlyIncomeGross || null,
+            otherIncome: data.otherIncome || null,
+            otherIncomeSource: data.otherIncomeSource || null,
+            creditScoreRange: data.creditScoreRange || null,
+            downPaymentAmount: data.downPaymentAmount || null,
+            preferredContactMethod: data.preferredContactMethod || null,
+            hasTradeIn: data.hasTradeIn ?? false,
+            tradeInDetails: data.tradeInDetails || null,
+            coApplicantName: data.coApplicantName || null,
+            coApplicantIncome: data.coApplicantIncome || null,
+            coApplicantRelationship: data.coApplicantRelationship || null,
+            consentCreditCheck: data.consentCreditCheck,
+            agreeTerms: data.agreeTerms,
+          }
+        });
+      } else {
+        throw detailErr; // bubble up unexpected error
       }
-    });
+    }
 
     // Optional: persist document metadata if client sent it and model exists
     try {

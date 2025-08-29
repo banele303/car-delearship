@@ -240,6 +240,8 @@ model FinancingApplicationDetail {
   coApplicantRelationship String?
   consentCreditCheck      Boolean              @default(false)
   agreeTerms              Boolean              @default(false)
+  // Stores any additional public form fields (vehicle details, next of kin, bank info, expenses, declarations, etc.)
+  extraData               Json?
   createdAt               DateTime             @default(now())
   financingApplication    FinancingApplication @relation(fields: [financingApplicationId], references: [id])
 }

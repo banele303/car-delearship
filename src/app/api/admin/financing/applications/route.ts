@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Get recent financing applications with related data
-    const applications = await prisma.financingApplication.findMany({
+  const applications = await prisma.financingApplication.findMany({
       take: limit,
       skip: (page - 1) * limit,
       where: filters,
@@ -81,7 +81,8 @@ export async function GET(request: NextRequest) {
               select: { make: true, model: true, year: true }
             }
           }
-        }
+    },
+    documents: true
       }
     });
     
@@ -104,7 +105,8 @@ export async function GET(request: NextRequest) {
         termMonths: app.termMonths,
         monthlyPayment: app.monthlyPayment,
         interestRate: app.interestRate,
-        carModel
+        carModel,
+        documentCount: app.documents?.length || 0
       };
     });
 
