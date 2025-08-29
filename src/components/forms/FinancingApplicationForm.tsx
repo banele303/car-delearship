@@ -228,7 +228,19 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
     if (onChange) onChange(raw);
   }, [onChange, name]);
   const required = REQUIRED_FIELDS.has(name);
-  const err = (typeof window !== 'undefined' && (window as any).__finErrors) ? (window as any).__finErrors[name] : undefined;
+  const globalErrs = (typeof window !== 'undefined' && (window as any).__finErrors) ? (window as any).__finErrors : {};
+  const submittedAttempted = (typeof window !== 'undefined' && (window as any).__finSubmittedAttempted) || false;
+  let err = globalErrs[name];
+  if (!err && required && submittedAttempted) {
+    // derive current value from window form snapshot if present
+    try {
+      const snapshot = (typeof window !== 'undefined' && (window as any).__finFormState) || {};
+      const current = snapshot[name];
+      if (current == null || (typeof current === 'string' && current.trim() === '')) {
+        err = 'Required';
+      }
+    } catch {}
+  }
   const effectiveType = DATE_FIELDS.has(name) ? 'date' : type;
   return (
     <div className={colSpan || ''}>
@@ -288,8 +300,11 @@ export default function FinancingApplicationForm() {
   const [errors, setErrors] = useState<Partial<Record<keyof FinancingPublicForm, string>>>({});
   // Track missing document keys after submit attempt
   const [missingDocKeys, setMissingDocKeys] = useState<string[]>([]);
+  const [submittedAttempted, setSubmittedAttempted] = useState(false);
   // Expose errors for TextField lookup (avoid prop drilling large form)
   useEffect(() => { if (typeof window !== 'undefined') { (window as any).__finErrors = errors; } }, [errors]);
+  useEffect(() => { if (typeof window !== 'undefined') { (window as any).__finFormState = form; } }, [form]);
+  useEffect(() => { if (typeof window !== 'undefined') { (window as any).__finSubmittedAttempted = submittedAttempted; } }, [submittedAttempted]);
   // Field validator (partial); runs full schema but filters for field path
   const validateField = React.useCallback((name: keyof FinancingPublicForm, value: any) => {
     try {
@@ -528,6 +543,7 @@ export default function FinancingApplicationForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formRef.current) return;
+    if (!submittedAttempted) setSubmittedAttempted(true);
     // Build data from actual DOM values so nothing is lost between edits
     const fd = new FormData(formRef.current);
     const collected: any = { ...form }; // start with controlled bits (checkboxes/selects)
@@ -563,7 +579,7 @@ export default function FinancingApplicationForm() {
         try { (el as HTMLInputElement).focus({ preventScroll: true }); } catch {}
       }
     }
-    if (firstMissingName) return; // stop submit until all required filled
+  if (firstMissingName) return; // stop submit until all required filled
 
   // Removed strict schema blocking per request (previously enforced declarations & loan fields)
     // Ensure required documents uploaded
