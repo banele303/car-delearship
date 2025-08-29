@@ -235,6 +235,7 @@ const NUMERIC_DECIMAL_FIELDS = new Set<keyof FinancingPublicForm>([
 ]);
 
 const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholder, colSpan, uncontrolled = true, defaultValue = '', value, onChange }) => {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
   const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     let raw = e.target.value;
     // Numeric sanitization
@@ -273,6 +274,17 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
     } catch {}
   }
   const effectiveType = DATE_FIELDS.has(name) ? 'date' : type;
+  // Helper to decide if we should suppress error while actively typing
+  const activeEl = (typeof document !== 'undefined') ? document.activeElement : null;
+  if (activeEl === inputRef.current && submittedAttempted) {
+    // If user is typing and there is some value, suppress required error
+    try {
+      const currentVal = (inputRef.current as HTMLInputElement).value;
+      if (currentVal && err && REQUIRED_MESSAGES[name] && (err === REQUIRED_MESSAGES[name])) {
+        err = undefined;
+      }
+    } catch {}
+  }
   return (
     <div className={colSpan || ''}>
       <Label className='text-sm font-medium flex items-center gap-1' htmlFor={name}>{label}{required && <span className='text-red-500'>*</span>}</Label>
@@ -283,6 +295,7 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
         data-phone={PHONE_FIELDS.has(name) ? 'true' : undefined}
         type={effectiveType}
         placeholder={placeholder}
+        ref={inputRef}
     // Security hardening attributes
     maxLength={200}
     autoComplete='off'
@@ -292,6 +305,15 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
           NUMERIC_DECIMAL_FIELDS.has(name) ? '^\\d*(\\.\\d{0,2})?$' :
           name === 'idNumber' ? '^[A-Za-z0-9-]+$' : '[^<>]+' }
         {...(uncontrolled ? { defaultValue } : { value: value ?? '', onChange: handleChange })}
+        onInput={(e) => {
+          // While typing after a submit attempt, clear existing required error once field has content
+          if (submittedAttempted) {
+            const val = (e.target as HTMLInputElement).value;
+            if (val && typeof window !== 'undefined' && (window as any).__finClearError) {
+              (window as any).__finClearError(name);
+            }
+          }
+        }}
         onBlur={(e) => {
           // Phone normalization
           if (PHONE_FIELDS.has(name)) {
@@ -307,6 +329,13 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
           // Only run validation after user attempted to submit (prevents early error display)
           if (typeof window !== 'undefined' && (window as any).__finSubmittedAttempted && (window as any).__validateFinField) {
             (window as any).__validateFinField(name, (e.target as HTMLInputElement).value);
+          }
+          // If emptied on blur, restore required error (validateField above will add schema error, but ensure required message matches mapping)
+          if (submittedAttempted) {
+            const val = (e.target as HTMLInputElement).value.trim();
+            if (!val && typeof window !== 'undefined' && (window as any).__finEnsureRequiredError) {
+              (window as any).__finEnsureRequiredError(name);
+            }
           }
         }}
         className={'mt-1 ' + (err ? 'border-red-500 focus-visible:ring-red-500' : '')}
@@ -337,6 +366,32 @@ export default function FinancingApplicationForm() {
   useEffect(() => { if (typeof window !== 'undefined') { (window as any).__finErrors = errors; } }, [errors]);
   useEffect(() => { if (typeof window !== 'undefined') { (window as any).__finFormState = form; } }, [form]);
   useEffect(() => { if (typeof window !== 'undefined') { (window as any).__finSubmittedAttempted = submittedAttempted; } }, [submittedAttempted]);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__finClearError = (field: keyof FinancingPublicForm) => {
+        setErrors(prev => {
+          if (!prev[field]) return prev;
+            const { [field]: _, ...rest } = prev; return rest;
+        });
+      };
+      (window as any).__finEnsureRequiredError = (field: keyof FinancingPublicForm) => {
+        if (!REQUIRED_FIELDS.has(field)) return;
+        setErrors(prev => {
+          const snapshot = (window as any).__finFormState || {};
+          const current = snapshot[field];
+          if (current && typeof current === 'string' && current.trim() !== '') {
+            // filled, ensure no required error
+            if (prev[field] && prev[field] === REQUIRED_MESSAGES[field]) {
+              const { [field]:__, ...rest } = prev; return rest;
+            }
+            return prev;
+          }
+          // empty
+          return { ...prev, [field]: REQUIRED_MESSAGES[field] || 'This field is required' };
+        });
+      };
+    }
+  }, [setErrors]);
   // Field validator (partial); runs full schema but filters for field path
   const validateField = React.useCallback((name: keyof FinancingPublicForm, value: any) => {
     try {
