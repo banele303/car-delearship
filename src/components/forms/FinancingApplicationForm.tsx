@@ -225,7 +225,7 @@ const DATE_FIELDS = new Set<keyof FinancingPublicForm>(['dateOfBirth','dateMarri
 const PHONE_FIELDS = new Set<keyof FinancingPublicForm>(['phone','telephoneHome','telephoneWork','spouseCell','nextOfKinCell']);
 // Fields that should accept only whole numbers
 const NUMERIC_INT_FIELDS = new Set<keyof FinancingPublicForm>([
-  'employmentYears','creditScore','dependants','yearsPreviouslyEmployed','spouseYearsEmployed'
+  'employmentYears','creditScore','yearsPreviouslyEmployed','spouseYearsEmployed'
 ]);
 // Fields that can accept decimal monetary values
 const NUMERIC_DECIMAL_FIELDS = new Set<keyof FinancingPublicForm>([
