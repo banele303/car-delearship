@@ -192,18 +192,41 @@ const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
 const DATE_FIELDS = new Set<keyof FinancingPublicForm>(['dateOfBirth','dateMarried','propertyPurchaseDate','salaryDate']);
 // Phone fields for normalization
 const PHONE_FIELDS = new Set<keyof FinancingPublicForm>(['phone','telephoneHome','telephoneWork','spouseCell','nextOfKinCell']);
+// Fields that should accept only whole numbers
+const NUMERIC_INT_FIELDS = new Set<keyof FinancingPublicForm>([
+  'employmentYears','creditScore','dependants','yearsPreviouslyEmployed','spouseYearsEmployed'
+]);
+// Fields that can accept decimal monetary values
+const NUMERIC_DECIMAL_FIELDS = new Set<keyof FinancingPublicForm>([
+  'loanAmount','cashPrice','vehicleKM','monthlyIncomeGross','otherIncome','annualIncome','downPaymentAmount',
+  'grossSalary','basicMonthlyExclCar','carAllowance','monthlyCommission','netTakeHomePay','totalMonthlyHouseholdIncome',
+  'expenseRentBond','expenseRatesUtilities','expenseVehicleInstalments','expensePersonalLoans','expenseCreditCardRepayment','expenseFurniture','expenseClothing','expenseOverdraft','expenseInsurance','expenseTelephone','expenseTransport','expenseFoodEntertainment','expenseEducation','expenseMaintenance','expenseHousehold','expenseOther','totalMonthlyHouseholdExpenses'
+]);
 
 const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholder, colSpan, uncontrolled = true, defaultValue = '', value, onChange }) => {
   const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-  // Basic neutralization: strip script-like tags & control chars
-  let val = e.target.value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\u202E]/g,'');
-  val = val.replace(/<\/?script[^>]*>/gi,'');
-  // Collapse excessive whitespace
-  val = val.replace(/\s{2,}/g,' ');
-  // Enforce max practical length
-  if (val.length > 200) val = val.slice(0,200);
-  if (onChange) onChange(val);
-  }, [onChange]);
+    let raw = e.target.value;
+    // Numeric sanitization
+    if (NUMERIC_INT_FIELDS.has(name)) {
+      raw = raw.replace(/[^0-9]/g,'');
+    } else if (NUMERIC_DECIMAL_FIELDS.has(name)) {
+      // keep digits and at most one dot, limit to 2 decimals
+      raw = raw.replace(/[^0-9.]/g,'');
+      const parts = raw.split('.');
+      if (parts.length > 2) {
+        raw = parts.shift() + '.' + parts.join('');
+      }
+      const [intP, decP] = raw.split('.');
+      if (decP && decP.length > 2) raw = intP + '.' + decP.slice(0,2);
+    } else {
+      // Basic neutralization for text fields
+      raw = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\u202E]/g,'');
+      raw = raw.replace(/<\/?script[^>]*>/gi,'');
+      raw = raw.replace(/\s{2,}/g,' ');
+    }
+    if (raw.length > 200) raw = raw.slice(0,200);
+    if (onChange) onChange(raw);
+  }, [onChange, name]);
   const required = REQUIRED_FIELDS.has(name);
   const err = (typeof window !== 'undefined' && (window as any).__finErrors) ? (window as any).__finErrors[name] : undefined;
   const effectiveType = DATE_FIELDS.has(name) ? 'date' : type;
@@ -220,8 +243,11 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
     // Security hardening attributes
     maxLength={200}
     autoComplete='off'
-    inputMode={effectiveType === 'date' ? undefined : 'text'}
-    pattern={effectiveType === 'date' ? undefined : '[^<>]+'}
+  inputMode={ NUMERIC_INT_FIELDS.has(name) ? 'numeric' : NUMERIC_DECIMAL_FIELDS.has(name) ? 'decimal' : (effectiveType === 'date' ? undefined : 'text') }
+        pattern={ effectiveType === 'date' ? undefined :
+          NUMERIC_INT_FIELDS.has(name) ? '\\d*' :
+          NUMERIC_DECIMAL_FIELDS.has(name) ? '^\\d*(\\.\\d{0,2})?$' :
+          name === 'idNumber' ? '^[A-Za-z0-9-]+$' : '[^<>]+' }
         {...(uncontrolled ? { defaultValue } : { value: value ?? '', onChange: handleChange })}
         onBlur={(e) => {
           // Phone normalization
@@ -515,6 +541,29 @@ export default function FinancingApplicationForm() {
     collected.legalCapacityConfirm = form.legalCapacityConfirm;
     collected.creditRecordDeclaration = form.creditRecordDeclaration;
     collected.marketingCommunicationConsent = form.marketingCommunicationConsent;
+
+    // Inline submit-time required field validation (ensures untouched empty fields surface errors)
+    const newErrors: Partial<Record<keyof FinancingPublicForm, string>> = { ...errors };
+    let firstMissingName: string | null = null;
+    REQUIRED_FIELDS.forEach((fieldName) => {
+      const val = (collected as any)[fieldName];
+      if (!val || (typeof val === 'string' && val.trim() === '')) {
+        newErrors[fieldName] = 'Required';
+        if (!firstMissingName) firstMissingName = fieldName as string;
+      }
+    });
+    // Update error state if changed
+    const changed = Object.keys(newErrors).some(k => (errors as any)[k] !== (newErrors as any)[k]);
+    if (changed) setErrors(newErrors);
+    if (firstMissingName) {
+      // Scroll to first missing field
+      const el = document.getElementById(firstMissingName);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        try { (el as HTMLInputElement).focus({ preventScroll: true }); } catch {}
+      }
+    }
+    if (firstMissingName) return; // stop submit until all required filled
 
   // Removed strict schema blocking per request (previously enforced declarations & loan fields)
     // Ensure required documents uploaded
