@@ -71,6 +71,25 @@ export async function GET(
   const detail = (application as any).details || null;
   const car = application.sale?.car;
   const carImage = Array.isArray(car?.photoUrls) && car.photoUrls.length ? car.photoUrls[0] : null;
+  // Derive a pseudo vehicle from captured extraData if no linked sale/car record exists
+  let derivedCar: any = null;
+  try {
+    const extra: any = detail?.extraData || null;
+    if (!car && extra && (extra.vehicleMake || extra.vehicleModel)) {
+      const rawPrice = extra.cashPrice || extra.vehiclePrice || extra.price || application.loanAmount;
+      const parsedPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice).replace(/[^0-9.]/g,''));
+      derivedCar = {
+        id: String(extra.vehicleId || 'virtual'),
+        make: String(extra.vehicleMake || '').slice(0,60) || 'Unknown',
+        model: String(extra.vehicleModel || '').slice(0,60) || 'Vehicle',
+        year: extra.vehicleYear ? parseInt(String(extra.vehicleYear),10) : (extra.year ? parseInt(String(extra.year),10) : new Date().getFullYear()),
+        price: !isNaN(parsedPrice) ? parsedPrice : application.loanAmount,
+        imageUrl: extra.vehicleImageUrl || extra.imageUrl || null,
+      };
+    }
+  } catch (e) {
+    console.warn('Failed deriving vehicle from extraData', e);
+  }
     const shaped: any = {
       id: application.id,
       applicationDate: application.applicationDate?.toISOString?.() || new Date().toISOString(),
@@ -99,7 +118,7 @@ export async function GET(
         year: car.year,
         price: car.price,
         imageUrl: carImage
-      } : null,
+      } : (derivedCar || null),
       documents: ((application as any).documents || []).map((d: any) => ({
         id: d.id,
         docType: d.docType,
