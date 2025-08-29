@@ -195,7 +195,14 @@ const PHONE_FIELDS = new Set<keyof FinancingPublicForm>(['phone','telephoneHome'
 
 const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholder, colSpan, uncontrolled = true, defaultValue = '', value, onChange }) => {
   const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onChange) onChange(e.target.value);
+  // Basic neutralization: strip script-like tags & control chars
+  let val = e.target.value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\u202E]/g,'');
+  val = val.replace(/<\/?script[^>]*>/gi,'');
+  // Collapse excessive whitespace
+  val = val.replace(/\s{2,}/g,' ');
+  // Enforce max practical length
+  if (val.length > 200) val = val.slice(0,200);
+  if (onChange) onChange(val);
   }, [onChange]);
   const required = REQUIRED_FIELDS.has(name);
   const err = (typeof window !== 'undefined' && (window as any).__finErrors) ? (window as any).__finErrors[name] : undefined;
@@ -210,6 +217,11 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
         data-phone={PHONE_FIELDS.has(name) ? 'true' : undefined}
         type={effectiveType}
         placeholder={placeholder}
+    // Security hardening attributes
+    maxLength={200}
+    autoComplete='off'
+    inputMode={effectiveType === 'date' ? undefined : 'text'}
+    pattern={effectiveType === 'date' ? undefined : '[^<>]+'}
         {...(uncontrolled ? { defaultValue } : { value: value ?? '', onChange: handleChange })}
         onBlur={(e) => {
           // Phone normalization
@@ -717,7 +729,12 @@ export default function FinancingApplicationForm() {
       process: (_fieldName: string, file: any, _metadata: any, load: any, error: any, _progress: any, abort: any) => {
         const controller = new AbortController();
         const fd = new FormData();
-        fd.append('file', file, file.name);
+        // Sanitize filename to mitigate path / HTML issues
+        const safeName = String(file.name || 'file')
+          .replace(/[^a-zA-Z0-9._-]/g,'_')
+          .replace(/_{2,}/g,'_')
+          .slice(0,80);
+        fd.append('file', file, safeName);
         const primary = `/api/uploads/financing?docType=${encodeURIComponent(docType)}`;
         const fallback = `/api/financing-uploads?docType=${encodeURIComponent(docType)}`;
 
