@@ -273,7 +273,8 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
             // Fallback if pattern mismatch
             e.target.value = pretty.startsWith('+27 ') ? pretty : '+' + intl;
           }
-          if (typeof window !== 'undefined' && (window as any).__validateFinField) {
+          // Only run validation after user attempted to submit (prevents early error display)
+          if (typeof window !== 'undefined' && (window as any).__finSubmittedAttempted && (window as any).__validateFinField) {
             (window as any).__validateFinField(name, (e.target as HTMLInputElement).value);
           }
         }}
@@ -311,22 +312,26 @@ export default function FinancingApplicationForm() {
       const candidate: any = { ...form, [name]: value };
       const res = schema.safeParse(candidate);
       if (res.success) {
-        setErrors(prev => {
-          if (prev[name]) {
-            const { [name]: _, ...rest } = prev;
-            return rest;
-          }
-            return prev;
-        });
+        if ((window as any)?.__finSubmittedAttempted) {
+          setErrors(prev => {
+            if (prev[name]) {
+              const { [name]: _, ...rest } = prev;
+              return rest;
+            }
+              return prev;
+          });
+        }
       } else {
         const issue = res.error.issues.find(i => i.path[0] === name);
-        if (issue) {
-          setErrors(prev => ({ ...prev, [name]: issue.message || 'Invalid' }));
-        } else {
-          setErrors(prev => {
-            if (prev[name]) { const { [name]: _, ...rest } = prev; return rest; }
-            return prev;
-          });
+        if ((window as any)?.__finSubmittedAttempted) {
+          if (issue) {
+            setErrors(prev => ({ ...prev, [name]: issue.message || 'Invalid' }));
+          } else {
+            setErrors(prev => {
+              if (prev[name]) { const { [name]: _, ...rest } = prev; return rest; }
+              return prev;
+            });
+          }
         }
       }
     } catch {}
