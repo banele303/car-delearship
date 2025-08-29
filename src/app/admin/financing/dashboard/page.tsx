@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { 
   Card, 
   CardContent, 
@@ -64,12 +65,23 @@ export default function FinancingDashboardPage() {
       setIsLoading(true);
       try {
         // Fetch financing applications data
-        const applicationsRes = await fetch('/api/admin/financing/applications?limit=5');
+        let token: string | undefined;
+        try {
+          const session = await fetchAuthSession();
+          token = session.tokens?.idToken?.toString();
+        } catch (e) {
+          console.warn('Auth session not available for dashboard fetch:', e);
+        }
+        const applicationsRes = await fetch('/api/admin/financing/applications?limit=5', {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         if (!applicationsRes.ok) throw new Error('Failed to fetch applications');
         const applicationsData = await applicationsRes.json();
         
         // Fetch financing statistics
-        const statsRes = await fetch('/api/admin/financing/stats');
+        const statsRes = await fetch('/api/admin/financing/stats', {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         if (!statsRes.ok) throw new Error('Failed to fetch statistics');
         const statsData = await statsRes.json();
         

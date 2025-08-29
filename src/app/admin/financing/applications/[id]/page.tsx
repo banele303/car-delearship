@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { useRouter } from 'next/navigation';
 import { 
   Card, 
@@ -41,9 +42,10 @@ import {
   Clock9
 } from 'lucide-react';
 import Link from 'next/link';
+import { toast as sonnerToast } from 'sonner';
 
 type FinancingApplication = {
-  id: string;
+  id: number; // backend returns numeric id
   applicationDate: string;
   status: 'APPROVED' | 'REJECTED' | 'PENDING';
   creditScore: number;
@@ -88,6 +90,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -95,11 +98,21 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
       setIsLoading(true);
       try {
         // Fetch application details
-        const res = await fetch(`/api/admin/financing/applications/${params.id}`);
+        // Acquire Cognito ID token (if available) for protected admin endpoint
+        let token: string | undefined;
+        try {
+          const session = await fetchAuthSession();
+          token = session.tokens?.idToken?.toString();
+        } catch (e) {
+          console.warn('Auth session not available for financing detail fetch:', e);
+        }
+        const res = await fetch(`/api/admin/financing/applications/${params.id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         if (!res.ok) throw new Error('Failed to fetch application details');
         
-        const data = await res.json();
-        setApplication(data);
+  const data = await res.json();
+  setApplication(data);
       } catch (error) {
         console.error('Error fetching application details:', error);
         toast.error("Failed to load application details");
@@ -114,10 +127,18 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
   const handleApprove = async () => {
     setIsSubmitting(true);
     try {
+      let token: string | undefined;
+      try {
+        const session = await fetchAuthSession();
+        token = session.tokens?.idToken?.toString();
+      } catch (e) {
+        console.warn('Auth session not available for approve action:', e);
+      }
       const res = await fetch(`/api/admin/financing/applications/${params.id}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           decisionNotes: "Application approved based on credit score and income verification."
@@ -150,10 +171,18 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
   const handleReject = async () => {
     setIsSubmitting(true);
     try {
+      let token: string | undefined;
+      try {
+        const session = await fetchAuthSession();
+        token = session.tokens?.idToken?.toString();
+      } catch (e) {
+        console.warn('Auth session not available for reject action:', e);
+      }
       const res = await fetch(`/api/admin/financing/applications/${params.id}/reject`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           decisionNotes: "Application rejected due to insufficient credit score."
@@ -252,6 +281,64 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
   
   const { creditScore } = application;
   const creditRating = getCreditScoreRating(creditScore);
+
+  const handleExportPdf = async () => {
+    if (!application) return;
+    setExporting(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ unit: 'pt' });
+      const lineHeight = 16;
+      let y = 40;
+      const left = 40;
+      doc.setFontSize(18);
+      doc.text(`Financing Application #${application.id}`, left, y);
+      y += 30;
+      doc.setFontSize(12);
+      const addLine = (label: string, value: any) => {
+        const text = `${label}: ${value === null || value === undefined || value === '' ? '-' : value}`;
+        if (y > 760) { doc.addPage(); y = 40; }
+        doc.text(text, left, y);
+        y += lineHeight;
+      };
+      addLine('Status', application.status);
+      addLine('Application Date', new Date(application.applicationDate).toLocaleString());
+      addLine('Loan Amount', `R${application.loanAmount.toLocaleString()}`);
+      addLine('Loan Term (Months)', application.loanTermMonths);
+      addLine('Interest Rate', `${application.interestRate}%`);
+      addLine('Monthly Payment', `R${application.monthlyPayment.toLocaleString()}`);
+      addLine('Credit Score', application.creditScore);
+      if ((application as any).annualIncome) addLine('Annual Income', `R${(application as any).annualIncome.toLocaleString()}`);
+      y += 10; doc.text('Customer', left, y); y += lineHeight;
+      addLine('Name', `${application.customer.firstName || (application as any).customer?.name || ''} ${application.customer.lastName || ''}`.trim());
+      addLine('Email', application.customer.email);
+      addLine('Phone', application.customer.phone);
+      addLine('DOB', application.customer.dateOfBirth ? new Date(application.customer.dateOfBirth).toLocaleDateString() : '-');
+      y += 10; doc.text('Vehicle', left, y); y += lineHeight;
+      addLine('Vehicle', `${application.car.year} ${application.car.make} ${application.car.model}`);
+      addLine('Price', `R${application.car.price.toLocaleString()}`);
+      if ((application as any).details) {
+        const d: any = (application as any).details;
+        y += 10; doc.text('Extended Details', left, y); y += lineHeight;
+        ['address','city','state','postalCode','housingStatus','employmentStatus','employerName','jobTitle','monthlyIncomeGross','otherIncome','coApplicantName','coApplicantIncome','coApplicantRelationship','preferredContactMethod','downPaymentAmount'].forEach(key => {
+          if (d[key] !== undefined && d[key] !== null && d[key] !== '') {
+            addLine(key.replace(/([A-Z])/g,' $1'), d[key]);
+          }
+        });
+      }
+      if (application.documents && application.documents.length) {
+        y += 10; doc.text('Documents', left, y); y += lineHeight;
+        application.documents.forEach(docMeta => addLine(docMeta.docType, `${docMeta.originalName} (${(docMeta.size/1024).toFixed(1)} KB)`));
+      }
+      doc.save(`financing-application-${application.id}.pdf`);
+      sonnerToast.success('PDF exported');
+    } catch (e) {
+      console.error('PDF export failed', e);
+      sonnerToast.error('Failed to export PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
   
   return (
     <div className="container mx-auto px-4 py-8">
@@ -270,7 +357,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
           <div className="flex items-center mt-2">
             {getStatusBadge(application.status)}
             <span className="text-gray-500 dark:text-gray-400 ml-2">
-              Application #{application.id.slice(0, 8)}
+              Application #{String(application.id).slice(0, 8)}
             </span>
             <span className="mx-2 text-gray-300 dark:text-gray-700">•</span>
             <span className="text-gray-500 dark:text-gray-400">
@@ -279,8 +366,12 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
           </div>
         </div>
         
-        {application.status === 'PENDING' && (
-          <div className="flex space-x-3 mt-4 md:mt-0">
+        <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
+          <Button variant="outline" onClick={handleExportPdf} disabled={exporting}>
+            {exporting ? 'Exporting...' : 'Export PDF'}
+          </Button>
+          {application.status === 'PENDING' && (
+            <>
             <Button 
               variant="outline" 
               onClick={() => setIsRejectDialogOpen(true)}
@@ -296,15 +387,19 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
               <CheckCircle className="h-4 w-4 mr-2" />
               Approve
             </Button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-xl">Application Details</CardTitle>
+            <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle className="text-xl">Application Details</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Comprehensive financing summary with customer & underwriting data.</p>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -428,6 +523,48 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
         </div>
         
         <div className="space-y-6">
+          {/* Extended Applicant Details */}
+          {(application as any).details && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Extended Applicant Details</CardTitle>
+                <CardDescription>Additional financial & background information supplied in application.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-sm">
+                  {(() => {
+                    const d: any = (application as any).details;
+                    const fieldMap: Record<string,string> = {
+                      address: 'Address', city: 'City', state: 'State', postalCode: 'Postal Code',
+                      housingStatus: 'Housing Status', monthlyHousingPayment: 'Monthly Housing Payment',
+                      employmentStatus: 'Employment Status', employerName: 'Employer', jobTitle: 'Job Title', employmentYears: 'Employment Years',
+                      monthlyIncomeGross: 'Monthly Income (Gross)', otherIncome: 'Other Income', otherIncomeSource: 'Other Income Source',
+                      creditScoreRange: 'Credit Score Range', downPaymentAmount: 'Down Payment', preferredContactMethod: 'Preferred Contact',
+                      hasTradeIn: 'Has Trade-In', tradeInDetails: 'Trade-In Details', coApplicantName: 'Co-Applicant Name',
+                      coApplicantIncome: 'Co-Applicant Income', coApplicantRelationship: 'Co-Applicant Relationship', consentCreditCheck: 'Consent Credit Check',
+                      agreeTerms: 'Agreed To Terms'
+                    };
+                    return Object.entries(fieldMap)
+                      .filter(([k]) => d[k] !== undefined && d[k] !== null && d[k] !== '')
+                      .map(([k,label]) => (
+                        <div key={k} className="space-y-1">
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
+                          <p className="font-medium break-words">
+                            {typeof d[k] === 'boolean' ? (d[k] ? 'Yes' : 'No') : k.toLowerCase().includes('payment') || k.toLowerCase().includes('income') || k.toLowerCase().includes('amount') ? `R${Number(d[k]).toLocaleString()}` : String(d[k])}
+                          </p>
+                        </div>
+                      ));
+                  })()}
+                </div>
+                {(() => { const d: any = (application as any).details; return d?.extraData ? (
+                  <div className="mt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Additional Data (JSON)</p>
+                    <pre className="text-xs bg-muted rounded p-3 overflow-x-auto max-h-64">{JSON.stringify(d.extraData, null, 2)}</pre>
+                  </div>
+                ) : null; })()}
+              </CardContent>
+            </Card>
+          )}
           {/* Documents Section */}
           {application.documents && application.documents.length > 0 && (
             <Card>

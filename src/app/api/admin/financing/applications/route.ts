@@ -54,37 +54,40 @@ export async function GET(request: NextRequest) {
       ];
     }
     
-    // Get recent financing applications with related data
-  const applications = await prisma.financingApplication.findMany({
-      take: limit,
-      skip: (page - 1) * limit,
-      where: filters,
-      orderBy: {
-        applicationDate: 'desc'
-      },
-      include: {
-        customer: {
-          select: {
-            name: true,
-            email: true
-          }
-        },
-        details: {
-          select: {
-            firstName: true,
-            lastName: true
-          }
-        },
-        sale: {
+    // Get recent financing applications with related data; tolerate missing documents table
+    let applications;
+    try {
+      applications = await prisma.financingApplication.findMany({
+        take: limit,
+        skip: (page - 1) * limit,
+        where: filters,
+        orderBy: { applicationDate: 'desc' },
+        include: {
+          customer: { select: { name: true, email: true } },
+          details: { select: { firstName: true, lastName: true } },
+          sale: { include: { car: { select: { make: true, model: true, year: true } } } },
+          documents: true,
+        }
+      });
+    } catch (err: any) {
+      const code = err?.code;
+      if (code === 'P2021' || code === 'P2022') {
+        console.warn('[Admin Financing] Documents relation unavailable, retrying without it. Code:', code);
+        applications = await prisma.financingApplication.findMany({
+          take: limit,
+          skip: (page - 1) * limit,
+          where: filters,
+          orderBy: { applicationDate: 'desc' },
           include: {
-            car: {
-              select: { make: true, model: true, year: true }
-            }
+            customer: { select: { name: true, email: true } },
+            details: { select: { firstName: true, lastName: true } },
+            sale: { include: { car: { select: { make: true, model: true, year: true } } } },
           }
-    },
-    documents: true
+        });
+      } else {
+        throw err;
       }
-    });
+    }
     
     // Transform the data for the frontend
     const formattedApplications = applications.map(app => {
@@ -94,6 +97,7 @@ export async function GET(request: NextRequest) {
         : app.customer.name;
       
       const carModel = app.sale?.car ? `${app.sale.car.make} ${app.sale.car.model}` : '';
+      const docCount = (app as any).documents ? (app as any).documents.length || 0 : 0;
       return {
         id: app.id,
         customerName,
@@ -106,7 +110,7 @@ export async function GET(request: NextRequest) {
         monthlyPayment: app.monthlyPayment,
         interestRate: app.interestRate,
         carModel,
-        documentCount: app.documents?.length || 0
+        documentCount: docCount
       };
     });
 
@@ -115,7 +119,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching financing applications:', error);
     return new NextResponse(
-      JSON.stringify({ error: 'Internal Server Error' }),
+      JSON.stringify({ error: 'Internal Server Error', detail: process.env.NODE_ENV !== 'production' ? (error as any)?.message : undefined }),
       { status: 500 }
     );
   }

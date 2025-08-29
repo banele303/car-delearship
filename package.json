@@ -16,7 +16,7 @@
   "dependencies": {
     "@aws-amplify/ui-react": "^6.9.1",
     "@aws-sdk/client-s3": "^3.810.0",
-  "@aws-sdk/lib-storage": "^3.810.0",
+    "@aws-sdk/lib-storage": "^3.810.0",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
@@ -59,6 +59,7 @@
     "geist": "^1.4.1",
     "install": "^0.13.0",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.474.0",
     "mapbox-gl": "^3.9.4",

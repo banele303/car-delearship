@@ -21,7 +21,7 @@ const publicFinancingSchema = z.object({
   state: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
   housingStatus: z.string().optional().nullable(),
-  monthlyHousingPayment: z.number().optional().nullable(),
+  monthlyHousingPayment: z.coerce.number().optional().nullable(),
   employmentStatus: z.string().optional().nullable(),
   employerName: z.string().optional().nullable(),
   jobTitle: z.string().optional().nullable(),
@@ -37,10 +37,10 @@ const publicFinancingSchema = z.object({
   hasTradeIn: z.boolean().optional().nullable(),
   tradeInDetails: z.string().optional().nullable(),
   coApplicantName: z.string().optional().nullable(),
-  coApplicantIncome: z.number().optional().nullable(),
+  coApplicantIncome: z.coerce.number().optional().nullable(),
   coApplicantRelationship: z.string().optional().nullable(),
-  consentCreditCheck: z.boolean().refine(v => v === true, 'Consent required'),
-  agreeTerms: z.boolean().refine(v => v === true, 'Terms acceptance required'),
+  consentCreditCheck: z.preprocess(v => v === 'true' ? true : v === 'false' ? false : v, z.boolean()).refine(v => v === true, 'Consent required'),
+  agreeTerms: z.preprocess(v => v === 'true' ? true : v === 'false' ? false : v, z.boolean()).refine(v => v === true, 'Terms acceptance required'),
 });
 
 // Simple GET to avoid confusing 404 when hitting the endpoint directly in a browser
@@ -64,29 +64,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', issues: zerr.issues || [] }, { status: 400 });
     }
   // Preserve full raw body for extraData (excluding large documents array to limit size)
-  const { documents, ...restRaw } = json || {};
+    const { documents, ...restRaw } = json || {};
+
+    const safeDate = (val: any): Date | null => {
+      if (!val || typeof val !== 'string') return null;
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return null;
+      return d;
+    };
 
     // Create or find pseudo customer by email (public submission not logged in)
-    let customer = await prisma.customer.findFirst({ where: { email: data.email } });
+  let customer = await prisma.customer.findFirst({ where: { email: data.email } });
     if (!customer) {
       customer = await prisma.customer.create({
         data: {
-          cognitoId: `public_${Date.now()}_${data.email.replace(/[@.]/g,'_')}`,
-          name: `${data.firstName} ${data.lastName}`,
+          cognitoId: `public_${Date.now()}_${data.email.replace(/[@.]/g,'_')}`.slice(0,60),
+          name: `${data.firstName} ${data.lastName}`.trim().slice(0,120),
           email: data.email,
-          phoneNumber: data.phone,
-          address: data.address || undefined,
-          city: data.city || undefined,
-          state: data.state || undefined,
-          postalCode: data.postalCode || undefined,
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+          phoneNumber: String(data.phone).slice(0,40),
+          address: data.address ? String(data.address).slice(0,200) : undefined,
+          city: data.city ? String(data.city).slice(0,80) : undefined,
+          state: data.state ? String(data.state).slice(0,80) : undefined,
+          postalCode: data.postalCode ? String(data.postalCode).slice(0,20) : undefined,
+          dateOfBirth: safeDate(data.dateOfBirth) || undefined,
         }
       });
     }
 
     let financingApplication;
     try {
-      financingApplication = await prisma.financingApplication.create({
+  financingApplication = await prisma.financingApplication.create({
       data: {
         loanAmount: data.loanAmount,
         interestRate: data.interestRate || 0,
@@ -100,7 +107,7 @@ export async function POST(req: NextRequest) {
     });
     } catch (dbCreateErr: any) {
       console.error('Failed creating financingApplication:', dbCreateErr);
-      return NextResponse.json({ error: 'Failed to create application base record' }, { status: 500 });
+  return NextResponse.json({ error: 'Failed to create application base record', detail: process.env.NODE_ENV !== 'production' ? dbCreateErr.message : undefined }, { status: 500 });
     }
 
     // Persist extended detail record (model name FinancingApplicationDetail -> prisma.financingApplicationDetail)
@@ -112,14 +119,14 @@ export async function POST(req: NextRequest) {
     // Attempt to persist full detail with extraData JSON (non-fatal if it fails)
     try {
       try {
-        await (prisma as any).financingApplicationDetail.create({
+    await (prisma as any).financingApplicationDetail.create({
           data: {
             financingApplicationId: financingApplication.id,
             firstName: data.firstName,
             lastName: data.lastName,
             email: data.email,
             phone: data.phone,
-            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+      dateOfBirth: safeDate(data.dateOfBirth),
             idNumber: data.idNumber || null,
             address: data.address || null,
             city: data.city || null,
@@ -151,14 +158,14 @@ export async function POST(req: NextRequest) {
         const msg: string = detailErr?.message || '';
         if (/extraData|column\s+\"?extradata\"?\s+does not exist/i.test(msg)) {
           // Retry without extraData for backward compatibility
-          await (prisma as any).financingApplicationDetail.create({
+      await (prisma as any).financingApplicationDetail.create({
             data: {
               financingApplicationId: financingApplication.id,
               firstName: data.firstName,
               lastName: data.lastName,
               email: data.email,
               phone: data.phone,
-              dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+        dateOfBirth: safeDate(data.dateOfBirth),
               idNumber: data.idNumber || null,
               address: data.address || null,
               city: data.city || null,

@@ -27,17 +27,32 @@ export async function GET(
     }
     
     // Get the financing application details with related data
-    const application = await prisma.financingApplication.findUnique({
-      where: { id: applicationId },
-      include: {
-        customer: true,
-        documents: true,
-        details: true,
-        sale: {
-          include: { car: true }
+    let application;
+    try {
+      application = await prisma.financingApplication.findUnique({
+        where: { id: applicationId },
+        include: {
+          customer: true,
+          documents: true,
+          details: true,
+          sale: { include: { car: true } }
         }
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2021' || err?.code === 'P2022') {
+        console.warn('[Admin Financing Detail] Documents relation unavailable, retrying without it. Code:', err.code);
+        application = await prisma.financingApplication.findUnique({
+          where: { id: applicationId },
+          include: {
+            customer: true,
+            details: true,
+            sale: { include: { car: true } }
+          }
+        });
+      } else {
+        throw err;
       }
-    });
+    }
     
     if (!application) {
       return new NextResponse(
@@ -53,42 +68,36 @@ export async function GET(
         { status: 404 }
       );
     }
-  const shaped: any = {
+    const detail = (application as any).details || null;
+    const car = application.sale?.car;
+    const carImage = Array.isArray(car?.photoUrls) && car.photoUrls.length ? car.photoUrls[0] : null;
+    const shaped: any = {
       id: application.id,
       applicationDate: application.applicationDate?.toISOString?.() || new Date().toISOString(),
+      approvalDate: application.approvalDate?.toISOString?.() || null,
       status: application.status,
-      creditScore: application.creditScore || 0,
+      creditScore: application.creditScore || detail?.creditScoreRange || 0,
       loanAmount: application.loanAmount,
       loanTermMonths: application.termMonths,
       interestRate: application.interestRate,
       monthlyPayment: application.monthlyPayment,
-      isNSFASAccredited: false,
+      annualIncome: application.annualIncome || null,
+      isNSFASAccredited: false, // placeholder until accreditation logic added
       customer: {
         id: application.customer?.cognitoId || application.customer?.id,
-        firstName: application.details?.firstName || (application.customer?.name?.split(' ')[0] || ''),
-        lastName: application.details?.lastName || (application.customer?.name?.split(' ').slice(1).join(' ') || ''),
-        email: application.customer?.email || '',
-        phone: application.customer?.phoneNumber || '',
-  dateOfBirth: application.details?.dateOfBirth ? application.details.dateOfBirth.toISOString() : '',
-  address: application.details?.address || null,
-  city: application.details?.city || null,
-  state: application.details?.state || null,
-  postalCode: application.details?.postalCode || null,
-  housingStatus: application.details?.housingStatus || null,
-  employmentStatus: application.details?.employmentStatus || null,
-  employerName: application.details?.employerName || null,
-  jobTitle: application.details?.jobTitle || null,
-  monthlyIncomeGross: application.details?.monthlyIncomeGross || null
+        name: application.customer?.name || `${detail?.firstName || ''} ${detail?.lastName || ''}`.trim(),
+        email: application.customer?.email || detail?.email || '',
+        phone: application.customer?.phoneNumber || detail?.phone || '',
       },
-      car: application.sale?.car ? {
-        id: application.sale.car.id,
-        make: application.sale.car.make,
-        model: application.sale.car.model,
-        year: application.sale.car.year,
-        price: application.sale.car.price,
-    imageUrl: null
+      car: car ? {
+        id: car.id,
+        make: car.make,
+        model: car.model,
+        year: car.year,
+        price: car.price,
+        imageUrl: carImage
       } : { id: '', make: '', model: '', year: 0, price: 0, imageUrl: null },
-      documents: (application.documents || []).map(d => ({
+      documents: ((application as any).documents || []).map((d: any) => ({
         id: d.id,
         docType: d.docType,
         originalName: d.originalName,
@@ -96,7 +105,63 @@ export async function GET(
         mime: d.mime,
         size: d.size,
         uploadedAt: d.uploadedAt?.toISOString?.() || ''
-      }))
+      })),
+      // Provide full detail record for richer UI & PDF export
+      details: detail ? {
+        firstName: detail.firstName,
+        lastName: detail.lastName,
+        email: detail.email,
+        phone: detail.phone,
+        dateOfBirth: detail.dateOfBirth?.toISOString?.() || null,
+        idNumber: detail.idNumber,
+        address: detail.address,
+        city: detail.city,
+        state: detail.state,
+        postalCode: detail.postalCode,
+        housingStatus: detail.housingStatus,
+        monthlyHousingPayment: detail.monthlyHousingPayment,
+        employmentStatus: detail.employmentStatus,
+        employerName: detail.employerName,
+        jobTitle: detail.jobTitle,
+        employmentYears: detail.employmentYears,
+        monthlyIncomeGross: detail.monthlyIncomeGross,
+        otherIncome: detail.otherIncome,
+        otherIncomeSource: detail.otherIncomeSource,
+        creditScoreRange: detail.creditScoreRange,
+        downPaymentAmount: detail.downPaymentAmount,
+        preferredContactMethod: detail.preferredContactMethod,
+        hasTradeIn: detail.hasTradeIn,
+        tradeInDetails: detail.tradeInDetails,
+        coApplicantName: detail.coApplicantName,
+        coApplicantIncome: detail.coApplicantIncome,
+        coApplicantRelationship: detail.coApplicantRelationship,
+        consentCreditCheck: detail.consentCreditCheck,
+        agreeTerms: detail.agreeTerms,
+        extraData: detail.extraData || null,
+        createdAt: detail.createdAt?.toISOString?.() || null,
+      } : null,
+      _meta: {
+        hasDetail: !!detail,
+        fieldCompleteness: detail ? (Object.values({
+          firstName: detail.firstName,
+          lastName: detail.lastName,
+          email: detail.email,
+          phone: detail.phone,
+          dateOfBirth: detail.dateOfBirth,
+          address: detail.address,
+          city: detail.city,
+          state: detail.state,
+          postalCode: detail.postalCode,
+          housingStatus: detail.housingStatus,
+          employmentStatus: detail.employmentStatus,
+          employerName: detail.employerName,
+          jobTitle: detail.jobTitle,
+          monthlyIncomeGross: detail.monthlyIncomeGross,
+          otherIncome: detail.otherIncome,
+          coApplicantName: detail.coApplicantName,
+          coApplicantIncome: detail.coApplicantIncome,
+        }).filter(v => v !== null && v !== undefined && v !== '').length) : 0
+      }
     };
     return NextResponse.json(shaped);
     
