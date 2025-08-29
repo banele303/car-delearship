@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
+// Numeric coercion using built-in helpers for reliable typing
 const publicFinancingSchema = z.object({
-  loanAmount: z.number().min(1), // front-end will coerce from cashPrice if blank
-  termMonths: z.number().min(1),
-  interestRate: z.number().min(0).max(60).optional().nullable(),
-  monthlyPayment: z.number().min(0).optional().nullable(),
+  loanAmount: z.coerce.number().positive('Loan amount required'),
+  termMonths: z.coerce.number().int().positive('Term required'),
+  interestRate: z.coerce.number().min(0).max(60).optional().nullable(),
+  monthlyPayment: z.coerce.number().min(0).optional().nullable(),
   // Applicant (minimum required subset)
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -24,14 +25,14 @@ const publicFinancingSchema = z.object({
   employmentStatus: z.string().optional().nullable(),
   employerName: z.string().optional().nullable(),
   jobTitle: z.string().optional().nullable(),
-  employmentYears: z.number().optional().nullable(),
-  monthlyIncomeGross: z.number().optional().nullable(),
-  otherIncome: z.number().optional().nullable(),
+  employmentYears: z.coerce.number().optional().nullable(),
+  monthlyIncomeGross: z.coerce.number().optional().nullable(),
+  otherIncome: z.coerce.number().optional().nullable(),
   otherIncomeSource: z.string().optional().nullable(),
-  annualIncome: z.number().optional().nullable(),
-  creditScore: z.number().int().optional().nullable(),
+  annualIncome: z.coerce.number().optional().nullable(),
+  creditScore: z.coerce.number().int().optional().nullable(),
   creditScoreRange: z.string().optional().nullable(),
-  downPaymentAmount: z.number().optional().nullable(),
+  downPaymentAmount: z.coerce.number().optional().nullable(),
   preferredContactMethod: z.string().optional().nullable(),
   hasTradeIn: z.boolean().optional().nullable(),
   tradeInDetails: z.string().optional().nullable(),
@@ -40,7 +41,7 @@ const publicFinancingSchema = z.object({
   coApplicantRelationship: z.string().optional().nullable(),
   consentCreditCheck: z.boolean().refine(v => v === true, 'Consent required'),
   agreeTerms: z.boolean().refine(v => v === true, 'Terms acceptance required'),
-}).refine(d => d.loanAmount > 0 && d.termMonths > 0, { message: 'Invalid loan basics' });
+});
 
 // Simple GET to avoid confusing 404 when hitting the endpoint directly in a browser
 export async function GET() {
@@ -55,7 +56,13 @@ export async function POST(req: NextRequest) {
     }
 
   const json = await req.json();
-  const data = publicFinancingSchema.parse(json);
+    type PublicFinancingData = z.infer<typeof publicFinancingSchema>;
+    let data: PublicFinancingData;
+    try {
+      data = publicFinancingSchema.parse(json);
+    } catch (zerr: any) {
+      return NextResponse.json({ error: 'Validation failed', issues: zerr.issues || [] }, { status: 400 });
+    }
   // Preserve full raw body for extraData (excluding large documents array to limit size)
   const { documents, ...restRaw } = json || {};
 
@@ -77,7 +84,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const financingApplication = await prisma.financingApplication.create({
+    let financingApplication;
+    try {
+      financingApplication = await prisma.financingApplication.create({
       data: {
         loanAmount: data.loanAmount,
         interestRate: data.interestRate || 0,
@@ -89,6 +98,10 @@ export async function POST(req: NextRequest) {
   annualIncome: data.annualIncome || null,
       }
     });
+    } catch (dbCreateErr: any) {
+      console.error('Failed creating financingApplication:', dbCreateErr);
+      return NextResponse.json({ error: 'Failed to create application base record' }, { status: 500 });
+    }
 
     // Persist extended detail record (model name FinancingApplicationDetail -> prisma.financingApplicationDetail)
     if (!(prisma as any).financingApplicationDetail) {
@@ -177,38 +190,41 @@ export async function POST(req: NextRequest) {
     }
 
     // Optional: persist document metadata if client sent it and model exists
-    try {
-      const bodyAny: any = json;
-      if (Array.isArray(bodyAny.documents) && bodyAny.documents.length && (prisma as any).financingApplicationDocument) {
-        const docsToCreate = bodyAny.documents.slice(0, 100).map((d: any) => ({
-          financingApplicationId: financingApplication.id,
-          docType: String(d.docType || d.type || 'unknown'),
-          originalName: String(d.originalName || d.name || 'file'),
-          storedName: String(d.storedName || d.serverId || d.originalName || 'file'),
-          mime: String(d.mime || d.type || 'application/octet-stream'),
-          size: Number(d.size || 0),
-          url: String(d.url || ''),
-        }));
-        if (docsToCreate.length) {
-          await (prisma as any).financingApplicationDocument.createMany({ data: docsToCreate });
+    if ((prisma as any).financingApplicationDocument) {
+      try {
+        const bodyAny: any = json;
+        if (Array.isArray(bodyAny.documents) && bodyAny.documents.length) {
+          const docsToCreate = bodyAny.documents.slice(0, 50).map((d: any) => ({
+            financingApplicationId: financingApplication.id,
+            docType: String(d.docType || d.type || 'unknown').slice(0,50),
+            originalName: String(d.originalName || d.name || 'file').slice(0,120),
+            storedName: String(d.storedName || d.serverId || d.originalName || 'file').slice(0,160),
+            mime: String(d.mime || d.type || 'application/octet-stream').slice(0,100),
+            size: Number(d.size || 0),
+            url: String(d.url || '').slice(0,500),
+          }));
+          if (docsToCreate.length) {
+            await (prisma as any).financingApplicationDocument.createMany({ data: docsToCreate });
+          }
         }
+      } catch (docErr) {
+        console.warn('Document metadata persistence skipped:', docErr);
       }
-    } catch (docErr) {
-      console.warn('Document metadata persistence skipped:', docErr);
     }
 
     return NextResponse.json({ id: financingApplication.id, status: 'PENDING' }, { status: 201 });
   } catch (e: any) {
+    const message = e?.message || '';
     if (e.name === 'ZodError') {
       return NextResponse.json({ error: 'Validation failed', issues: e.issues }, { status: 400 });
     }
     if (e.code === 'P1001') {
       return NextResponse.json({ error: 'Cannot reach database. Check network / DATABASE_URL.' }, { status: 500 });
     }
-    if (e instanceof Prisma.PrismaClientInitializationError || /invalid port number|Error parsing connection string/i.test(e.message)) {
-      return NextResponse.json({ error: 'Invalid DATABASE_URL. Fix connection string format.' }, { status: 500 });
+    if (e instanceof Prisma.PrismaClientInitializationError || /invalid port number|Error parsing connection string/i.test(message)) {
+      return NextResponse.json({ error: 'Invalid DATABASE_URL.' }, { status: 500 });
     }
-    console.error('Public financing submission error', e);
-    return NextResponse.json({ error: 'Failed to submit application' }, { status: 500 });
+    console.error('Public financing submission error (unhandled):', e);
+    return NextResponse.json({ error: 'Server error processing application', detail: process.env.NODE_ENV !== 'production' ? message : undefined }, { status: 500 });
   }
 }
