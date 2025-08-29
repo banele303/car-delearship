@@ -154,40 +154,6 @@ export default function FinancingAnalyticsPage() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Insights & Recommendations</CardTitle>
-            <CardDescription>Based on analysis of financing data</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              <li className="flex items-start">
-                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3 mt-0.5">
-                  1
-                </div>
-                <p>NSFAS accredited applications have a 22% higher approval rate. Consider expanding marketing to NSFAS students.</p>
-              </li>
-              <li className="flex items-start">
-                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3 mt-0.5">
-                  2
-                </div>
-                <p>SUVs have the highest financing application volumes but also the highest rejection rates. Review pricing strategies.</p>
-              </li>
-              <li className="flex items-start">
-                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3 mt-0.5">
-                  3
-                </div>
-                <p>26-35 age group represents the largest segment of approved financing. Target marketing campaigns to this demographic.</p>
-              </li>
-              <li className="flex items-start">
-                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3 mt-0.5">
-                  4
-                </div>
-                <p>Average processing time has decreased by 0.5 days. Continue optimizing workflow to further reduce approval times.</p>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
