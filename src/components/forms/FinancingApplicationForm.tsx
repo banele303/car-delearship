@@ -260,6 +260,8 @@ export default function FinancingApplicationForm() {
   const [form, setForm] = useState<FinancingPublicForm>(defaultValues);
   // Store only keys that currently have an error; omit key to represent no error
   const [errors, setErrors] = useState<Partial<Record<keyof FinancingPublicForm, string>>>({});
+  // Track missing document keys after submit attempt
+  const [missingDocKeys, setMissingDocKeys] = useState<string[]>([]);
   // Expose errors for TextField lookup (avoid prop drilling large form)
   useEffect(() => { if (typeof window !== 'undefined') { (window as any).__finErrors = errors; } }, [errors]);
   // Field validator (partial); runs full schema but filters for field path
@@ -518,10 +520,12 @@ export default function FinancingApplicationForm() {
     // Ensure required documents uploaded
     const missingDocs = typeof missingRequiredDocs === 'function' ? (missingRequiredDocs() as any) : [];
     if (missingDocs.length) {
-      toast.error(`Missing required documents: ${missingDocs.map((d:any)=>d.label).join(', ')}`);
+      setMissingDocKeys(missingDocs.map((d:any)=>d.key));
       const docSection = document.getElementById('docs-section');
       if (docSection) docSection.scrollIntoView({behavior:'smooth'});
-      return;
+      return; // prevent submit until resolved
+    } else if (missingDocKeys.length) {
+      setMissingDocKeys([]);
     }
     setSubmitting(true);
     try {
@@ -561,6 +565,7 @@ export default function FinancingApplicationForm() {
         toast.success('Application submitted!');
         formRef.current.reset(); // clear visible inputs
         setForm(defaultValues); // reset controlled items
+  setMissingDocKeys([]);
   try { localStorage.removeItem('financingUploadedDocsTemp'); } catch {}
       }
     } catch (err) {
@@ -702,7 +707,7 @@ export default function FinancingApplicationForm() {
   const missingRequiredDocs = () => missingRequiredDocsRef.current();
 
   // Child component for uploads
-  const DocumentUploads: React.FC<{ docRequirements: readonly any[], register: (fn: () => any[]) => void, registerDocs: (fn: () => any[]) => void, employmentStatus: string }> = React.memo(({ docRequirements, register, registerDocs, employmentStatus }) => {
+  const DocumentUploads: React.FC<{ docRequirements: readonly any[], register: (fn: () => any[]) => void, registerDocs: (fn: () => any[]) => void, employmentStatus: string, missingDocKeys: string[] }> = React.memo(({ docRequirements, register, registerDocs, employmentStatus, missingDocKeys }) => {
     const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
     const [uploadingByType, setUploadingByType] = useState<Record<string, boolean>>({});
     const STORAGE_KEY = 'financingUploadedDocsTemp';
@@ -810,10 +815,14 @@ export default function FinancingApplicationForm() {
         {/self_employed/i.test(employmentStatus) && (
           <p className='text-xs text-slate-500 mt-1'>Self‑employed: Only business documents are optional to upload now. You may proceed without other documents.</p>
         )}
+        {!/self_employed/i.test(employmentStatus) && missingDocKeys.length > 0 && (
+          <div className='mt-3 text-xs text-red-600 font-medium'>Please upload the required documents highlighted below before submitting.</div>
+        )}
         <div className='mt-6 space-y-8'>
           {displayed.map(d => {
             const uploaded = uploadedByType[d.key]?.length || 0;
             const isReq = d.required;
+            const isMissing = isReq && missingDocKeys.includes(d.key) && uploaded === 0;
             return (
               <div key={d.key} className='grid md:grid-cols-2 gap-6'>
                 <div>
@@ -826,7 +835,7 @@ export default function FinancingApplicationForm() {
                     <span>{d.uploadLabel}{isReq && <span className='text-red-500'>*</span>}</span>
                     {uploaded > 0 && <span className='text-[10px] font-normal text-slate-500'>{uploaded} file{uploaded===1?'':'s'}</span>}
                   </Label>
-                  <div className={`doc-upload-wrapper ${uploadingByType[d.key] ? 'uploading' : ''} relative rounded-md border border-dashed ${isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs transition-all`}> 
+                  <div className={`doc-upload-wrapper ${uploadingByType[d.key] ? 'uploading' : ''} relative rounded-md border border-dashed ${isMissing ? 'border-red-500 dark:border-red-500' : isReq ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800'} bg-slate-50/60 dark:bg-slate-800/30 p-2 max-w-xs transition-all`}> 
                     <FilePond
                       name={`files_${d.key}`}
                       allowMultiple
@@ -865,6 +874,7 @@ export default function FinancingApplicationForm() {
                     )}
                   </div>
                   <p className='mt-2 text-[10px] text-slate-500 leading-snug pr-4'>{d.hint}</p>
+                  {isMissing && <p className='mt-1 text-[10px] font-medium text-red-600'>Required document not uploaded.</p>}
                   {!!uploaded && (
                     <div className='mt-2 flex flex-wrap gap-2'>
                       {uploadedByType[d.key].map(f => {
@@ -1036,7 +1046,7 @@ export default function FinancingApplicationForm() {
 
   {/* Consent & terms section removed per request */}
 
-  <DocumentUploads employmentStatus={form.employmentStatus||''} docRequirements={docRequirements} register={registerMissingDocsFn} registerDocs={registerUploadedDocsFn} />
+  <DocumentUploads employmentStatus={form.employmentStatus||''} docRequirements={docRequirements} register={registerMissingDocsFn} registerDocs={registerUploadedDocsFn} missingDocKeys={missingDocKeys} />
 
       {/* Added declarations as requested */}
       <div className='space-y-6 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-5'>
