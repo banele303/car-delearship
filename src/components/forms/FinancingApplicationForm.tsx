@@ -188,6 +188,37 @@ const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
   'vehicleCondition','cashPrice','vehicleMake','vehicleModel'
 ]);
 
+// Descriptive messages per required field
+const REQUIRED_MESSAGES: Partial<Record<keyof FinancingPublicForm, string>> = {
+  firstName: 'First name is required',
+  lastName: 'Last name is required',
+  email: 'Email address is required',
+  phone: 'Phone number is required',
+  dateOfBirth: 'Date of birth is required',
+  idNumber: 'ID Number is required',
+  address: 'Address is required',
+  city: 'City is required',
+  state: 'State / Province is required',
+  postalCode: 'Postal Code is required',
+  housingStatus: 'Housing status is required',
+  title: 'Title is required',
+  initials: 'Initials are required',
+  nextOfKinName: 'Next of kin name is required',
+  nextOfKinRelationship: 'Relationship to next of kin is required',
+  nextOfKinAddress: 'Next of kin address is required',
+  nextOfKinCell: 'Next of kin cell is required',
+  telephoneHome: 'Home phone is required',
+  employmentStatus: 'Employment status is required',
+  employerName: 'Employer name is required',
+  jobTitle: 'Job title is required',
+  employmentYears: 'Years in job is required',
+  monthlyIncomeGross: 'Gross monthly income is required',
+  vehicleCondition: 'Vehicle condition is required',
+  cashPrice: 'Cash price is required',
+  vehicleMake: 'Vehicle make is required',
+  vehicleModel: 'Vehicle model is required'
+};
+
 // Date field auto-detection
 const DATE_FIELDS = new Set<keyof FinancingPublicForm>(['dateOfBirth','dateMarried','propertyPurchaseDate','salaryDate']);
 // Phone fields for normalization
@@ -237,7 +268,7 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
       const snapshot = (typeof window !== 'undefined' && (window as any).__finFormState) || {};
       const current = snapshot[name];
       if (current == null || (typeof current === 'string' && current.trim() === '')) {
-        err = 'Required';
+        err = (REQUIRED_MESSAGES as any)[name] || 'This field is required';
       }
     } catch {}
   }
@@ -569,7 +600,7 @@ export default function FinancingApplicationForm() {
     REQUIRED_FIELDS.forEach((fieldName) => {
       const val = (collected as any)[fieldName];
       if (!val || (typeof val === 'string' && val.trim() === '')) {
-        newErrors[fieldName] = 'Required';
+        newErrors[fieldName] = REQUIRED_MESSAGES[fieldName] || 'This field is required';
         if (!firstMissingName) firstMissingName = fieldName as string;
       }
     });
@@ -578,7 +609,7 @@ export default function FinancingApplicationForm() {
     // Remove prior 'Required' errors for fields now filled
     Object.keys(mergedErrors).forEach(k => {
       const key = k as keyof FinancingPublicForm;
-      if (!newErrors[key] && mergedErrors[key] === 'Required') {
+      if (!newErrors[key] && REQUIRED_MESSAGES[key] && mergedErrors[key] === REQUIRED_MESSAGES[key]) {
         delete mergedErrors[key];
       }
     });
@@ -903,6 +934,14 @@ export default function FinancingApplicationForm() {
             const uploaded = uploadedByType[d.key]?.length || 0;
             const isReq = d.required;
             const isMissing = isReq && missingDocKeys.includes(d.key) && uploaded === 0;
+            const docErrorLabels: Record<string,string> = {
+              id_doc: 'Please upload a clear ID document (front & back).',
+              drivers_license: 'Please upload a valid driver\'s license copy.',
+              payslips_3_months: 'Please upload your last 3 payslips (if applicable).',
+              bank_statements: 'Please upload bank statements (last 3 months; 6 if self‑employed).',
+              proof_of_residence: 'Please upload a recent proof of residence (< 3 months old).',
+              self_employed_docs: 'Optional: business / company documents may be added.'
+            };
             return (
               <div key={d.key} className='grid md:grid-cols-2 gap-6'>
                 <div>
@@ -954,7 +993,7 @@ export default function FinancingApplicationForm() {
                     )}
                   </div>
                   <p className='mt-2 text-[10px] text-slate-500 leading-snug pr-4'>{d.hint}</p>
-                  {isMissing && <p className='mt-1 text-[10px] font-medium text-red-600'>Required document not uploaded.</p>}
+                  {isMissing && <p className='mt-1 text-[10px] font-medium text-red-600'>{docErrorLabels[d.key] || 'This document is required.'}</p>}
                   {!!uploaded && (
                     <div className='mt-2 flex flex-wrap gap-2'>
                       {uploadedByType[d.key].map(f => {
