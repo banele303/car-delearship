@@ -69,7 +69,7 @@ type FinancingApplication = {
     year: number;
     price: number;
     imageUrl: string | null;
-  };
+  } | null;
   documents?: {
     id: number;
     docType: string;
@@ -564,11 +564,13 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                 )}
               </CardContent>
               <CardFooter className="pt-0">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/inventory/${application.car.id}`}>
-                    View Vehicle Details
-                  </Link>
-                </Button>
+                {application.car && (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/admin/inventory/${application.car.id}`}>
+                      View Vehicle Details
+                    </Link>
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           </div>
