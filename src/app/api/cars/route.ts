@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       take,
       orderBy: { updatedAt: orderDir },
     });
-    // Normalize legacy enum values (GASOLINE -> PETROL) without mutating DB
+    // Normalize legacy enum values (GASOLINE -> PETROL for display) without mutating DB
   const normalized = cars.map(c => (String(c.fuelType) === 'GASOLINE' ? { ...c, fuelType: 'PETROL' } : c));
     return NextResponse.json(normalized, { headers: { 'x-query-time': String(Date.now() - started), 'x-fueltype-normalized': 'true' } });
   } catch (error: any) {
@@ -108,9 +108,16 @@ export async function POST(req: NextRequest) {
         seen.add(k); return true;
       });
     }
-    // Enum migration: accept legacy GASOLINE or interim FUEL and map to PETROL
-    if (carData.fuelType === 'GASOLINE' || carData.fuelType === 'FUEL') {
-      carData.fuelType = 'PETROL';
+    // Enum migration: accept legacy GASOLINE or interim FUEL and map to GASOLINE (temporarily, until PETROL migration is applied)
+    if (carData.fuelType === 'PETROL' || carData.fuelType === 'FUEL') {
+      carData.fuelType = 'GASOLINE'; // Use GASOLINE until migration adds PETROL to database enum
+    }
+    
+    // Ensure fuel type is valid for database enum
+    const validFuelTypes = ['GASOLINE', 'DIESEL', 'HYBRID', 'ELECTRIC', 'PLUG_IN_HYBRID', 'HYDROGEN'];
+    if (!validFuelTypes.includes(carData.fuelType)) {
+      console.warn('[CAR_CREATE_DEBUG] Invalid fuelType:', carData.fuelType, 'defaulting to GASOLINE');
+      carData.fuelType = 'GASOLINE';
     }
   const photos = formData.getAll('photos') as File[];
   const MAX_FILES = CAR_UPLOAD_MAX_FILES;
@@ -182,6 +189,11 @@ export async function POST(req: NextRequest) {
       let gen = '';
       for (let i=0;i<17;i++) gen += alphabet[Math.floor(Math.random()*alphabet.length)];
       carData.vin = gen;
+    }
+    
+    // Provide default for interiorColor if not specified (since it was removed from form but still required in schema)
+    if (!carData.interiorColor) {
+      carData.interiorColor = 'Not specified';
     }
     try {
       const newCar = await prisma.car.create({ data: carData as any });

@@ -101,7 +101,7 @@ export default function EditCarPage({ params }: PageProps) {
     price: "",
     vin: "", // vin retained in data but not editable
     carType: "SEDAN",
-    fuelType: "FUEL",
+    fuelType: "GASOLINE", // Changed from FUEL to GASOLINE
     condition: "USED",
     transmission: "AUTOMATIC",
     engine: "",
@@ -490,7 +490,7 @@ export default function EditCarPage({ params }: PageProps) {
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="FUEL">Fuel</SelectItem>
+                    <SelectItem value="GASOLINE">Petrol</SelectItem>
                     <SelectItem value="DIESEL">Diesel</SelectItem>
                     <SelectItem value="HYBRID">Hybrid</SelectItem>
                     <SelectItem value="ELECTRIC">Electric</SelectItem>

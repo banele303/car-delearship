@@ -36,7 +36,7 @@ export default function AddCarPage() {
     price: "",
     // vin removed (generated on backend)
     carType: "SEDAN",
-  fuelType: "PETROL",
+  fuelType: "GASOLINE", // Temporarily use GASOLINE until migration applies PETROL to database
     condition: "USED",
     transmission: "AUTOMATIC",
     engine: "",
@@ -548,7 +548,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PETROL">Petrol</SelectItem>
+                    <SelectItem value="GASOLINE">Petrol</SelectItem>
                     <SelectItem value="DIESEL">Diesel</SelectItem>
                     <SelectItem value="HYBRID">Hybrid</SelectItem>
                     <SelectItem value="ELECTRIC">Electric</SelectItem>
