@@ -39,7 +39,7 @@ const schema = z.object({
   gender: z.string().optional(),
   dependants: z.string().optional(),
   // monthlyHousingPayment removed per request
-  employmentStatus: z.string().min(1, 'Employment status required'),
+  employmentStatus: z.string().optional(),
   employerName: z.string().min(1, 'Employer name required'),
   jobTitle: z.string().min(1, 'Job title required'),
   employmentYears: z.string().min(1, 'Years in job required'),
@@ -183,8 +183,8 @@ const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
   'title','initials','telephoneHome',
   // Next of kin - marked as required
   'nextOfKinName','nextOfKinRelationship','nextOfKinAddress','nextOfKinCell',
-  // Employment - marked as required
-  'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross',
+  // Employment - marked as required (except employmentStatus now optional)
+  'employerName','jobTitle','employmentYears','monthlyIncomeGross',
   // Vehicle info - marked as required
   'vehicleCondition','cashPrice','vehicleMake','vehicleModel',
   // Essential declarations will be handled separately
@@ -210,7 +210,6 @@ const REQUIRED_MESSAGES: Partial<Record<keyof FinancingPublicForm, string>> = {
   nextOfKinRelationship: 'Relationship is required',
   nextOfKinAddress: 'Next of Kin address is required',
   nextOfKinCell: 'Next of Kin cell number is required',
-  employmentStatus: 'Employment status is required',
   employerName: 'Employer name is required',
   jobTitle: 'Job title is required',
   employmentYears: 'Years in job is required',
@@ -436,6 +435,26 @@ export default function FinancingApplicationForm() {
   // Load car details from localStorage if available
   useEffect(() => {
     try {
+      // First, try to restore form data from backup (in case of previous error)
+      const backupData = localStorage.getItem("financingFormBackup");
+      if (backupData) {
+        const backup = JSON.parse(backupData);
+        console.log("Restored form data from backup:", backup);
+        setForm(prev => ({ ...prev, ...backup }));
+        // Show notification about restored data
+        toast.info("Previous form data restored. Your documents are also preserved.", {
+          duration: 5000,
+          style: {
+            backgroundColor: '#DBEAFE',
+            color: '#1E3A8A',
+            border: '1px solid #3B82F6'
+          }
+        });
+        // Clear backup after restoration
+        localStorage.removeItem("financingFormBackup");
+      }
+
+      // Then load car details if available
       const savedCarDetails = localStorage.getItem("financingCarDetails");
       if (savedCarDetails) {
         const carDetails = JSON.parse(savedCarDetails);
@@ -606,7 +625,7 @@ export default function FinancingApplicationForm() {
   }), [handleFieldUpdate]);
 
   // State for section open/close
-  const [open, setOpen] = useState<Record<string, boolean>>({ applicant: true, vehicle: true, docs: false });
+  const [open, setOpen] = useState<Record<string, boolean>>({ applicant: true, vehicle: true, expenses: true, docs: false });
   const toggle = (k:string)=> setOpen(o=>({...o,[k]:!o[k]}));
 
   // Utility function to scroll to error field and open appropriate section
@@ -773,25 +792,62 @@ export default function FinancingApplicationForm() {
               // Use the utility function to scroll to the first error field
               scrollToErrorField(firstField);
             }
-            toast.error('Please fix highlighted field' + (Object.keys(fieldErrors).length > 1 ? 's' : '') + '. Your documents are preserved.');
+            toast.error(`Please fix the highlighted field${Object.keys(fieldErrors).length > 1 ? 's' : ''}. All your uploaded documents are safely preserved.`, {
+              duration: 6000,
+              style: {
+                backgroundColor: '#FEF3C7',
+                color: '#92400E',
+                border: '1px solid #D97706'
+              }
+            });
           } else {
-            toast.error((j.error || 'Submission failed') + ' - your documents are preserved');
+            toast.error(`${j.error || 'Submission failed'} - All your uploaded documents are safely preserved.`, {
+              duration: 6000,
+              style: {
+                backgroundColor: '#FEF3C7',
+                color: '#92400E',
+                border: '1px solid #D97706'
+              }
+            });
           }
         } else {
-          toast.error((j.error || 'Submission failed') + ' - your documents are preserved');
+          toast.error(`${j.error || 'Submission failed'} - All your uploaded documents are safely preserved.`, {
+            duration: 6000,
+            style: {
+              backgroundColor: '#FEF3C7',
+              color: '#92400E',
+              border: '1px solid #D97706'
+            }
+          });
         }
       } else {
-        toast.success('Application submitted!');
+        toast.success('Application submitted successfully! All documents have been processed.');
         formRef.current.reset(); // clear visible inputs
         setForm(defaultValues); // reset controlled items
         setMissingDocKeys([]);
         // Clear localStorage - uploaded docs will be cleared by successful submission
         try { localStorage.removeItem('financingUploadedDocsTemp'); } catch {}
+        // Reset document uploads state after successful submission
+        try { localStorage.removeItem('financingCarDetails'); } catch {}
       }
     } catch (err) {
-      toast.error('Network error - your documents are preserved');
       console.error('Form submission error:', err);
+      toast.error('Network error occurred. All your uploaded documents and form data are preserved. Please try again.', {
+        duration: 6000,
+        style: {
+          backgroundColor: '#FEF3C7',
+          color: '#92400E',
+          border: '1px solid #D97706'
+        }
+      });
       // Documents remain in localStorage and uploadedByType state for retry
+      // Ensure form data is also preserved on error
+      try {
+        const formSnapshot = { ...form };
+        localStorage.setItem('financingFormBackup', JSON.stringify(formSnapshot));
+      } catch (backupErr) {
+        console.warn('Could not backup form data:', backupErr);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -984,8 +1040,16 @@ export default function FinancingApplicationForm() {
                 return attempt(fallback, true);
               }
               if (!r.ok) {
-                error(json.message || 'Upload failed');
-                toast.error((json.message || 'Upload failed') + ' - File preserved for retry');
+                const errorMsg = json.message || `Upload failed (${r.status})`;
+                error(errorMsg);
+                toast.error(`${errorMsg}. File preserved locally for retry.`, {
+                  duration: 5000,
+                  style: {
+                    backgroundColor: '#FEF3C7',
+                    color: '#92400E',
+                    border: '1px solid #D97706'
+                  }
+                });
                 return;
               }
               const files = json.files || [];
@@ -996,8 +1060,16 @@ export default function FinancingApplicationForm() {
             })
             .catch((e) => {
               if (controller.signal.aborted) return;
-              error('Network error - File preserved for retry');
-              toast.error('Network error - File preserved for retry');
+              const networkMsg = 'Network error - File preserved locally for retry';
+              error(networkMsg);
+              toast.error(networkMsg, {
+                duration: 5000,
+                style: {
+                  backgroundColor: '#FEF3C7',
+                  color: '#92400E',
+                  border: '1px solid #D97706'
+                }
+              });
             });
         };
         attempt(primary);
@@ -1264,7 +1336,7 @@ export default function FinancingApplicationForm() {
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Work & Income Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
             <div>
-              <Label className='text-sm font-medium flex items-center gap-1'>Employment Status<span className='text-red-500'>*</span></Label>
+              <Label className='text-sm font-medium'>Employment Status</Label>
               <Select value={form.employmentStatus||''} onValueChange={onChangeHandlers.employmentStatus}>
                 <SelectTrigger id='employmentStatus' className={'mt-1 ' + (errors.employmentStatus ? 'border-red-500 focus-visible:ring-red-500 shadow-sm shadow-red-200' : '')}><SelectValue placeholder='Select' /></SelectTrigger>
                 <SelectContent>
@@ -1376,10 +1448,19 @@ export default function FinancingApplicationForm() {
         
         {/* Show document count if any uploaded */}
         {Object.values(uploadedDocsRef.current()).length > 0 && (
-          <div className='mb-3 text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded px-3 py-2'>
-            ✓ {Object.values(uploadedDocsRef.current()).length} document(s) uploaded and saved
+          <div className='mb-3 text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded px-3 py-2 flex items-center gap-2'>
+            <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse'></div>
+            ✓ {Object.values(uploadedDocsRef.current()).length} document(s) uploaded and safely preserved
           </div>
         )}
+
+        {/* Document protection notice */}
+        <div className='mb-4 text-xs text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded px-3 py-2 flex items-center gap-2'>
+          <svg className='w-4 h-4 text-blue-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' />
+          </svg>
+          <span className='font-medium'>Document Protection:</span> All uploaded files and form data are automatically saved. If any errors occur, your documents and information will be preserved for retry.
+        </div>
         
         <Button type='submit' disabled={submitting} className='w-full md:w-auto px-8'>
           {submitting && <Loader2 className='h-4 w-4 mr-2 animate-spin' />}
