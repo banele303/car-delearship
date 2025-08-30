@@ -952,20 +952,24 @@ export default function FinancingApplicationForm() {
   ]);
 
   // Document requirements (restored full list + payslip variants) with small upload zones
-  const docRequirements = [
+  const docRequirements = useMemo(() => [
     { key: 'id_doc', question: "Valid id document - no copies (if you don't have a valid id you need to get a temporary one)", uploadLabel: 'Upload ID Copy', required: true, hint: 'Clear photos (front & back).' },
     { key: 'drivers_license', question: "Valid driver's license (if you don't have a valid driver's license you need to get a temporary one and attach a copy as well as the receipt to the deal)", uploadLabel: 'Upload Drivers License Copy', required: true, hint: 'Both sides.' },
     { key: 'payslips_3_months', question: 'If you earn commission / extras and income differs get the latest 3 payslips', uploadLabel: 'Last 3 Payslips', required: false, hint: 'Upload each as file / image.' },
     { key: 'bank_statements', question: 'Bank statements (latest 3 months - 6 if self‑employed)', uploadLabel: 'Bank Statements', required: true, hint: 'PDF preferred.' },
     { key: 'proof_of_residence', question: 'Proof of residence (utility bill < 3 months old)', uploadLabel: 'Proof of Residence', required: true, hint: 'Utility / rates bill.' },
     { key: 'self_employed_docs', question: 'Business docs (if self‑employed)', uploadLabel: 'Business Docs', required: false, hint: 'CK / tax / financials.' },
-  ] as const;
+  ] as const, []);
   // Document uploads handled in isolated component to avoid re-renders that steal input focus
   const missingRequiredDocsRef = useRef<() => any[]>(() => []);
-  const registerMissingDocsFn = (fn: () => any[]) => { missingRequiredDocsRef.current = fn; };
+  const registerMissingDocsFn = useCallback((fn: () => any[]) => { 
+    missingRequiredDocsRef.current = fn; 
+  }, []);
   // Store accessor for collected uploaded documents metadata (flattened)
   const uploadedDocsRef = useRef<() => any[]>(() => []);
-  const registerUploadedDocsFn = (fn: () => any[]) => { uploadedDocsRef.current = fn; };
+  const registerUploadedDocsFn = useCallback((fn: () => any[]) => { 
+    uploadedDocsRef.current = fn; 
+  }, []);
   // Inject tiny FilePond style once
   const tinyStyleInjected = useRef(false);
   useEffect(() => {
@@ -1267,9 +1271,12 @@ export default function FinancingApplicationForm() {
       </div>
     );
   }, (prevProps, nextProps) => {
-    // Only re-render if employmentStatus actually changes or missingDocKeys array changes
+    // Only re-render if employmentStatus, missingDocKeys, docRequirements, or callback functions change
     return prevProps.employmentStatus === nextProps.employmentStatus && 
-           JSON.stringify(prevProps.missingDocKeys) === JSON.stringify(nextProps.missingDocKeys);
+           JSON.stringify(prevProps.missingDocKeys) === JSON.stringify(nextProps.missingDocKeys) &&
+           prevProps.docRequirements === nextProps.docRequirements &&
+           prevProps.register === nextProps.register &&
+           prevProps.registerDocs === nextProps.registerDocs;
   });
 
   return (
