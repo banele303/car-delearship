@@ -146,32 +146,33 @@ export const generateFormPdf = (application: Application): void => {
 
   const drawField = (label: string, value: string, width?: number) => {
     const fieldWidth = width || contentWidth / 2 - 10;
-    const fieldHeight = 25;
+    const fieldHeight = 30; // Increased height for better readability
     
     checkPageSpace(fieldHeight + 5);
     
-    // Field container
+    // Field container with stronger border
     const borderRgb = hexToRgb(borderColor);
     doc.setDrawColor(borderRgb.r, borderRgb.g, borderRgb.b);
-    doc.setLineWidth(1);
+    doc.setLineWidth(1.5);
     doc.rect(margin, currentY, fieldWidth, fieldHeight);
     
-    // Label
-    const lightGrayRgb = hexToRgb(lightGray);
-    doc.setFillColor(lightGrayRgb.r, lightGrayRgb.g, lightGrayRgb.b);
-    doc.rect(margin, currentY, fieldWidth, 15, 'F');
+    // Label section with darker background
+    const labelRgb = hexToRgb('#e5e7eb'); // Darker gray for better contrast
+    doc.setFillColor(labelRgb.r, labelRgb.g, labelRgb.b);
+    doc.rect(margin, currentY, fieldWidth, 18, 'F'); // Larger label area
     
+    // Label text
     const primaryRgb = hexToRgb(primaryColor);
     doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    doc.setFontSize(9);
+    doc.setFontSize(10); // Slightly larger label font
     doc.setFont('helvetica', 'bold');
-    doc.text(label, margin + 5, currentY + 10);
+    doc.text(label, margin + 8, currentY + 12);
     
-    // Value
+    // Value text with better positioning
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     const displayValue = value || '-';
-    doc.text(displayValue, margin + 5, currentY + 22);
+    doc.text(displayValue, margin + 8, currentY + 25);
     
     return fieldWidth;
   };
@@ -184,36 +185,36 @@ export const generateFormPdf = (application: Application): void => {
     const savedY = currentY;
     currentY = savedY;
     
-    // Draw second field next to first
+    // Draw second field next to first with improved styling
     const secondFieldX = margin + fieldWidth + 20;
     const borderRgb = hexToRgb(borderColor);
     doc.setDrawColor(borderRgb.r, borderRgb.g, borderRgb.b);
-    doc.setLineWidth(1);
-    doc.rect(secondFieldX, currentY, fieldWidth, 25);
+    doc.setLineWidth(1.5);
+    doc.rect(secondFieldX, currentY, fieldWidth, 30); // Updated height
     
-    // Label for second field
-    const lightGrayRgb = hexToRgb(lightGray);
-    doc.setFillColor(lightGrayRgb.r, lightGrayRgb.g, lightGrayRgb.b);
-    doc.rect(secondFieldX, currentY, fieldWidth, 15, 'F');
+    // Label for second field with darker background
+    const labelRgb = hexToRgb('#e5e7eb');
+    doc.setFillColor(labelRgb.r, labelRgb.g, labelRgb.b);
+    doc.rect(secondFieldX, currentY, fieldWidth, 18, 'F'); // Updated label height
     
     const primaryRgb = hexToRgb(primaryColor);
     doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    doc.setFontSize(9);
+    doc.setFontSize(10); // Updated font size
     doc.setFont('helvetica', 'bold');
-    doc.text(field2.label, secondFieldX + 5, currentY + 10);
+    doc.text(field2.label, secondFieldX + 8, currentY + 12); // Updated positioning
     
     // Value for second field
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     const displayValue = field2.value || '-';
-    doc.text(displayValue, secondFieldX + 5, currentY + 22);
+    doc.text(displayValue, secondFieldX + 8, currentY + 25); // Updated positioning
     
-    currentY += 30;
+    currentY += 35; // Updated spacing
   };
 
   const drawFullWidthField = (label: string, value: string) => {
     drawField(label, value, contentWidth);
-    currentY += 30;
+    currentY += 35; // Updated spacing to match new field height
   };
 
   // Start generating PDF
@@ -233,30 +234,6 @@ export const generateFormPdf = (application: Application): void => {
     { label: 'Application Date', value: formatDate(application.applicationDate, { withTime: true }) },
     { label: 'Decision Date', value: application.decisionDate ? formatDate(application.decisionDate, { withTime: true }) : 'Pending' }
   );
-
-  currentY += sectionSpacing;
-
-  // Loan Details Section
-  drawSectionHeader('LOAN DETAILS');
-  
-  drawTwoColumnFields(
-    { label: 'Loan Amount', value: formatCurrency(application.loanAmount) },
-    { label: 'Loan Term', value: `${application.loanTermMonths} months` }
-  );
-  
-  drawTwoColumnFields(
-    { label: 'Monthly Payment', value: formatCurrency(application.monthlyPayment) },
-    { label: 'Credit Score', value: `${application.creditScore} (${creditRating.label})` }
-  );
-
-  if (application.downPayment) {
-    drawTwoColumnFields(
-      { label: 'Down Payment', value: formatCurrency(application.downPayment) },
-      { label: 'Interest Rate', value: `${application.interestRate}%` }
-    );
-  } else {
-    drawFullWidthField('Interest Rate', `${application.interestRate}%`);
-  }
 
   currentY += sectionSpacing;
 
@@ -383,18 +360,39 @@ export const generateFormPdf = (application: Application): void => {
       if (relevantEntries.length > 0) {
         drawSectionHeader('ADDITIONAL INFORMATION');
         
-        relevantEntries.forEach(([key, value]) => {
-          const label = key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-          let valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+        // Process entries in pairs for two-column layout
+        for (let i = 0; i < relevantEntries.length; i += 2) {
+          const leftEntry = relevantEntries[i];
+          const rightEntry = relevantEntries[i + 1];
+          
+          const leftLabel = leftEntry[0].replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+          let leftValue = typeof leftEntry[1] === 'object' ? JSON.stringify(leftEntry[1]) : String(leftEntry[1]);
           
           // Check if it's a monetary value
-          const isMoney = /payment|income|amount|price|cost/i.test(key) && !isNaN(Number(value));
-          if (isMoney) {
-            valueStr = formatCurrency(Number(value));
+          const isLeftMoney = /payment|income|amount|price|cost/i.test(leftEntry[0]) && !isNaN(Number(leftEntry[1]));
+          if (isLeftMoney) {
+            leftValue = formatCurrency(Number(leftEntry[1]));
           }
           
-          drawFullWidthField(label, valueStr);
-        });
+          if (rightEntry) {
+            // Two column layout
+            const rightLabel = rightEntry[0].replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+            let rightValue = typeof rightEntry[1] === 'object' ? JSON.stringify(rightEntry[1]) : String(rightEntry[1]);
+            
+            const isRightMoney = /payment|income|amount|price|cost/i.test(rightEntry[0]) && !isNaN(Number(rightEntry[1]));
+            if (isRightMoney) {
+              rightValue = formatCurrency(Number(rightEntry[1]));
+            }
+            
+            drawTwoColumnFields(
+              { label: leftLabel, value: leftValue },
+              { label: rightLabel, value: rightValue }
+            );
+          } else {
+            // Single field for odd number of entries
+            drawFullWidthField(leftLabel, leftValue);
+          }
+        }
         
         currentY += sectionSpacing;
       }
@@ -405,10 +403,23 @@ export const generateFormPdf = (application: Application): void => {
   if (application.documents && application.documents.length > 0) {
     drawSectionHeader('SUBMITTED DOCUMENTS');
     
-    application.documents.forEach(doc => {
-      const docInfo = `${doc.originalName} (${(doc.size / 1024).toFixed(1)} KB)`;
-      drawFullWidthField(doc.docType, docInfo);
-    });
+    // Process documents in pairs for two-column layout
+    for (let i = 0; i < application.documents.length; i += 2) {
+      const leftDoc = application.documents[i];
+      const rightDoc = application.documents[i + 1];
+      
+      const leftDocInfo = `${leftDoc.originalName} (${(leftDoc.size / 1024).toFixed(1)} KB)`;
+      
+      if (rightDoc) {
+        const rightDocInfo = `${rightDoc.originalName} (${(rightDoc.size / 1024).toFixed(1)} KB)`;
+        drawTwoColumnFields(
+          { label: leftDoc.docType, value: leftDocInfo },
+          { label: rightDoc.docType, value: rightDocInfo }
+        );
+      } else {
+        drawFullWidthField(leftDoc.docType, leftDocInfo);
+      }
+    }
     
     currentY += sectionSpacing;
   }
