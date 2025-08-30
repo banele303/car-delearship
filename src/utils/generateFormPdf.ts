@@ -63,14 +63,6 @@ const formatDate = (dateString: string, options?: { withTime?: boolean }): strin
   return date.toLocaleDateString('en-ZA');
 };
 
-const getCreditScoreRating = (score: number) => {
-  if (score >= 781) return { label: 'Excellent', color: '#22c55e' };
-  if (score >= 661) return { label: 'Good', color: '#3b82f6' };
-  if (score >= 601) return { label: 'Fair', color: '#f59e0b' };
-  if (score >= 500) return { label: 'Poor', color: '#ef4444' };
-  return { label: 'Very Poor', color: '#dc2626' };
-};
-
 export const generateFormPdf = (application: Application): void => {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -220,23 +212,6 @@ export const generateFormPdf = (application: Application): void => {
   // Start generating PDF
   drawHeader();
 
-  // Application Information Section
-  drawSectionHeader('APPLICATION INFORMATION');
-  
-  const creditRating = getCreditScoreRating(application.creditScore);
-  
-  drawTwoColumnFields(
-    { label: 'Application ID', value: `#${application.id}` },
-    { label: 'Status', value: application.status.toUpperCase() }
-  );
-  
-  drawTwoColumnFields(
-    { label: 'Application Date', value: formatDate(application.applicationDate, { withTime: true }) },
-    { label: 'Decision Date', value: application.decisionDate ? formatDate(application.decisionDate, { withTime: true }) : 'Pending' }
-  );
-
-  currentY += sectionSpacing;
-
   // Customer Information Section
   drawSectionHeader('CUSTOMER INFORMATION');
   
@@ -271,84 +246,80 @@ export const generateFormPdf = (application: Application): void => {
     
     drawSectionHeader('PERSONAL DETAILS');
     
-    if (details.address) {
-      drawFullWidthField('Address', details.address);
-    }
+    // Always show address
+    drawFullWidthField('Address', details.address || 'None');
     
-    if (details.city || details.state) {
-      drawTwoColumnFields(
-        { label: 'City', value: details.city || '' },
-        { label: 'State/Province', value: details.state || '' }
-      );
-    }
+    // Always show city and state
+    drawTwoColumnFields(
+      { label: 'City', value: details.city || 'None' },
+      { label: 'State/Province', value: details.state || 'None' }
+    );
     
-    if (details.postalCode || details.housingStatus) {
-      drawTwoColumnFields(
-        { label: 'Postal Code', value: details.postalCode || '' },
-        { label: 'Housing Status', value: details.housingStatus || '' }
-      );
-    }
+    // Always show postal code and housing status
+    drawTwoColumnFields(
+      { label: 'Postal Code', value: details.postalCode || 'None' },
+      { label: 'Housing Status', value: details.housingStatus || 'None' }
+    );
 
     currentY += sectionSpacing;
 
-    // Employment Information
-    if (details.employmentStatus || details.employerName) {
-      drawSectionHeader('EMPLOYMENT INFORMATION');
-      
-      if (details.employmentStatus) {
-        drawFullWidthField('Employment Status', details.employmentStatus);
-      }
-      
-      if (details.employerName || details.jobTitle) {
-        drawTwoColumnFields(
-          { label: 'Employer Name', value: details.employerName || '' },
-          { label: 'Job Title', value: details.jobTitle || '' }
-        );
-      }
-      
-      currentY += sectionSpacing;
-    }
+    // Employment Information - always show
+    drawSectionHeader('EMPLOYMENT INFORMATION');
+    
+    // Always show employment status
+    drawFullWidthField('Employment Status', details.employmentStatus || 'None');
+    
+    // Always show employer and job title
+    drawTwoColumnFields(
+      { label: 'Employer Name', value: details.employerName || 'None' },
+      { label: 'Job Title', value: details.jobTitle || 'None' }
+    );
 
-    // Financial Information
-    if (details.monthlyIncomeGross || details.otherIncome || details.downPaymentAmount) {
-      drawSectionHeader('FINANCIAL INFORMATION');
-      
-      if (details.monthlyIncomeGross) {
-        drawFullWidthField('Monthly Gross Income', formatCurrency(details.monthlyIncomeGross));
-      }
-      
-      if (details.otherIncome || details.downPaymentAmount) {
-        drawTwoColumnFields(
-          { label: 'Other Income', value: details.otherIncome ? formatCurrency(details.otherIncome) : '' },
-          { label: 'Down Payment', value: details.downPaymentAmount ? formatCurrency(details.downPaymentAmount) : '' }
-        );
-      }
-      
-      currentY += sectionSpacing;
-    }
+    currentY += sectionSpacing;
 
-    // Co-Applicant Information
-    if (details.coApplicantName || details.coApplicantIncome) {
-      drawSectionHeader('CO-APPLICANT INFORMATION');
-      
-      if (details.coApplicantName) {
-        drawFullWidthField('Co-Applicant Name', details.coApplicantName);
-      }
-      
-      if (details.coApplicantIncome || details.coApplicantRelationship) {
-        drawTwoColumnFields(
-          { label: 'Co-Applicant Income', value: details.coApplicantIncome ? formatCurrency(details.coApplicantIncome) : '' },
-          { label: 'Relationship', value: details.coApplicantRelationship || '' }
-        );
-      }
-      
-      currentY += sectionSpacing;
-    }
+    // Financial Information - always show
+    drawSectionHeader('FINANCIAL INFORMATION');
+    
+    // Always show monthly gross income
+    drawFullWidthField('Monthly Gross Income', details.monthlyIncomeGross ? formatCurrency(details.monthlyIncomeGross) : 'None');
+    
+    // Always show other income and down payment
+    drawTwoColumnFields(
+      { label: 'Other Income', value: details.otherIncome ? formatCurrency(details.otherIncome) : 'None' },
+      { label: 'Down Payment', value: details.downPaymentAmount ? formatCurrency(details.downPaymentAmount) : 'None' }
+    );
+
+    currentY += sectionSpacing;
+
+    // Co-Applicant Information - always show
+    drawSectionHeader('CO-APPLICANT INFORMATION');
+    
+    // Always show co-applicant name
+    drawFullWidthField('Co-Applicant Name', details.coApplicantName || 'None');
+    
+    // Always show co-applicant income and relationship
+    drawTwoColumnFields(
+      { label: 'Co-Applicant Income', value: details.coApplicantIncome ? formatCurrency(details.coApplicantIncome) : 'None' },
+      { label: 'Relationship', value: details.coApplicantRelationship || 'None' }
+    );
+
+    currentY += sectionSpacing;
 
     // Additional Information from extraData
     if (details.extraData) {
       const extraEntries = Object.entries(details.extraData);
-      const excludedKeys = new Set(['firstName', 'lastName', 'email', 'phone', 'dateOfBirth', 'vehicleMake', 'vehicleModel', 'vehicleYear', 'cashPrice']);
+      const excludedKeys = new Set([
+        'firstName', 'lastName', 'email', 'phone', 'dateOfBirth', 
+        'vehicleMake', 'vehicleModel', 'vehicleYear', 'cashPrice', 
+        'loanAmount', 'termMonths', 'loanTermMonths', 'monthlyPayment', 'interestRate', 
+        'team', 'Team', 'assignedTeam', 'salesTeam',
+        // Exclude all expense fields since they'll have their own section
+        'expenseRentBond', 'expenseRatesUtilities', 'expenseVehicleInstalments', 
+        'expensePersonalLoans', 'expenseCreditCardRepayment', 'expenseFurniture', 
+        'expenseClothing', 'expenseOverdraft', 'expenseInsurance', 'expenseTelephone', 
+        'expenseTransport', 'expenseFoodEntertainment', 'expenseEducation', 
+        'expenseMaintenance', 'expenseHousehold', 'expenseOther', 'totalMonthlyHouseholdExpenses'
+      ]);
       
       const relevantEntries = extraEntries.filter(([key, value]) => 
         value !== undefined && 
@@ -398,6 +369,98 @@ export const generateFormPdf = (application: Application): void => {
       }
     }
   }
+
+  // Always show Monthly Household Expenses Section (moved outside details conditional)
+  drawSectionHeader('MONTHLY HOUSEHOLD EXPENSES');
+  
+  // Helper function to format expense value
+  const formatExpenseValue = (value: any) => {
+    if (!value || value === '' || value === '0' || value === 0) return 'None';
+    const numValue = parseFloat(value);
+    return isNaN(numValue) ? value : formatCurrency(numValue);
+  };
+  
+  // Get expense data with fallbacks - handle case where details might not exist
+  const getExpenseValue = (fieldName: string) => {
+    if (!application.details) return '';
+    const details = application.details;
+    return details[fieldName] || details.extraData?.[fieldName] || '';
+  };
+  
+  // Row 1: Rent/Bond & Rates/Utilities
+  drawTwoColumnFields(
+    { label: 'Rent / Bond', value: formatExpenseValue(getExpenseValue('expenseRentBond')) },
+    { label: 'Rates & Utilities', value: formatExpenseValue(getExpenseValue('expenseRatesUtilities')) }
+  );
+  
+  // Row 2: Vehicle Instalments & Personal Loans
+  drawTwoColumnFields(
+    { label: 'Vehicle Instalments', value: formatExpenseValue(getExpenseValue('expenseVehicleInstalments')) },
+    { label: 'Personal Loans', value: formatExpenseValue(getExpenseValue('expensePersonalLoans')) }
+  );
+  
+  // Row 3: Credit Card Repayments & Furniture
+  drawTwoColumnFields(
+    { label: 'Credit Card Repayments', value: formatExpenseValue(getExpenseValue('expenseCreditCardRepayment')) },
+    { label: 'Furniture', value: formatExpenseValue(getExpenseValue('expenseFurniture')) }
+  );
+  
+  // Row 4: Clothing & Overdraft
+  drawTwoColumnFields(
+    { label: 'Clothing', value: formatExpenseValue(getExpenseValue('expenseClothing')) },
+    { label: 'Overdraft', value: formatExpenseValue(getExpenseValue('expenseOverdraft')) }
+  );
+  
+  // Row 5: Insurance & Telephone
+  drawTwoColumnFields(
+    { label: 'Insurance', value: formatExpenseValue(getExpenseValue('expenseInsurance')) },
+    { label: 'Telephone', value: formatExpenseValue(getExpenseValue('expenseTelephone')) }
+  );
+  
+  // Row 6: Transport & Food & Entertainment
+  drawTwoColumnFields(
+    { label: 'Transport', value: formatExpenseValue(getExpenseValue('expenseTransport')) },
+    { label: 'Food & Entertainment', value: formatExpenseValue(getExpenseValue('expenseFoodEntertainment')) }
+  );
+  
+  // Row 7: Education & Maintenance
+  drawTwoColumnFields(
+    { label: 'Education', value: formatExpenseValue(getExpenseValue('expenseEducation')) },
+    { label: 'Maintenance (Alimony etc.)', value: formatExpenseValue(getExpenseValue('expenseMaintenance')) }
+  );
+  
+  // Row 8: Household/Domestic & Other
+  drawTwoColumnFields(
+    { label: 'Household / Domestic', value: formatExpenseValue(getExpenseValue('expenseHousehold')) },
+    { label: 'Other', value: formatExpenseValue(getExpenseValue('expenseOther')) }
+  );
+  
+  // Total expenses - highlighted
+  checkPageSpace(45);
+  const totalExpenses = getExpenseValue('totalMonthlyHouseholdExpenses') || '0';
+  const totalValue = formatExpenseValue(totalExpenses);
+  
+  // Draw total with special styling
+  const lightBlueRgb = hexToRgb('#dbeafe');
+  doc.setFillColor(lightBlueRgb.r, lightBlueRgb.g, lightBlueRgb.b);
+  doc.rect(margin, currentY, contentWidth, 35, 'F');
+  
+  const borderRgb = hexToRgb('#3b82f6');
+  doc.setDrawColor(borderRgb.r, borderRgb.g, borderRgb.b);
+  doc.setLineWidth(2);
+  doc.rect(margin, currentY, contentWidth, 35);
+  
+  const primaryRgb = hexToRgb(primaryColor);
+  doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TOTAL MONTHLY HOUSEHOLD EXPENSES', margin + 15, currentY + 15);
+  
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(totalValue, margin + 15, currentY + 28);
+  
+  currentY += 50; // Extra spacing after expenses section
 
   // Documents Section
   if (application.documents && application.documents.length > 0) {

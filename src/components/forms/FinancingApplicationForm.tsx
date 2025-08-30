@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -992,11 +992,17 @@ export default function FinancingApplicationForm() {
   // Missing docs accessor used on submit (populated by child component)
   const missingRequiredDocs = () => missingRequiredDocsRef.current();
 
-  // Child component for uploads
+  // Child component for uploads - memoized to prevent re-renders that clear uploads
   const DocumentUploads: React.FC<{ docRequirements: readonly any[], register: (fn: () => any[]) => void, registerDocs: (fn: () => any[]) => void, employmentStatus: string, missingDocKeys: string[] }> = React.memo(({ docRequirements, register, registerDocs, employmentStatus, missingDocKeys }) => {
     const [uploadedByType, setUploadedByType] = useState<Record<string, any[]>>({});
     const [uploadingByType, setUploadingByType] = useState<Record<string, boolean>>({});
     const STORAGE_KEY = 'financingUploadedDocsTemp';
+    const uploadedByTypeRef = useRef<Record<string, any[]>>({});
+    
+    // Keep ref in sync with state for stability
+    useEffect(() => {
+      uploadedByTypeRef.current = uploadedByType;
+    }, [uploadedByType]);
 
     // Hydrate previously uploaded docs (in case of submission error causing remount or navigation back)
     useEffect(() => {
@@ -1006,6 +1012,7 @@ export default function FinancingApplicationForm() {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             setUploadedByType(parsed);
+            uploadedByTypeRef.current = parsed;
           }
         }
       } catch {}
@@ -1016,6 +1023,15 @@ export default function FinancingApplicationForm() {
     useEffect(() => {
       try { if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(uploadedByType)); } catch {}
     }, [uploadedByType]);
+
+    // Stable callback for updating uploaded documents
+    const updateUploadedByType = useCallback((updater: (prev: Record<string, any[]>) => Record<string, any[]>) => {
+      setUploadedByType((prev: Record<string, any[]>) => {
+        const updated = updater(prev);
+        uploadedByTypeRef.current = updated;
+        return updated;
+      });
+    }, []);
   const createServerConfig = (docType: string) => ({
       process: (_fieldName: string, file: any, _metadata: any, load: any, error: any, _progress: any, abort: any) => {
         const controller = new AbortController();
@@ -1054,7 +1070,7 @@ export default function FinancingApplicationForm() {
               }
               const files = json.files || [];
               if (files.length) {
-                setUploadedByType(prev => ({ ...prev, [docType]: [...(prev[docType]||[]), ...files] }));
+                updateUploadedByType((prev: Record<string, any[]>) => ({ ...prev, [docType]: [...(prev[docType]||[]), ...files] }));
               }
               load(files[0]?.storedName || file.name);
             })
@@ -1084,31 +1100,34 @@ export default function FinancingApplicationForm() {
         if (/self_employed/i.test(employmentStatus)) {
           return []; // no required docs enforced
         }
-        return docRequirements.filter(d => d.required && !(uploadedByType[d.key]?.length));
+        return docRequirements.filter(d => d.required && !(uploadedByTypeRef.current[d.key]?.length));
       });
       registerDocs(() => {
         const flat: any[] = [];
-        Object.entries(uploadedByType).forEach(([docType, arr]) => {
+        Object.entries(uploadedByTypeRef.current).forEach(([docType, arr]) => {
           (arr||[]).forEach((f: any) => flat.push({ docType, ...f }));
         });
         return flat;
       });
-    }, [docRequirements, uploadedByType, register, registerDocs, employmentStatus]);
-    const displayed = /self_employed/i.test(employmentStatus)
-      ? docRequirements.filter(d => d.key === 'self_employed_docs')
-      : docRequirements;
+    }, [docRequirements, register, registerDocs, employmentStatus, updateUploadedByType]);
+    
+    const displayed = useMemo(() => {
+      return /self_employed/i.test(employmentStatus)
+        ? docRequirements.filter(d => d.key === 'self_employed_docs')
+        : docRequirements;
+    }, [employmentStatus, docRequirements]);
     // Prune any uploaded types no longer displayed (e.g. removed payslip_latest)
     useEffect(() => {
-      setUploadedByType(prev => {
-        const allowed = new Set(displayed.map(d => d.key));
+      updateUploadedByType((prev: Record<string, any[]>) => {
+        const allowed = new Set(displayed.map((d: any) => d.key));
         let changed = false;
         const next: Record<string, any[]> = {};
         Object.entries(prev).forEach(([k,v]) => {
-          if (allowed.has(k)) next[k] = v; else changed = true;
+          if (allowed.has(k)) next[k] = v as any[]; else changed = true;
         });
         return changed ? next : prev;
       });
-    }, [displayed]);
+    }, [displayed, updateUploadedByType]);
     return (
       <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
         <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
@@ -1135,7 +1154,7 @@ export default function FinancingApplicationForm() {
           <div className='mt-3 text-xs text-red-600 font-medium'>Please upload the required documents highlighted below before submitting.</div>
         )}
         <div className='mt-6 space-y-8'>
-          {displayed.map(d => {
+          {displayed.map((d: any) => {
             const uploaded = uploadedByType[d.key]?.length || 0;
             const isReq = d.required;
             const isMissing = isReq && missingDocKeys.includes(d.key) && uploaded === 0;
@@ -1217,7 +1236,7 @@ export default function FinancingApplicationForm() {
                               <span className='text-[10px] font-medium text-slate-600 dark:text-slate-300 px-1 text-center leading-tight'>{isPdf ? 'PDF' : 'FILE'}</span>
                             )}
                             <button type='button'
-                              onClick={() => setUploadedByType(prev => ({ ...prev, [d.key]: prev[d.key].filter((x: any) => x.storedName !== f.storedName) }))}
+                              onClick={() => updateUploadedByType((prev: Record<string, any[]>) => ({ ...prev, [d.key]: prev[d.key].filter((x: any) => x.storedName !== f.storedName) }))}
                               className='absolute bottom-0 left-0 right-0 text-[10px] bg-black/60 text-white py-0.5 font-medium opacity-90 hover:opacity-100 transition'>X</button>
                           </div>
                         );
@@ -1231,6 +1250,10 @@ export default function FinancingApplicationForm() {
         </div>
       </div>
     );
+  }, (prevProps, nextProps) => {
+    // Only re-render if employmentStatus actually changes or missingDocKeys array changes
+    return prevProps.employmentStatus === nextProps.employmentStatus && 
+           JSON.stringify(prevProps.missingDocKeys) === JSON.stringify(nextProps.missingDocKeys);
   });
 
   return (
@@ -1415,7 +1438,16 @@ export default function FinancingApplicationForm() {
 
   {/* Consent & terms section removed per request */}
 
-  <DocumentUploads employmentStatus={form.employmentStatus||''} docRequirements={docRequirements} register={registerMissingDocsFn} registerDocs={registerUploadedDocsFn} missingDocKeys={missingDocKeys} />
+  {React.useMemo(() => (
+    <DocumentUploads 
+      key="document-uploads-stable"
+      employmentStatus={form.employmentStatus||''} 
+      docRequirements={docRequirements} 
+      register={registerMissingDocsFn} 
+      registerDocs={registerUploadedDocsFn} 
+      missingDocKeys={missingDocKeys} 
+    />
+  ), [form.employmentStatus, missingDocKeys, registerMissingDocsFn, registerUploadedDocsFn])}
 
       {/* Added declarations as requested */}
       <div className='space-y-6 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-5'>

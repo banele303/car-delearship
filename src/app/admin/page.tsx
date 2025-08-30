@@ -441,7 +441,7 @@ export default function AdminDashboard() {
                 View, add, and manage your car inventory
               </p>
               <div className="flex items-center gap-2">
-                <Button size="sm" className="gap-2" onClick={(e) => { e.stopPropagation(); router.push('/admin/cars/new'); }}>
+                <Button size="sm" className="gap-2" onClick={(e) => { e.stopPropagation(); router.push('/admin/cars/add'); }}>
                   <Plus className="h-4 w-4" />
                   Add Car
                 </Button>
@@ -642,7 +642,7 @@ export default function AdminDashboard() {
                 <Button 
                   variant="outline" 
                   className="justify-start h-auto py-4 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/30 dark:hover:text-blue-400 transition-colors"
-                  onClick={() => router.push('/admin/cars/new')}
+                  onClick={() => router.push('/admin/cars/add')}
                 >
                   <div className="flex items-center">
                     <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full mr-3">
