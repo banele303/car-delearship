@@ -50,6 +50,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,7 +89,8 @@ export default function AdminCarsPage() {
   const [filterCity, setFilterCity] = useState('');
   const [sortBy, setSortBy] = useState('make');
   const [sortOrder, setSortOrder] = useState('asc');
-  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [carsPerPage] = useState(10);
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
@@ -189,7 +191,7 @@ export default function AdminCarsPage() {
     return matchesSearch && matchesCity;
   }) || []; 
 
-  
+  // Filter and sort cars
   const sortedCars = filteredCars.sort((a: EnhancedCar, b: EnhancedCar) => {
     let comparison = 0;
     
@@ -205,6 +207,18 @@ export default function AdminCarsPage() {
     
     return sortOrder === "asc" ? comparison : -comparison;
   });
+
+  // Pagination logic
+  const totalCars = sortedCars.length;
+  const totalPages = Math.ceil(totalCars / carsPerPage);
+  const startIndex = (currentPage - 1) * carsPerPage;
+  const endIndex = startIndex + carsPerPage;
+  const paginatedCars = sortedCars.slice(startIndex, endIndex);
+
+  // Reset to first page when search/filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCity]);
   
   const toggleSortOrder = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -294,7 +308,7 @@ export default function AdminCarsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...Array(5)].map((_, i) => (
+                {[...Array(Math.min(10, carsPerPage))].map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -415,7 +429,7 @@ export default function AdminCarsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...Array(8)].map((_, i) => (
+                {[...Array(Math.min(10, carsPerPage))].map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -605,7 +619,12 @@ export default function AdminCarsPage() {
       
       <div className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex items-center">
         <Filter className="h-4 w-4 mr-2 text-blue-500" />
-        Showing <span className="font-semibold mx-1 text-blue-600 dark:text-blue-400">{sortedCars.length}</span> of <span className="font-semibold mx-1 text-blue-600 dark:text-blue-400">{cars?.length || 0}</span> cars
+        Showing <span className="font-semibold mx-1 text-blue-600 dark:text-blue-400">{Math.min(startIndex + 1, totalCars)}-{Math.min(endIndex, totalCars)}</span> of <span className="font-semibold mx-1 text-blue-600 dark:text-blue-400">{totalCars}</span> cars
+        {totalCars !== (cars?.length || 0) && (
+          <span className="ml-2 text-xs">
+            (filtered from {cars?.length || 0} total)
+          </span>
+        )}
       </div>
       
       
@@ -624,8 +643,8 @@ export default function AdminCarsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedCars.length > 0 ? (
-                sortedCars.map((car: EnhancedCar) => ( 
+              {paginatedCars.length > 0 ? (
+                paginatedCars.map((car: EnhancedCar) => ( 
                   <TableRow key={car.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -774,6 +793,17 @@ export default function AdminCarsPage() {
           </Table>
         </div>
       </Card>
+
+      {/* Pagination */}
+      {totalCars > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalCars}
+          itemsPerPage={carsPerPage}
+          onPageChange={setCurrentPage}
+        />
+      )}
       
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">

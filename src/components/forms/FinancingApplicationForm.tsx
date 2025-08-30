@@ -1286,7 +1286,7 @@ export default function FinancingApplicationForm() {
             <TextField label='Gross Monthly Income (R)' name='monthlyIncomeGross' defaultValue={form.monthlyIncomeGross||''} />
             <TextField label='Other Monthly Income (R)' name='otherIncome' defaultValue={form.otherIncome||''} />
             <TextField label='Other Income Source' name='otherIncomeSource' defaultValue={form.otherIncomeSource||''} />
-            <TextField label='Annual Income (R)' name='annualIncome' defaultValue={form.annualIncome||''} />
+            <TextField label='Net Income (R)' name='annualIncome' defaultValue={form.annualIncome||''} />
             <TextField label='Exact Credit Score' name='creditScore' defaultValue={form.creditScore||''} />
           </div>
         </div>
