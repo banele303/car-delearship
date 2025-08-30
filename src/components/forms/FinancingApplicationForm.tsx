@@ -33,13 +33,13 @@ const schema = z.object({
   city: z.string().min(1, 'City required'),
   state: z.string().min(1, 'State / Province required'),
   postalCode: z.string().min(1, 'Postal Code required'),
-  housingStatus: z.string().min(1, 'Housing status required'),
+  housingStatus: z.string().optional(),
   title: z.string().min(1, 'Title required'),
   initials: z.string().min(1, 'Initials required'),
   gender: z.string().optional(),
   dependants: z.string().optional(),
   // monthlyHousingPayment removed per request
-  employmentStatus: z.string().optional(),
+  employmentStatus: z.string().min(1, 'Employment status required'),
   employerName: z.string().min(1, 'Employer name required'),
   jobTitle: z.string().min(1, 'Job title required'),
   employmentYears: z.string().min(1, 'Years in job required'),
@@ -179,12 +179,12 @@ interface FieldProps { label: string; name: keyof FinancingPublicForm; type?: st
 const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
   // Core applicant info - fields marked with * in the form
   'firstName','lastName','email','phone','dateOfBirth','idNumber',
-  'address','city','state','postalCode','housingStatus',
+  'address','city','state','postalCode',
   'title','initials','telephoneHome',
   // Next of kin - marked as required
   'nextOfKinName','nextOfKinRelationship','nextOfKinAddress','nextOfKinCell',
-  // Employment - marked as required (except employmentStatus now optional)
-  'employerName','jobTitle','employmentYears','monthlyIncomeGross',
+  // Employment - marked as required
+  'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross',
   // Vehicle info - marked as required
   'vehicleCondition','cashPrice','vehicleMake','vehicleModel',
   // Essential declarations will be handled separately
@@ -202,7 +202,6 @@ const REQUIRED_MESSAGES: Partial<Record<keyof FinancingPublicForm, string>> = {
   city: 'City is required',
   state: 'State/Province is required',
   postalCode: 'Postal Code is required',
-  housingStatus: 'Housing status is required',
   title: 'Title is required',
   initials: 'Initials are required',
   telephoneHome: 'Home phone is required',
@@ -210,6 +209,7 @@ const REQUIRED_MESSAGES: Partial<Record<keyof FinancingPublicForm, string>> = {
   nextOfKinRelationship: 'Relationship is required',
   nextOfKinAddress: 'Next of Kin address is required',
   nextOfKinCell: 'Next of Kin cell number is required',
+  employmentStatus: 'Employment status is required',
   employerName: 'Employer name is required',
   jobTitle: 'Job title is required',
   employmentYears: 'Years in job is required',
@@ -264,6 +264,8 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
   const globalErrs = (typeof window !== 'undefined' && (window as any).__finErrors) ? (window as any).__finErrors : {};
   const submittedAttempted = (typeof window !== 'undefined' && (window as any).__finSubmittedAttempted) || false;
   let err = globalErrs[name];
+  
+  // Show required field errors immediately when submitted is attempted, regardless of timing
   if (!err && required && submittedAttempted) {
     // derive current value from window form snapshot if present
     try {
@@ -275,13 +277,16 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
     } catch {}
   }
   const effectiveType = DATE_FIELDS.has(name) ? 'date' : type;
+  
   // Helper to decide if we should suppress error while actively typing
   const activeEl = (typeof document !== 'undefined') ? document.activeElement : null;
-  if (activeEl === inputRef.current && submittedAttempted) {
-    // If user is typing and there is some value, suppress required error
+  const isActivelyTyping = activeEl === inputRef.current;
+  
+  // Only suppress required errors if actively typing AND there is some content
+  if (isActivelyTyping && submittedAttempted && err && REQUIRED_MESSAGES[name] && (err === REQUIRED_MESSAGES[name])) {
     try {
       const currentVal = (inputRef.current as HTMLInputElement).value;
-      if (currentVal && err && REQUIRED_MESSAGES[name] && (err === REQUIRED_MESSAGES[name])) {
+      if (currentVal && currentVal.trim()) {
         err = undefined;
       }
     } catch {}
@@ -685,7 +690,10 @@ export default function FinancingApplicationForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formRef.current) return;
-    if (!submittedAttempted) setSubmittedAttempted(true);
+    
+    // Set submitted attempted flag first
+    setSubmittedAttempted(true);
+    
     // Build data from actual DOM values so nothing is lost between edits
     const fd = new FormData(formRef.current);
     const collected: any = { ...form }; // start with controlled bits (checkboxes/selects)
@@ -716,6 +724,7 @@ export default function FinancingApplicationForm() {
         if (!firstMissingName) firstMissingName = fieldName as string;
       }
     });
+    
     // Preserve only still-missing required errors; other previous errors (like schema) retained if not overridden
     const mergedErrors: Partial<Record<keyof FinancingPublicForm, string>> = { ...errors };
     // Remove prior 'Required' errors for fields now filled
@@ -727,14 +736,21 @@ export default function FinancingApplicationForm() {
     });
     // Add current missing ones
     Object.assign(mergedErrors, newErrors);
-    const changed = JSON.stringify(mergedErrors) !== JSON.stringify(errors);
-    if (changed) setErrors(mergedErrors);
+    
+    // Set errors immediately and force submission attempted flag
+    setErrors(mergedErrors);
+    
+    // Ensure window global is also updated immediately for TextField access
+    if (typeof window !== 'undefined') {
+      (window as any).__finErrors = mergedErrors;
+      (window as any).__finSubmittedAttempted = true;
+    }
     
     if (firstMissingName) {
       // Use the utility function to scroll to the first missing field
       scrollToErrorField(firstMissingName);
+      return; // stop submit until all required filled
     }
-  if (firstMissingName) return; // stop submit until all required filled
 
   // Removed strict schema blocking per request (previously enforced declarations & loan fields)
     // Ensure required documents uploaded
@@ -1302,7 +1318,7 @@ export default function FinancingApplicationForm() {
           <TextField label='State/Province' name='state' defaultValue={form.state||''} />
           <TextField label='Postal Code' name='postalCode' defaultValue={form.postalCode||''} />
           <div>
-            <Label className='text-sm font-medium flex items-center gap-1'>Housing Status<span className='text-red-500'>*</span></Label>
+            <Label className='text-sm font-medium'>Housing Status</Label>
             <Select value={form.housingStatus||''} onValueChange={onChangeHandlers.housingStatus}>
               <SelectTrigger id='housingStatus' className={'mt-1 ' + (errors.housingStatus ? 'border-red-500 focus-visible:ring-red-500 shadow-sm shadow-red-200' : '')}><SelectValue placeholder='Select' /></SelectTrigger>
               <SelectContent>
@@ -1359,7 +1375,7 @@ export default function FinancingApplicationForm() {
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Work & Income Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
             <div>
-              <Label className='text-sm font-medium'>Employment Status</Label>
+              <Label className='text-sm font-medium'>Employment Status *</Label>
               <Select value={form.employmentStatus||''} onValueChange={onChangeHandlers.employmentStatus}>
                 <SelectTrigger id='employmentStatus' className={'mt-1 ' + (errors.employmentStatus ? 'border-red-500 focus-visible:ring-red-500 shadow-sm shadow-red-200' : '')}><SelectValue placeholder='Select' /></SelectTrigger>
                 <SelectContent>
