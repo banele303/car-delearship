@@ -175,25 +175,23 @@ const defaultValues: FinancingPublicForm = {
 
 interface FieldProps { label: string; name: keyof FinancingPublicForm; type?: string; placeholder?: string; colSpan?: string; uncontrolled?: boolean; defaultValue?: string; value?: string; onChange?: (v: string)=>void; }
 
-// Required field names (excluding declaration checkboxes handled elsewhere)
+// Required field names - these are the fields that will show asterisks (*) and validate as required
 const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
-  // Core finance numbers now enforced so backend schema passes
-  'loanAmount','termMonths',
-  // First 15 inputs (gender & dependants made optional per request)
-  'firstName','lastName','email','phone','dateOfBirth','idNumber','address','city','state','postalCode','housingStatus','title','initials',
-  // Next of kin required fields
+  // Core applicant info - fields marked with * in the form
+  'firstName','lastName','email','phone','dateOfBirth','idNumber',
+  'address','city','state','postalCode','housingStatus',
+  'title','initials','telephoneHome',
+  // Next of kin - marked as required
   'nextOfKinName','nextOfKinRelationship','nextOfKinAddress','nextOfKinCell',
-  'telephoneHome',
-  // Employment line now required
+  // Employment - marked as required
   'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross',
-  // Existing vehicle required fields
-  'vehicleCondition','cashPrice','vehicleMake','vehicleModel'
+  // Vehicle info - marked as required
+  'vehicleCondition','cashPrice','vehicleMake','vehicleModel',
+  // Essential declarations will be handled separately
 ]);
 
 // Descriptive messages per required field
 const REQUIRED_MESSAGES: Partial<Record<keyof FinancingPublicForm, string>> = {
-  loanAmount: 'Loan amount is required',
-  termMonths: 'Term (months) is required',
   firstName: 'First name is required',
   lastName: 'Last name is required',
   email: 'Email address is required',
@@ -202,16 +200,16 @@ const REQUIRED_MESSAGES: Partial<Record<keyof FinancingPublicForm, string>> = {
   idNumber: 'ID Number is required',
   address: 'Address is required',
   city: 'City is required',
-  state: 'State / Province is required',
+  state: 'State/Province is required',
   postalCode: 'Postal Code is required',
   housingStatus: 'Housing status is required',
   title: 'Title is required',
   initials: 'Initials are required',
-  nextOfKinName: 'Next of kin name is required',
-  nextOfKinRelationship: 'Relationship to next of kin is required',
-  nextOfKinAddress: 'Next of kin address is required',
-  nextOfKinCell: 'Next of kin cell is required',
   telephoneHome: 'Home phone is required',
+  nextOfKinName: 'Next of Kin name is required',
+  nextOfKinRelationship: 'Relationship is required',
+  nextOfKinAddress: 'Next of Kin address is required',
+  nextOfKinCell: 'Next of Kin cell number is required',
   employmentStatus: 'Employment status is required',
   employerName: 'Employer name is required',
   jobTitle: 'Job title is required',
@@ -342,9 +340,14 @@ const TextField = React.memo<FieldProps>(({ label, name, type='text', placeholde
             }
           }
         }}
-        className={'mt-1 ' + (err ? 'border-red-500 focus-visible:ring-red-500' : '')}
+        className={'mt-1 ' + (err ? 'border-red-500 focus-visible:ring-red-500 shadow-sm shadow-red-200' : '')}
       />
-      {err && <p className='mt-1 text-xs text-red-600'>{err}</p>}
+      {err && <p className='mt-1 text-xs text-red-600 font-medium flex items-center gap-1'>
+        <svg className='w-3 h-3 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'>
+          <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z' clipRule='evenodd' />
+        </svg>
+        {err}
+      </p>}
     </div>
   );
 });
@@ -602,6 +605,64 @@ export default function FinancingApplicationForm() {
     referralSource: (v: string) => handleFieldUpdate('referralSource', v),
   }), [handleFieldUpdate]);
 
+  // State for section open/close
+  const [open, setOpen] = useState<Record<string, boolean>>({ applicant: true, vehicle: true, docs: false });
+  const toggle = (k:string)=> setOpen(o=>({...o,[k]:!o[k]}));
+
+  // Utility function to scroll to error field and open appropriate section
+  const scrollToErrorField = React.useCallback((fieldName: string) => {
+    // Find which section contains the error field and ensure it's open
+    const sectionMap: Record<string, string> = {
+      firstName: 'applicant', lastName: 'applicant', email: 'applicant', phone: 'applicant',
+      dateOfBirth: 'applicant', idNumber: 'applicant', address: 'applicant', city: 'applicant',
+      state: 'applicant', postalCode: 'applicant', housingStatus: 'applicant',
+      title: 'applicant', initials: 'applicant', telephoneHome: 'applicant',
+      nextOfKinName: 'applicant', nextOfKinRelationship: 'applicant', 
+      nextOfKinAddress: 'applicant', nextOfKinCell: 'applicant',
+      employmentStatus: 'applicant', employerName: 'applicant', jobTitle: 'applicant',
+      employmentYears: 'applicant', monthlyIncomeGross: 'applicant',
+      vehicleCondition: 'vehicle', cashPrice: 'vehicle', vehicleMake: 'vehicle', vehicleModel: 'vehicle',
+      // Add expense fields to expenses section
+      expenseRentBond: 'expenses', expenseRatesUtilities: 'expenses', expenseVehicleInstalments: 'expenses'
+    };
+    
+    const sectionId = sectionMap[fieldName];
+    
+    const performScroll = () => {
+      const el = document.getElementById(fieldName);
+      if (el) {
+        // Add a temporary highlight class for visual feedback
+        el.classList.add('error-highlight');
+        setTimeout(() => el.classList.remove('error-highlight'), 2000);
+        
+        // Scroll element into view with some padding
+        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        
+        // Focus the element after a delay to ensure scroll completes
+        setTimeout(() => {
+          try { 
+            // For select triggers, click to focus, for inputs just focus
+            if (el.tagName === 'BUTTON' && el.getAttribute('role') === 'combobox') {
+              (el as HTMLButtonElement).click();
+            } else {
+              (el as HTMLInputElement).focus({ preventScroll: true }); 
+            }
+          } catch {}
+        }, 500);
+      }
+    };
+    
+    if (sectionId && !open[sectionId]) {
+      // Section needs to be opened first
+      setOpen(prev => ({ ...prev, [sectionId]: true }));
+      // Wait for section to open before scrolling
+      setTimeout(performScroll, 150);
+    } else {
+      // Section is already open, scroll immediately
+      performScroll();
+    }
+  }, [open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formRef.current) return;
@@ -649,13 +710,10 @@ export default function FinancingApplicationForm() {
     Object.assign(mergedErrors, newErrors);
     const changed = JSON.stringify(mergedErrors) !== JSON.stringify(errors);
     if (changed) setErrors(mergedErrors);
+    
     if (firstMissingName) {
-      // Scroll to first missing field
-      const el = document.getElementById(firstMissingName);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        try { (el as HTMLInputElement).focus({ preventScroll: true }); } catch {}
-      }
+      // Use the utility function to scroll to the first missing field
+      scrollToErrorField(firstMissingName);
     }
   if (firstMissingName) return; // stop submit until all required filled
 
@@ -712,35 +770,33 @@ export default function FinancingApplicationForm() {
           if (Object.keys(fieldErrors).length) {
             setErrors(prev => ({ ...prev, ...fieldErrors }));
             if (firstField) {
-              const el = document.getElementById(firstField);
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                try { (el as HTMLInputElement).focus({ preventScroll: true }); } catch {}
-              }
+              // Use the utility function to scroll to the first error field
+              scrollToErrorField(firstField);
             }
-            toast.error('Please fix highlighted field' + (Object.keys(fieldErrors).length > 1 ? 's' : '') + '.');
+            toast.error('Please fix highlighted field' + (Object.keys(fieldErrors).length > 1 ? 's' : '') + '. Your documents are preserved.');
           } else {
-            toast.error(j.error || 'Submission failed');
+            toast.error((j.error || 'Submission failed') + ' - your documents are preserved');
           }
         } else {
-          toast.error(j.error || 'Submission failed');
+          toast.error((j.error || 'Submission failed') + ' - your documents are preserved');
         }
       } else {
         toast.success('Application submitted!');
         formRef.current.reset(); // clear visible inputs
         setForm(defaultValues); // reset controlled items
-  setMissingDocKeys([]);
-  try { localStorage.removeItem('financingUploadedDocsTemp'); } catch {}
+        setMissingDocKeys([]);
+        // Clear localStorage - uploaded docs will be cleared by successful submission
+        try { localStorage.removeItem('financingUploadedDocsTemp'); } catch {}
       }
     } catch (err) {
-      toast.error('Network error');
+      toast.error('Network error - your documents are preserved');
+      console.error('Form submission error:', err);
+      // Documents remain in localStorage and uploadedByType state for retry
     } finally {
       setSubmitting(false);
     }
   };
 
-  const [open, setOpen] = useState<Record<string, boolean>>({ applicant: true, vehicle: true, docs: false });
-  const toggle = (k:string)=> setOpen(o=>({...o,[k]:!o[k]}));
   const Section: React.FC<{id:string; title:string; desc?:string; children:React.ReactNode; noScrollAdjust?: boolean}> = ({id,title,desc,children,noScrollAdjust}) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const handleToggle = () => {
@@ -863,6 +919,16 @@ export default function FinancingApplicationForm() {
   @keyframes docpulse { 0%{opacity:.55;} 50%{opacity:1;} 100%{opacity:.55;} }
   /* Hide internal FilePond preview list; we'll show our own thumbnails */
   .doc-upload-wrapper .filepond--list { display:none !important; }
+  /* Error highlight animation */
+  .error-highlight {
+    animation: errorPulse 2s ease-in-out;
+    transform: scale(1.02);
+  }
+  @keyframes errorPulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.1); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  }
     `;
     document.head.appendChild(style);
     tinyStyleInjected.current = true;
@@ -919,7 +985,7 @@ export default function FinancingApplicationForm() {
               }
               if (!r.ok) {
                 error(json.message || 'Upload failed');
-                toast.error(json.message || 'Upload failed');
+                toast.error((json.message || 'Upload failed') + ' - File preserved for retry');
                 return;
               }
               const files = json.files || [];
@@ -930,8 +996,8 @@ export default function FinancingApplicationForm() {
             })
             .catch((e) => {
               if (controller.signal.aborted) return;
-              error('Network error');
-              toast.error('Network error');
+              error('Network error - File preserved for retry');
+              toast.error('Network error - File preserved for retry');
             });
         };
         attempt(primary);
@@ -974,11 +1040,24 @@ export default function FinancingApplicationForm() {
     return (
       <div id='docs-section' className='border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6'>
         <h3 className='font-semibold text-base md:text-lg'>Necessary Documents to supply</h3>
+        
+        {/* Document preservation notice */}
+        <div className='mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg'>
+          <div className='flex items-start gap-2'>
+            <svg className='w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'>
+              <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
+            </svg>
+            <p className='text-xs text-blue-700 dark:text-blue-300 leading-relaxed'>
+              <strong>Your documents are automatically saved.</strong> If there's an error during submission, you won't lose your uploaded files - they'll be preserved for your next attempt.
+            </p>
+          </div>
+        </div>
+
         {!/self_employed/i.test(employmentStatus) && (
-          <p className='text-xs text-slate-500 mt-1'>Upload small files or images. Items marked <span className='text-red-500 font-semibold'>*</span> are required.</p>
+          <p className='text-xs text-slate-500 mt-3'>Upload small files or images. Items marked <span className='text-red-500 font-semibold'>*</span> are required.</p>
         )}
         {/self_employed/i.test(employmentStatus) && (
-          <p className='text-xs text-slate-500 mt-1'>Self‑employed: Only business documents are optional to upload now. You may proceed without other documents.</p>
+          <p className='text-xs text-slate-500 mt-3'>Self‑employed: Only business documents are optional to upload now. You may proceed without other documents.</p>
         )}
         {!/self_employed/i.test(employmentStatus) && missingDocKeys.length > 0 && (
           <div className='mt-3 text-xs text-red-600 font-medium'>Please upload the required documents highlighted below before submitting.</div>
@@ -1029,7 +1108,12 @@ export default function FinancingApplicationForm() {
                       onprocessfile={(error: any, file: any)=> { 
                         setUploadingByType(u=>({...u,[d.key]:false})); 
                         if(error){
-                          try { const parsed = error?.body ? JSON.parse(error.body) : null; toast.error(parsed?.message || 'Upload failed'); } catch { toast.error('Upload failed'); }
+                          try { 
+                            const parsed = error?.body ? JSON.parse(error.body) : null; 
+                            toast.error((parsed?.message || 'Upload failed') + ' - Retry available');
+                          } catch { 
+                            toast.error('Upload failed - Retry available'); 
+                          }
                           return;
                         }
                         if(file && file.remove) { file.remove(); }
@@ -1079,6 +1163,35 @@ export default function FinancingApplicationForm() {
 
   return (
   <form ref={formRef} onSubmit={handleSubmit} className='mt-12 space-y-6'>
+      {/* Error Summary */}
+      {submittedAttempted && Object.keys(errors).length > 0 && (
+        <div className='border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 rounded-lg p-4'>
+          <div className='flex items-start gap-3'>
+            <svg className='w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'>
+              <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z' clipRule='evenodd' />
+            </svg>
+            <div>
+              <h4 className='text-sm font-semibold text-red-800 dark:text-red-200'>Please fix the following errors:</h4>
+              <div className='mt-2 text-xs text-red-700 dark:text-red-300'>
+                <p className='mb-2'>
+                  {Object.keys(errors).length} field{Object.keys(errors).length !== 1 ? 's' : ''} require{Object.keys(errors).length === 1 ? 's' : ''} attention. Required fields are marked with an asterisk (*).
+                </p>
+                <button 
+                  type='button'
+                  onClick={() => {
+                    const firstErrorField = Object.keys(errors)[0];
+                    if (firstErrorField) scrollToErrorField(firstErrorField);
+                  }}
+                  className='text-red-600 dark:text-red-400 underline hover:no-underline font-medium'
+                >
+                  Go to first error
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Loan Snapshot section removed as requested */}
 
   <Section id='applicant' title='Applicant Details' desc='Primary applicant profile and supporting details'>
@@ -1094,9 +1207,9 @@ export default function FinancingApplicationForm() {
           <TextField label='State/Province' name='state' defaultValue={form.state||''} />
           <TextField label='Postal Code' name='postalCode' defaultValue={form.postalCode||''} />
           <div>
-            <Label className='text-sm font-medium'>Housing Status</Label>
+            <Label className='text-sm font-medium flex items-center gap-1'>Housing Status<span className='text-red-500'>*</span></Label>
             <Select value={form.housingStatus||''} onValueChange={onChangeHandlers.housingStatus}>
-              <SelectTrigger className='mt-1'><SelectValue placeholder='Select' /></SelectTrigger>
+              <SelectTrigger id='housingStatus' className={'mt-1 ' + (errors.housingStatus ? 'border-red-500 focus-visible:ring-red-500 shadow-sm shadow-red-200' : '')}><SelectValue placeholder='Select' /></SelectTrigger>
               <SelectContent>
                 <SelectItem value='rent'>Rent</SelectItem>
                 <SelectItem value='own'>Own</SelectItem>
@@ -1104,6 +1217,12 @@ export default function FinancingApplicationForm() {
                 <SelectItem value='other'>Other</SelectItem>
               </SelectContent>
             </Select>
+            {errors.housingStatus && <p className='mt-1 text-xs text-red-600 font-medium flex items-center gap-1'>
+              <svg className='w-3 h-3 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'>
+                <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z' clipRule='evenodd' />
+              </svg>
+              {errors.housingStatus}
+            </p>}
           </div>
         </div>
   {/* Co-applicant fields removed per request */}
@@ -1147,14 +1266,19 @@ export default function FinancingApplicationForm() {
             <div>
               <Label className='text-sm font-medium flex items-center gap-1'>Employment Status<span className='text-red-500'>*</span></Label>
               <Select value={form.employmentStatus||''} onValueChange={onChangeHandlers.employmentStatus}>
-                <SelectTrigger className={'mt-1 ' + (errors.employmentStatus ? 'border-red-500 focus-visible:ring-red-500' : '')}><SelectValue placeholder='Select' /></SelectTrigger>
+                <SelectTrigger id='employmentStatus' className={'mt-1 ' + (errors.employmentStatus ? 'border-red-500 focus-visible:ring-red-500 shadow-sm shadow-red-200' : '')}><SelectValue placeholder='Select' /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value='full_time'>Full-Time</SelectItem>
                   <SelectItem value='part_time'>Part-Time</SelectItem>
                   <SelectItem value='self_employed'>Self-Employed</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.employmentStatus && <p className='mt-1 text-xs text-red-600'>{errors.employmentStatus}</p>}
+              {errors.employmentStatus && <p className='mt-1 text-xs text-red-600 font-medium flex items-center gap-1'>
+                <svg className='w-3 h-3 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'>
+                  <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z' clipRule='evenodd' />
+                </svg>
+                {errors.employmentStatus}
+              </p>}
             </div>
             <TextField label='Employer Name' name='employerName' defaultValue={form.employerName||''} />
             <TextField label='Job Title' name='jobTitle' defaultValue={form.jobTitle||''} />
@@ -1249,6 +1373,14 @@ export default function FinancingApplicationForm() {
   {/* Hidden required consent flags (UI text already present above as declarations) */}
   <input type='hidden' name='consentCreditCheck' value={form.legalCapacityConfirm ? 'true' : 'true'} />
   <input type='hidden' name='agreeTerms' value={form.creditRecordDeclaration ? 'true' : 'true'} />
+        
+        {/* Show document count if any uploaded */}
+        {Object.values(uploadedDocsRef.current()).length > 0 && (
+          <div className='mb-3 text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded px-3 py-2'>
+            ✓ {Object.values(uploadedDocsRef.current()).length} document(s) uploaded and saved
+          </div>
+        )}
+        
         <Button type='submit' disabled={submitting} className='w-full md:w-auto px-8'>
           {submitting && <Loader2 className='h-4 w-4 mr-2 animate-spin' />}
           Submit Application
