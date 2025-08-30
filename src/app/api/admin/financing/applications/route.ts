@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         orderBy: { applicationDate: 'desc' },
         include: {
           customer: { select: { name: true, email: true } },
-          details: { select: { firstName: true, lastName: true } },
+          details: { select: { firstName: true, lastName: true, extraData: true } },
           sale: { include: { car: { select: { make: true, model: true, year: true } } } },
           documents: true,
         }
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
           orderBy: { applicationDate: 'desc' },
           include: {
             customer: { select: { name: true, email: true } },
-            details: { select: { firstName: true, lastName: true } },
+            details: { select: { firstName: true, lastName: true, extraData: true } },
             sale: { include: { car: { select: { make: true, model: true, year: true } } } },
           }
         });
@@ -93,10 +93,32 @@ export async function GET(request: NextRequest) {
     const formattedApplications = applications.map(app => {
       // Get customer name from details if available, otherwise from customer record
       const customerName = app.details 
-        ? `${app.details.firstName} ${app.details.lastName}`
-        : app.customer.name;
+        ? `${app.details.firstName || ''} ${app.details.lastName || ''}`.trim()
+        : app.customer.name || 'Unknown Customer';
       
-      const carModel = app.sale?.car ? `${app.sale.car.make} ${app.sale.car.model}` : '';
+      // Create comprehensive vehicle information
+      let carModel = '';
+      
+      // First check if vehicle info is in the sale relationship
+      if (app.sale?.car) {
+        const { make, model, year } = app.sale.car;
+        carModel = `${year || ''} ${make || ''} ${model || ''}`.trim();
+      }
+      
+      // If no vehicle in sale, check extraData for vehicle details
+      if (!carModel && app.details?.extraData) {
+        const extraData = app.details.extraData as any;
+        
+        // Check for various vehicle field formats in extraData
+        const vehicleMake = extraData.vehicleMake || extraData.vehicle_make || extraData.make;
+        const vehicleModel = extraData.vehicleModel || extraData.vehicle_model || extraData.model;
+        const vehicleYear = extraData.vehicleYear || extraData.vehicle_year || extraData.year;
+        
+        if (vehicleMake || vehicleModel || vehicleYear) {
+          carModel = `${vehicleYear || ''} ${vehicleMake || ''} ${vehicleModel || ''}`.trim();
+        }
+      }
+      
       const docCount = (app as any).documents ? (app as any).documents.length || 0 : 0;
       return {
         id: app.id,
@@ -105,11 +127,11 @@ export async function GET(request: NextRequest) {
         applicationDate: app.applicationDate.toISOString(),
         amount: app.loanAmount,
         status: app.status,
-        creditScore: app.creditScore || 0,
+        creditScore: app.creditScore || null,
         termMonths: app.termMonths,
         monthlyPayment: app.monthlyPayment,
         interestRate: app.interestRate,
-        carModel,
+        carModel: carModel || 'Vehicle not specified',
         documentCount: docCount
       };
     });

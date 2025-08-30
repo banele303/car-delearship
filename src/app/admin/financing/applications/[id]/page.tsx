@@ -285,80 +285,8 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
     if (!application) return;
     setExporting(true);
     try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF({ unit: 'pt' });
-      const lineHeight = 16;
-      let y = 40;
-      const left = 40;
-      doc.setFontSize(18);
-      doc.text(`Financing Application #${application.id}`, left, y);
-      y += 26;
-      doc.setFontSize(14);
-      doc.text('Summary', left, y);
-      y += 10;
-      doc.setFontSize(11);
-      const addLine = (label: string, value: any) => {
-        const text = `${label}: ${value === null || value === undefined || value === '' ? '-' : value}`;
-        if (y > 760) { doc.addPage(); y = 40; doc.setFontSize(11); }
-        doc.text(text, left, y);
-        y += lineHeight;
-      };
-      const creditRating = getCreditScoreRating(application.creditScore);
-      addLine('Status', application.status);
-      addLine('Application Date', formatDate(application.applicationDate, { withTime: true }));
-      if (application.decisionDate) addLine('Decision Date', formatDate(application.decisionDate, { withTime: true }));
-      addLine('Loan Amount', formatCurrency(application.loanAmount));
-      addLine('Loan Term (Months)', application.loanTermMonths);
-  // Interest Rate removed per request
-      addLine('Monthly Payment', formatCurrency(application.monthlyPayment));
-  addLine('Credit Score', `${application.creditScore} (${creditRating.label})`);
-  if ((application as any).annualIncome) addLine('Annual Income', formatCurrency((application as any).annualIncome));
-  // NSFAS Accredited removed per request
-      y += 10; doc.text('Customer', left, y); y += lineHeight;
-      addLine('Name', `${application.customer.firstName || (application as any).customer?.name || ''} ${application.customer.lastName || ''}`.trim() || '-');
-      addLine('Email', application.customer.email);
-      addLine('Phone', application.customer.phone);
-      addLine('DOB', formatDate(application.customer.dateOfBirth));
-      if (application.car) {
-        y += 10; doc.text('Vehicle', left, y); y += lineHeight;
-        addLine('Vehicle', `${application.car.year} ${application.car.make} ${application.car.model}`);
-        addLine('Price', formatCurrency(application.car.price));
-      }
-      if ((application as any).details) {
-        const d: any = (application as any).details;
-        y += 10; doc.text('Extended Details', left, y); y += lineHeight;
-        ['address','city','state','postalCode','housingStatus','employmentStatus','employerName','jobTitle','monthlyIncomeGross','otherIncome','coApplicantName','coApplicantIncome','coApplicantRelationship','preferredContactMethod','downPaymentAmount'].forEach(key => {
-          if (d[key] !== undefined && d[key] !== null && d[key] !== '') {
-            const label = key.replace(/([A-Z])/g,' $1');
-            const isMoney = /payment|income|amount/i.test(key) && !isNaN(Number(d[key]));
-            addLine(label, isMoney ? formatCurrency(Number(d[key])) : d[key]);
-          }
-        });
-        if (d.extraData) {
-          // Simplified table (text rows) for Additional Data
-          y += 10; doc.setFontSize(12); doc.text('Additional Data', left, y); y += lineHeight;
-          doc.setFontSize(10);
-          const entries = Object.entries(d.extraData as Record<string, any>);
-          const alreadyShownKeys = new Set(['firstName','lastName','email','phone','dateOfBirth','vehicleMake','vehicleModel','vehicleYear','cashPrice']);
-          const ensurePageSpace = () => { if (y > 760) { doc.addPage(); y = 40; doc.setFontSize(10); } };
-          entries
-            .filter(([k,v]) => v !== undefined && v !== null && v !== '' && !alreadyShownKeys.has(k))
-            .forEach(([key, value]) => {
-              ensurePageSpace();
-              const label = key.replace(/([A-Z])/g,' $1').replace(/_/g,' ').replace(/\s+/g,' ').trim();
-              let valStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
-              if (valStr.length > 100) valStr = valStr.slice(0,100) + '…';
-              doc.text(`${label}: ${valStr}`, left + 10, y);
-              y += 12;
-            });
-          doc.setFontSize(11);
-        }
-      }
-      if (application.documents && application.documents.length) {
-        y += 10; doc.text('Documents', left, y); y += lineHeight;
-        application.documents.forEach(docMeta => addLine(docMeta.docType, `${docMeta.originalName} (${(docMeta.size/1024).toFixed(1)} KB)`));
-      }
-      doc.save(`financing-application-${application.id}.pdf`);
+      const { generateFormPdf } = await import('@/utils/generateFormPdf');
+      generateFormPdf(application);
       sonnerToast.success('PDF exported');
     } catch (e) {
       console.error('PDF export failed', e);

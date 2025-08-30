@@ -72,7 +72,7 @@ export default function FinancingApplicationsPage() {
         const mapped: FinancingApplication[] = (raw || []).map((r: any) => ({
           id: r.id,
           customerName: r.customerName || r.customer?.name || r.customerEmail || 'Unknown',
-          carModel: r.carModel || 'N/A',
+          carModel: r.carModel || 'Vehicle not specified',
           applicationDate: r.applicationDate || r.createdAt || new Date().toISOString(),
           amount: typeof r.amount === 'string' ? parseFloat(r.amount) : (r.amount ?? r.loanAmount) || 0,
           status: r.status || 'PENDING',
@@ -83,7 +83,11 @@ export default function FinancingApplicationsPage() {
         // Client-side search filter (customerName / carModel)
         const lowered = searchTerm.trim().toLowerCase();
         const filtered = lowered
-          ? mapped.filter(m => m.customerName.toLowerCase().includes(lowered) || m.carModel.toLowerCase().includes(lowered))
+          ? mapped.filter(m => 
+              m.customerName.toLowerCase().includes(lowered) || 
+              m.carModel.toLowerCase().includes(lowered) ||
+              (m.carModel !== 'Vehicle not specified' && m.carModel.toLowerCase().includes(lowered))
+            )
           : mapped;
 
         setTotalApplications(filtered.length);
@@ -189,8 +193,8 @@ export default function FinancingApplicationsPage() {
       </Card>
       
       <Card>
-        <CardContent className="p-0">
-          <div className="block md:hidden p-4 space-y-4">
+        <CardContent className="p-6">
+          <div className="block md:hidden space-y-4">
             {isLoading ? (
               [...Array(4)].map((_,i)=>(
                 <div key={i} className="border rounded-lg p-4 space-y-2 animate-pulse">
@@ -207,7 +211,7 @@ export default function FinancingApplicationsPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-gray-100">{app.customerName}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{app.carModel}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{app.carModel || 'Vehicle not specified'}</p>
                     </div>
                     {getStatusBadge(app.status)}
                   </div>
@@ -224,7 +228,7 @@ export default function FinancingApplicationsPage() {
                       <p className="text-gray-500 dark:text-gray-400">Credit</p>
                       <p className="font-medium flex items-center gap-1">
                         <span className={`h-2 w-2 rounded-full ${getCreditScoreColor(app.creditScore ?? 0)}`}></span>
-                        {app.creditScore}
+                        {app.creditScore || 'N/A'}
                       </p>
                     </div>
                     <div className="col-span-2">
@@ -237,7 +241,7 @@ export default function FinancingApplicationsPage() {
               ))
             )}
             {!isLoading && applications.length > 0 && (
-              <div className="pt-2">
+              <div className="pt-4">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -248,7 +252,7 @@ export default function FinancingApplicationsPage() {
               </div>
             )}
           </div>
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto px-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -288,13 +292,13 @@ export default function FinancingApplicationsPage() {
                   applications.map((app) => (
                     <TableRow key={app.id}>
                       <TableCell className="font-medium">{app.customerName}</TableCell>
-                      <TableCell>{app.carModel}</TableCell>
+                      <TableCell>{app.carModel || 'Vehicle not specified'}</TableCell>
                       <TableCell>{new Date(app.applicationDate).toLocaleDateString()}</TableCell>
                       <TableCell>R{app.amount.toLocaleString()}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <div className={`h-2 w-2 rounded-full ${getCreditScoreColor(app.creditScore ?? 0)}`}></div>
-                          <span>{app.creditScore}</span>
+                          <span>{app.creditScore || 'N/A'}</span>
                         </div>
                       </TableCell>
                       <TableCell><span className='text-xs font-medium'>{app.documentCount}</span></TableCell>
@@ -313,7 +317,7 @@ export default function FinancingApplicationsPage() {
             </Table>
           </div>
           
-          <div className="hidden md:block">
+          <div className="hidden md:block px-6">
             {!isLoading && applications.length > 0 && (
               <div className="py-4">
                 <Pagination
