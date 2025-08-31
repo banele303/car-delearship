@@ -283,11 +283,11 @@ export const generateFormPdf = (application: Application): void => {
     // Always show monthly gross income
     drawFullWidthField('Monthly Gross Income', details.monthlyIncomeGross ? formatCurrency(details.monthlyIncomeGross) : 'None');
     
-    // Always show other income and down payment
-    drawTwoColumnFields(
-      { label: 'Other Income', value: details.otherIncome ? formatCurrency(details.otherIncome) : 'None' },
-      { label: 'Down Payment', value: details.downPaymentAmount ? formatCurrency(details.downPaymentAmount) : 'None' }
-    );
+    // Always show net income
+    drawFullWidthField('Monthly Net Income', details.monthlyIncomeNet ? formatCurrency(details.monthlyIncomeNet) : 'None');
+    
+    // Always show other income only (removed down payment)
+    drawFullWidthField('Other Income', details.otherIncome ? formatCurrency(details.otherIncome) : 'None');
 
     currentY += sectionSpacing;
 
@@ -313,6 +313,10 @@ export const generateFormPdf = (application: Application): void => {
         'vehicleMake', 'vehicleModel', 'vehicleYear', 'cashPrice', 
         'loanAmount', 'termMonths', 'loanTermMonths', 'monthlyPayment', 'interestRate', 
         'team', 'Team', 'assignedTeam', 'salesTeam',
+        // Remove these specific fields from PDF
+        'fileIdDoc', 'vehicleFuelType', 'consentCheck', 'filesBankStatements', 
+        'filesDriversLicense', 'legalCapacity', 'filesProofOfResidence', 
+        'marketingCommunicationConsent',
         // Exclude all expense fields since they'll have their own section
         'expenseRentBond', 'expenseRatesUtilities', 'expenseVehicleInstalments', 
         'expensePersonalLoans', 'expenseCreditCardRepayment', 'expenseFurniture', 
@@ -466,23 +470,11 @@ export const generateFormPdf = (application: Application): void => {
   if (application.documents && application.documents.length > 0) {
     drawSectionHeader('SUBMITTED DOCUMENTS');
     
-    // Process documents in pairs for two-column layout
-    for (let i = 0; i < application.documents.length; i += 2) {
-      const leftDoc = application.documents[i];
-      const rightDoc = application.documents[i + 1];
-      
-      const leftDocInfo = `${leftDoc.originalName} (${(leftDoc.size / 1024).toFixed(1)} KB)`;
-      
-      if (rightDoc) {
-        const rightDocInfo = `${rightDoc.originalName} (${(rightDoc.size / 1024).toFixed(1)} KB)`;
-        drawTwoColumnFields(
-          { label: leftDoc.docType, value: leftDocInfo },
-          { label: rightDoc.docType, value: rightDocInfo }
-        );
-      } else {
-        drawFullWidthField(leftDoc.docType, leftDocInfo);
-      }
-    }
+    // Display each document on its own row for better readability
+    application.documents.forEach((doc) => {
+      const docInfo = `${doc.originalName} (${(doc.size / 1024).toFixed(1)} KB)`;
+      drawFullWidthField(doc.docType, docInfo);
+    });
     
     currentY += sectionSpacing;
   }
