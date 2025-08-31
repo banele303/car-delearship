@@ -314,9 +314,10 @@ export const generateFormPdf = (application: Application): void => {
         'loanAmount', 'termMonths', 'loanTermMonths', 'monthlyPayment', 'interestRate', 
         'team', 'Team', 'assignedTeam', 'salesTeam',
         // Remove these specific fields from PDF
-        'fileIdDoc', 'vehicleFuelType', 'consentCheck', 'filesBankStatements', 
-        'filesDriversLicense', 'legalCapacity', 'filesProofOfResidence', 
-        'marketingCommunicationConsent', 'creditRecordDeclaration',
+        'fileIdDoc', 'vehicleFuelType', 'vehicleType', 'consentCheck', 'consentCreditCheck', 
+        'filesBankStatements', 'filesDriversLicense', 'legalCapacity', 'filesProofOfResidence', 
+        'marketingCommunicationConsent', 'creditRecordDeclaration', 'agreeTerms',
+        'vehicleKM', 'vehicleCondition', 'vehicleTransmission', 'legalCapacityConfirm',
         // Additional file-related fields to exclude from ADDITIONAL INFORMATION
         'filesIdDoc', 'filesBankStatements', 'filesDriversLicense', 
         'filesProofOfResidence', 'files_id_doc', 'files_bank_statements',
