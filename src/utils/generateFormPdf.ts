@@ -316,7 +316,11 @@ export const generateFormPdf = (application: Application): void => {
         // Remove these specific fields from PDF
         'fileIdDoc', 'vehicleFuelType', 'consentCheck', 'filesBankStatements', 
         'filesDriversLicense', 'legalCapacity', 'filesProofOfResidence', 
-        'marketingCommunicationConsent',
+        'marketingCommunicationConsent', 'creditRecordDeclaration',
+        // Additional file-related fields to exclude from ADDITIONAL INFORMATION
+        'filesIdDoc', 'filesBankStatements', 'filesDriversLicense', 
+        'filesProofOfResidence', 'files_id_doc', 'files_bank_statements',
+        'files_drivers_license', 'files_proof_of_residence',
         // Exclude all expense fields since they'll have their own section
         'expenseRentBond', 'expenseRatesUtilities', 'expenseVehicleInstalments', 
         'expensePersonalLoans', 'expenseCreditCardRepayment', 'expenseFurniture', 
