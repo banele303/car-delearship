@@ -359,94 +359,65 @@ const NewCar = () => {
       
       // Use reordered uploadedFiles state as single source of truth for photo order
       let photoFiles: File[] = uploadedFiles.length ? [...uploadedFiles] : [];
-      if (!photoFiles.length && data.photoUrls) {
-        const files = data.photoUrls as unknown as FileList;
-        if (files && files.length) photoFiles = Array.from(files);
-      }
-      if (photoFiles.length) {
-        console.log('[CAR_CREATE] Using photo order:', photoFiles.map(f=>f.name));
-      }
+      // Build FormData for metadata only (no photos) to mirror proven admin flow
+      const meta = new FormData();
+      meta.append('make', data.make);
+      meta.append('model', data.model);
+      meta.append('year', String(data.year));
+      meta.append('price', String(data.price));
+      meta.append('carType', data.carType);
+      // Map PETROL -> PETROL (server converts to GASOLINE until enum migration) keeping consistency
+      meta.append('fuelType', data.fuelType === 'PETROL' ? 'PETROL' : data.fuelType);
+      meta.append('condition', data.condition);
+      meta.append('transmission', data.transmission);
+      if (data.engine) meta.append('engine', data.engine);
+      if (data.exteriorColor) meta.append('exteriorColor', data.exteriorColor);
+      meta.append('mileage', String(data.mileage));
+      meta.append('description', data.description);
+      if (Array.isArray(data.features)) meta.append('features', JSON.stringify(data.features));
+      if (data.dealershipId) meta.append('dealershipId', String(data.dealershipId));
+      if (authUser.cognitoInfo.userId) meta.append('employeeId', authUser.cognitoInfo.userId);
+      meta.append('status', data.status);
 
-      
-      const carData = {
-        ...data,
-        employeeId: authUser.cognitoInfo.userId, 
-        features: Array.isArray(data.features) ? data.features : [],
-        photoUrls: [], 
-      };
-
-      
       const session = await fetchAuthSession();
       const idToken = session.tokens?.idToken?.toString();
-      
-      
-      const createResponse = await fetch('/api/vehicles', { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(carData),
-      });
-      
-      if (!createResponse.ok) {
-        const errorData = await createResponse.json();
-        console.error('Error creating car:', errorData);
-        throw new Error(errorData.message || 'Failed to create car');
-      }
-      
-      const carResponse = await createResponse.json();
-      console.log("Car created successfully:", carResponse);
+      if (!idToken) throw new Error('Auth token missing');
 
-      
-      if (photoFiles.length > 0) {
-        console.log(`Uploading ${photoFiles.length} photos for car ID ${carResponse.id}`);
-        const uploadedPhotos = [];
-        let failedUploads = 0;
-        
-        for (const file of photoFiles) {
+      toast.message('Creating car...');
+      const createResp = await fetch('/api/cars', { method:'POST', headers: { 'Authorization': `Bearer ${idToken}` }, body: meta });
+      if (!createResp.ok) {
+        const raw = await createResp.text();
+        let message = raw;
+        try { const parsed = JSON.parse(raw); message = parsed.message || parsed.error || message; } catch {}
+        throw new Error(message);
+      }
+      const createdCar = await createResp.json();
+      toast.dismiss();
+      toast.success('Car created. Uploading photos...');
+
+      // Sequential photo uploads with progress feedback
+      if (photoFiles.length) {
+        let ok = 0; let fail = 0; const total = photoFiles.length;
+        toast.message(`Uploading 0/${total} photos...`);
+        for (let i=0;i<photoFiles.length;i++) {
+          const f = photoFiles[i];
+          const fdPhoto = new FormData(); fdPhoto.append('photo', f);
           try {
-            const photoFormData = new FormData();
-            photoFormData.append('photo', file);
-            photoFormData.append('carId', carResponse.id.toString()); 
-            
-            const uploadResponse = await fetch(`/api/vehicles/${carResponse.id}/photos`, { 
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${idToken}`,
-              },
-              body: photoFormData,
-            });
-            
-            if (!uploadResponse.ok) {
-              const errorData = await uploadResponse.json();
-              console.error(`Error uploading photo ${file.name}:`, errorData);
-              failedUploads++;
-              continue;
-            }
-            
-            const photoData = await uploadResponse.json();
-            console.log(`Successfully uploaded photo ${file.name}:`, photoData);
-            uploadedPhotos.push(photoData.photoUrl);
-          } catch (error) {
-            console.error(`Error uploading photo ${file.name}:`, error);
-            failedUploads++;
-          }
+            const r = await fetch(`/api/cars/${createdCar.id}/photos`, { method:'POST', headers: { 'Authorization': `Bearer ${idToken}` }, body: fdPhoto });
+            if (r.ok) ok++; else fail++;
+          } catch { fail++; }
+          toast.message(`Uploading ${i+1}/${total} photos...`, { description: `${ok} ok / ${fail} failed` });
         }
-        
-        console.log(`Uploaded ${uploadedPhotos.length} photos. Failed: ${failedUploads}`);
-        if (failedUploads > 0) {
-          toast.error(`Failed to upload ${failedUploads} photo(s)`);
-        }
+        toast.dismiss();
+        if (fail === 0) toast.success(`Car "${data.make} ${data.model}" created with ${ok} photos.`);
+        else if (ok === 0) toast.error('Car created but all photo uploads failed. Edit later to add images.');
+        else toast.warning(`${ok} photos uploaded, ${fail} failed. You can add missing ones in edit.` as any);
+      } else {
+        toast.success(`Car "${data.make} ${data.model}" created successfully (no photos).`);
       }
 
-      
-      form.reset();
-      setUploadedFiles([]);
-
-      
-      router.push("/employees/inventory"); 
-
+      form.reset(); setUploadedFiles([]);
+      router.push('/employees/inventory');
       
       toast.success(
         `Car "${data.make} ${data.model}" created successfully`,
