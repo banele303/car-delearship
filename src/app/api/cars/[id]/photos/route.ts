@@ -28,8 +28,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Fetch existing car
-    const car = await prisma.car.findUnique({ where: { id } });
-    if (!car) return NextResponse.json({ message: 'Car not found' }, { status: 404 });
+  let car = await prisma.car.findUnique({ where: { id } });
+  if (!car) return NextResponse.json({ message: 'Car not found' }, { status: 404 });
 
     // (Optional) enforce cumulative limit against existing + new file
     if (CAR_UPLOAD_TOTAL_MAX_MB > 0) {
@@ -43,12 +43,40 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ message: 'Failed to upload to storage', error: e?.message }, { status: 500 });
     }
 
-    const updated = await prisma.car.update({
-      where: { id },
-      data: { photoUrls: [...car.photoUrls, url] },
-      select: { id: true, photoUrls: true }
-    });
-    return NextResponse.json({ carId: updated.id, url, count: updated.photoUrls.length });
+    // Optimistic concurrency retry loop to avoid lost updates when multiple uploads happen at once
+    const MAX_RETRIES = 5;
+    let finalPhotoUrls: string[] = [];
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const currentList = car.photoUrls || [];
+      // Skip if already present (idempotence)
+      if (currentList.includes(url)) {
+        finalPhotoUrls = currentList;
+        break;
+      }
+      const nextList = [...currentList, url];
+      // Use updateMany with updatedAt match (optimistic lock)
+      const updatedAt = car.updatedAt;
+      const updateResult = await prisma.car.updateMany({
+        where: { id, updatedAt },
+        data: { photoUrls: nextList }
+      });
+      if (updateResult.count === 1) {
+        // Success
+        finalPhotoUrls = nextList;
+        break;
+      }
+      // Another concurrent update occurred; refetch and retry
+      car = await prisma.car.findUnique({ where: { id } }) as any;
+      if (!car) return NextResponse.json({ message: 'Car disappeared during upload' }, { status: 404 });
+      if (attempt === MAX_RETRIES - 1) {
+        console.warn('[CAR PHOTO UPLOAD] Max retries reached; performing last-chance merge');
+        const merged = new Set<string>([...car.photoUrls, url]);
+        const forced = await prisma.car.update({ where: { id }, data: { photoUrls: Array.from(merged) }, select: { id: true, photoUrls: true } });
+        finalPhotoUrls = forced.photoUrls;
+        return NextResponse.json({ carId: forced.id, url, count: forced.photoUrls.length, retries: attempt + 1, forced: true });
+      }
+    }
+    return NextResponse.json({ carId: car.id, url, count: finalPhotoUrls.length });
   } catch (err: any) {
     console.error('[CAR PHOTO UPLOAD ERROR]', err);
     return NextResponse.json({ message: 'Photo upload failed', error: err?.message }, { status: 500 });
