@@ -560,7 +560,6 @@ export default function EditCarPage({ params }: PageProps) {
                 />
               </div>
             </div>
-            <p className="text-xs text-slate-500 -mt-2">VIN auto-generated: <span className="font-mono">{car?.vin}</span></p>
 
             {/* Extras / Features */}
             <div className="space-y-3">

@@ -234,9 +234,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       finalPhotos = [...keptExisting, ...uploadedNew];
     }
     data.photoUrls = finalPhotos;
-    // Enum migration: map legacy GASOLINE or interim FUEL to PETROL
-    if (data.fuelType === 'GASOLINE' || data.fuelType === 'FUEL') {
-      data.fuelType = 'PETROL';
+    // ENUM COMPAT: Database enum currently does NOT include PETROL yet (only legacy GASOLINE).
+    // UI uses PETROL. Convert outbound (write) PETROL -> GASOLINE so Postgres accepts it.
+    // When migration adding PETROL is applied, remove this block (and inverse mapping in create route) and keep value as-is.
+    if (data.fuelType === 'PETROL') {
+      data.fuelType = 'GASOLINE';
+    } else if (data.fuelType === 'FUEL') { // very old interim token
+      data.fuelType = 'GASOLINE';
     }
 
     const updatedCar = await prisma.car.update({
