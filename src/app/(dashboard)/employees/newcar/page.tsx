@@ -170,6 +170,35 @@ const NewCar = () => {
   const { data: authUser } = useGetAuthUserQuery(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]); 
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  const moveFile = (from: number, to: number) => {
+    setUploadedFiles(prev => {
+      if (to < 0 || to >= prev.length) return prev;
+      const copy = [...prev];
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy;
+    });
+  };
+
+  const handleDragStart = (index: number) => (e: React.DragEvent) => {
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDragOver = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === index) return;
+    // Provide visual reorder while dragging (hover swap)
+    setUploadedFiles(prev => {
+      const copy = [...prev];
+      const [item] = copy.splice(dragIndex, 1);
+      copy.splice(index, 0, item);
+      return copy;
+    });
+    setDragIndex(index);
+  };
+  const handleDragEnd = () => setDragIndex(null);
   const router = useRouter();
   
   
@@ -287,7 +316,8 @@ const NewCar = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       const filesArray = Array.from(e.target.files);
-      setUploadedFiles(filesArray);
+      // Append new files to existing (avoid losing existing order)
+      setUploadedFiles(prev => [...prev, ...filesArray]);
     }
   };
 
@@ -327,13 +357,14 @@ const NewCar = () => {
       }
 
       
-      let photoFiles: File[] = [];
-      if (data.photoUrls) {
+      // Use reordered uploadedFiles state as single source of truth for photo order
+      let photoFiles: File[] = uploadedFiles.length ? [...uploadedFiles] : [];
+      if (!photoFiles.length && data.photoUrls) {
         const files = data.photoUrls as unknown as FileList;
-        if (files && files.length) {
-          photoFiles = Array.from(files);
-          console.log(`Extracted ${photoFiles.length} photo files`);
-        }
+        if (files && files.length) photoFiles = Array.from(files);
+      }
+      if (photoFiles.length) {
+        console.log('[CAR_CREATE] Using photo order:', photoFiles.map(f=>f.name));
       }
 
       
@@ -748,23 +779,40 @@ const NewCar = () => {
                     
                     {uploadedFiles.length > 0 && (
                       <div className="mt-4">
-                        <p className="text-sm text-gray-400 mb-2">Selected car files ({uploadedFiles.length}):</p>
+                        <p className="text-sm text-gray-400 mb-2 flex items-center justify-between">Selected car images ({uploadedFiles.length}): <span className="text-xs text-blue-400">Drag to reorder or use arrows</span></p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                          {uploadedFiles.map((file, index) => (
-                            <div
-                              key={index}
-                              className="relative bg-[#0B1120] rounded-md p-1 h-20 flex items-center justify-center overflow-hidden"
-                            >
-                              <Image
-                                src={URL.createObjectURL(file)} 
-                                alt={`Preview ${index}`}
-                                width={300}
-                                height={200}
-                                className="w-full h-full object-cover rounded-lg"
-                              />
-                            </div>
-                          ))}
+                          {uploadedFiles.map((file, index) => {
+                            const objectUrl = URL.createObjectURL(file);
+                            return (
+                              <div
+                                key={index}
+                                className={`group relative bg-[#0B1120] ring-1 ring-[#1E2A45] rounded-md h-24 flex items-center justify-center overflow-hidden shadow-sm ${dragIndex===index? 'outline outline-2 outline-blue-500' : ''}`}
+                                draggable
+                                onDragStart={handleDragStart(index)}
+                                onDragOver={handleDragOver(index)}
+                                onDragEnd={handleDragEnd}
+                              >
+                                <Image
+                                  src={objectUrl}
+                                  alt={`Preview ${index}`}
+                                  width={320}
+                                  height={240}
+                                  className="w-full h-full object-cover rounded-md pointer-events-none select-none"
+                                  onLoad={() => URL.revokeObjectURL(objectUrl)}
+                                />
+                                <div className="absolute top-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                                  <button type="button" aria-label="Move up" onClick={() => moveFile(index, index-1)} disabled={index===0} className="px-1.5 py-0.5 rounded bg-[#0B1120]/70 text-xs text-gray-200 hover:bg-blue-600 disabled:opacity-40">↑</button>
+                                  <button type="button" aria-label="Move down" onClick={() => moveFile(index, index+1)} disabled={index===uploadedFiles.length-1} className="px-1.5 py-0.5 rounded bg-[#0B1120]/70 text-xs text-gray-200 hover:bg-blue-600 disabled:opacity-40">↓</button>
+                                </div>
+                                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1.5 text-[10px] text-gray-200 flex items-center justify-between">
+                                  <span className="truncate max-w-[70%]" title={file.name}>{index+1}. {file.name}</span>
+                                  <button type="button" aria-label="Remove image" onClick={() => setUploadedFiles(prev => prev.filter((_,i)=>i!==index))} className="text-red-400 hover:text-red-300 font-semibold">✕</button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
+                        <p className="mt-2 text-xs text-gray-500">First image becomes the primary display image.</p>
                       </div>
                     )}
                   </div>

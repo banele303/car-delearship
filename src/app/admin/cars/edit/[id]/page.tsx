@@ -289,46 +289,76 @@ export default function EditCarPage({ params }: PageProps) {
     setIsLoading(true);
 
     try {
-      const submitFormData = new FormData();
-      
-  Object.entries(formData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          submitFormData.append(key, value.toString());
-        }
-      });
-  submitFormData.append('features', JSON.stringify(selectedFeatures));
-  submitFormData.set('featured', formData.featured ? 'true' : 'false');
-
-      const keptExisting = items.filter(i => i.source==='existing' && !removedExisting.has(i.url)).map(i => i.url);
-      submitFormData.append('photoUrls', JSON.stringify(keptExisting));
-      const order: string[] = [];
-      let newIdx=0; const newFiles: File[]=[];
-      items.forEach(i => {
-        if (i.source==='existing' && !removedExisting.has(i.url)) order.push(i.url);
-        else if (i.source==='new') { order.push(`__new_${newIdx}__`); if (i.file) newFiles.push(i.file); newIdx++; }
-      });
-      submitFormData.append('photoOrder', JSON.stringify(order));
-      newFiles.forEach(f => submitFormData.append('photos', f));
-
+      // Phase 1: Upload new images individually (like create flow) to avoid huge multipart body
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
-      
       if (!token) {
-        toast.error("Authentication required. Please log in again.");
+        toast.error('Authentication required. Please log in again.');
         return;
       }
 
-      const response = await fetch(`/api/cars/${carId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: submitFormData,
-      });
+      // Determine intended final order (using current items array order)
+      const intendedOrder = [...items];
+      const newItemEntries = intendedOrder.filter(i => i.source === 'new');
+      const existingItemEntries = intendedOrder.filter(i => i.source === 'existing' && !removedExisting.has(i.url));
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update car');
+      // Map to hold uploaded URL for each new file (key by temporary id)
+      const uploadedUrlMap = new Map<string, string>();
+
+      // Upload new images sequentially in UI order for predictable ordering
+      for (const entry of newItemEntries) {
+        if (!entry.file) continue;
+        const fd = new FormData();
+        fd.append('photo', entry.file);
+        try {
+          const uploadResp = await fetch(`/api/cars/${carId}/photos`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd,
+          });
+          if (!uploadResp.ok) {
+            let msg = 'Failed to upload image';
+            try { const j = await uploadResp.json(); msg = j.message || msg; } catch { try { const t = await uploadResp.text(); if (t) msg = t.slice(0,160); } catch {} }
+            throw new Error(msg);
+          }
+          const payload = await uploadResp.json();
+          if (payload?.url) uploadedUrlMap.set(entry.id, payload.url);
+        } catch (err:any) {
+          console.error('[EDIT_CAR][UPLOAD_ERROR]', err);
+          toast.error(err.message || 'Image upload failed');
+          throw err; // abort entire submit
+        }
+      }
+
+      // Build final ordered URL list (existing kept + newly uploaded) in the intended order
+      const finalOrderedUrls: string[] = [];
+      for (const entry of intendedOrder) {
+        if (entry.source === 'existing') {
+          if (!removedExisting.has(entry.url)) finalOrderedUrls.push(entry.url);
+        } else if (entry.source === 'new') {
+          const remoteUrl = uploadedUrlMap.get(entry.id);
+            if (remoteUrl) finalOrderedUrls.push(remoteUrl);
+        }
+      }
+
+      // Phase 2: Send metadata & ordering update (no photos payload now)
+      const metaForm = new FormData();
+      Object.entries(formData).forEach(([key,value]) => { if (value !== undefined && value !== null) metaForm.append(key, value.toString()); });
+      metaForm.append('features', JSON.stringify(selectedFeatures));
+      metaForm.set('featured', formData.featured ? 'true' : 'false');
+      metaForm.append('photoUrls', JSON.stringify(finalOrderedUrls)); // ensures deletions processed
+      metaForm.append('photoOrder', JSON.stringify(finalOrderedUrls)); // ensures ordering applied
+
+      const metaResp = await fetch(`/api/cars/${carId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: metaForm,
+      });
+      if (!metaResp.ok) {
+        let message = 'Failed to update car';
+        try { const j = await metaResp.json(); message = j.message || message; }
+        catch { try { const t = await metaResp.text(); if (t) message = t.slice(0,300); } catch {} }
+        throw new Error(message);
       }
 
       toast.success('Car updated successfully!');
