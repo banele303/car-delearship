@@ -375,7 +375,8 @@ export default function EditCarPage({ params }: PageProps) {
     }
   };
 
-  if (!authInitialized || isLoading) {
+  // Show full skeleton only during initial auth/car fetch (not during submit update)
+  if (!authInitialized || (!car && isLoading)) {
     return <FormSkeleton />;
   }
 

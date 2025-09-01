@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Phone, Mail, MapPin, Send } from "lucide-react";
+import InquiryForm from '@/components/inquiry/InquiryForm';
 import { motion } from "framer-motion";
 // FooterSection import removed (using global/site footer only)
 
@@ -183,120 +184,7 @@ export default function ContactUsPage() {
           <div className="bg-white rounded-2xl shadow-lg p-8 md:p-10">
             <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-8">Send Us a Message</h2>
             
-            {submitted ? (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-medium text-green-800 mb-2">Message Sent!</h3>
-                <p className="text-green-700">Thank you for contacting us. We&apos;ll get back to you as soon as possible.</p>
-                <Button 
-                  className="mt-6 bg-green-600 hover:bg-green-700"
-                  onClick={() => setSubmitted(false)}
-                >
-                  Send Another Message
-                </Button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label htmlFor="name" className="block text-sm font-medium text-slate-700">
-                      Full Name
-                    </label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                      placeholder="John Doe"
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-                      Email Address
-                    </label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                      placeholder="john@example.com"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label htmlFor="phone" className="block text-sm font-medium text-slate-700">
-                      Phone Number
-                    </label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      placeholder="+27 68 072 0424"
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="subject" className="block text-sm font-medium text-slate-700">
-                      Subject
-                    </label>
-                    <Input
-                      id="subject"
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                      placeholder="Inquiry about a car, test drive, financing..." 
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="message" className="block text-sm font-medium text-slate-700">
-                    Message
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    required
-                    rows={5}
-                    placeholder="Please provide details about your inquiry..."
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  />
-                </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>Processing...</>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      <span>Send Message</span>
-                    </>
-                  )}
-                </Button>
-              </form>
-            )}
+            <InquiryForm className="mt-2" />
           </div>
         </div>
       </section>
