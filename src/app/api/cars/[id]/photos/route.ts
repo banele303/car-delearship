@@ -7,7 +7,8 @@ import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB } from '@/config/uplo
 // POST /api/cars/:id/photos  (single photo per request)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const authResult = await verifyAuth(req, ['SALES_MANAGER', 'ADMIN']);
+  // Broaden allowed roles so standard employees can upload photos
+  const authResult = await verifyAuth(req, ['SALES_MANAGER', 'ADMIN', 'EMPLOYEE', 'SALES_REP']);
     if (!authResult.isAuthenticated) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }

@@ -171,6 +171,8 @@ const NewCar = () => {
   const [submitting, setSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]); 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [photoProgress, setPhotoProgress] = useState<{total:number;completed:number;success:number;failed:number;inFlight:number}>({ total:0, completed:0, success:0, failed:0, inFlight:0 });
 
   const moveFile = (from: number, to: number) => {
     setUploadedFiles(prev => {
@@ -395,25 +397,77 @@ const NewCar = () => {
       toast.dismiss();
       toast.success('Car created. Uploading photos...');
 
-      // Sequential photo uploads with progress feedback
+      // Concurrent photo uploads with retries & progress
       if (photoFiles.length) {
-        let ok = 0; let fail = 0; const total = photoFiles.length;
-        toast.message(`Uploading 0/${total} photos...`);
-        for (let i=0;i<photoFiles.length;i++) {
-          const f = photoFiles[i];
-          const fdPhoto = new FormData(); fdPhoto.append('photo', f);
-          try {
-            const r = await fetch(`/api/cars/${createdCar.id}/photos`, { method:'POST', headers: { 'Authorization': `Bearer ${idToken}` }, body: fdPhoto });
-            if (r.ok) ok++; else fail++;
-          } catch { fail++; }
-          toast.message(`Uploading ${i+1}/${total} photos...`, { description: `${ok} ok / ${fail} failed` });
-        }
+        const CONCURRENCY = 4; // upload in batches of 4
+        const RETRIES = 2; // retry per file
+        setUploadingPhotos(true);
+        setPhotoProgress({ total: photoFiles.length, completed:0, success:0, failed:0, inFlight:0 });
+
+        const results: {file: File; success: boolean}[] = [];
+        let active = 0; let index = 0; let completed = 0; let success = 0; let failed = 0;
+
+        const uploadOne = async (file: File): Promise<boolean> => {
+          for (let attempt=0; attempt<=RETRIES; attempt++) {
+            try {
+              const fdPhoto = new FormData(); fdPhoto.append('photo', file);
+              const r = await fetch(`/api/cars/${createdCar.id}/photos`, { method:'POST', headers: { 'Authorization': `Bearer ${idToken}` }, body: fdPhoto });
+              if (r.ok) return true;
+              // read error (optional)
+              try { await r.json(); } catch {}
+            } catch {}
+          }
+          return false;
+        };
+
+        await new Promise<void>((resolve) => {
+          const launchNext = () => {
+            if (index >= photoFiles.length && active === 0) { resolve(); return; }
+            while (active < CONCURRENCY && index < photoFiles.length) {
+              const file = photoFiles[index++];
+              active++;
+              setPhotoProgress(p=>({ ...p, inFlight: p.inFlight + 1 }));
+              uploadOne(file).then(ok => {
+                active--;
+                completed++; if (ok) success++; else failed++;
+                results.push({ file, success: ok });
+                setPhotoProgress(p=>({ ...p, completed, success, failed, inFlight: Math.max(0, p.inFlight-1) }));
+                toast.message(`Uploading ${completed}/${photoFiles.length} photos...`, { description: `${success} ok / ${failed} failed` });
+                launchNext();
+              });
+            }
+          };
+          launchNext();
+        });
+        setUploadingPhotos(false);
         toast.dismiss();
-        if (fail === 0) toast.success(`Car "${data.make} ${data.model}" created with ${ok} photos.`);
-        else if (ok === 0) toast.error('Car created but all photo uploads failed. Edit later to add images.');
-        else toast.warning(`${ok} photos uploaded, ${fail} failed. You can add missing ones in edit.` as any);
+
+        // Verify by fetching car (ensure DB has all)
+        let finalCount = 0; let verified = false; let attempts = 0;
+        while (!verified && attempts < 3) {
+          attempts++;
+            try {
+              const verifyResp = await fetch(`/api/cars/${createdCar.id}`);
+              if (verifyResp.ok) {
+                const verifyData = await verifyResp.json();
+                if (Array.isArray(verifyData.photoUrls)) {
+                  finalCount = verifyData.photoUrls.length;
+                  verified = true;
+                }
+              }
+            } catch {}
+            if (!verified) await new Promise(r=>setTimeout(r, 500*attempts));
+        }
+
+        if (failed === 0) {
+          toast.success(`Car \"${data.make} ${data.model}\" created with all ${success} photos${verified?` (verified ${finalCount})`:''}.`);
+        } else if (success === 0) {
+          toast.error('Car created but all photo uploads failed. Edit later to add images.');
+        } else {
+          toast.warning(`${success} photos uploaded, ${failed} failed.${verified?` Server shows ${finalCount} stored.`:''} You can retry via edit.` as any);
+        }
       } else {
-        toast.success(`Car "${data.make} ${data.model}" created successfully (no photos).`);
+        toast.success(`Car \"${data.make} ${data.model}\" created successfully (no photos).`);
       }
 
       form.reset(); setUploadedFiles([]);
@@ -749,7 +803,17 @@ const NewCar = () => {
 
                     
                     {uploadedFiles.length > 0 && (
-                      <div className="mt-4">
+                      <div className="mt-4 relative">
+                        {uploadingPhotos && (
+                          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/70 rounded-md">
+                            <Loader2 className="h-8 w-8 animate-spin text-blue-400 mb-3" />
+                            <p className="text-xs text-gray-200 mb-1">Uploading photos...</p>
+                            <div className="w-40 h-2 bg-gray-700 rounded overflow-hidden">
+                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${(photoProgress.completed / Math.max(1, photoProgress.total))*100}%` }} />
+                            </div>
+                            <p className="mt-1 text-[10px] text-gray-400">{photoProgress.completed}/{photoProgress.total} · {photoProgress.success} ok · {photoProgress.failed} failed</p>
+                          </div>
+                        )}
                         <p className="text-sm text-gray-400 mb-2 flex items-center justify-between">Selected car images ({uploadedFiles.length}): <span className="text-xs text-blue-400">Drag to reorder or use arrows</span></p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                           {uploadedFiles.map((file, index) => {
@@ -757,11 +821,11 @@ const NewCar = () => {
                             return (
                               <div
                                 key={index}
-                                className={`group relative bg-[#0B1120] ring-1 ring-[#1E2A45] rounded-md h-24 flex items-center justify-center overflow-hidden shadow-sm ${dragIndex===index? 'outline outline-2 outline-blue-500' : ''}`}
-                                draggable
-                                onDragStart={handleDragStart(index)}
-                                onDragOver={handleDragOver(index)}
-                                onDragEnd={handleDragEnd}
+                                className={`group relative bg-[#0B1120] ring-1 ring-[#1E2A45] rounded-md h-24 flex items-center justify-center overflow-hidden shadow-sm ${dragIndex===index? 'outline outline-2 outline-blue-500' : ''} ${uploadingPhotos? 'opacity-50 pointer-events-none' : ''}`}
+                                draggable={!uploadingPhotos}
+                                onDragStart={!uploadingPhotos ? handleDragStart(index) : undefined}
+                                onDragOver={!uploadingPhotos ? handleDragOver(index) : undefined}
+                                onDragEnd={!uploadingPhotos ? handleDragEnd : undefined}
                               >
                                 <Image
                                   src={objectUrl}
@@ -772,12 +836,12 @@ const NewCar = () => {
                                   onLoad={() => URL.revokeObjectURL(objectUrl)}
                                 />
                                 <div className="absolute top-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                                  <button type="button" aria-label="Move up" onClick={() => moveFile(index, index-1)} disabled={index===0} className="px-1.5 py-0.5 rounded bg-[#0B1120]/70 text-xs text-gray-200 hover:bg-blue-600 disabled:opacity-40">↑</button>
-                                  <button type="button" aria-label="Move down" onClick={() => moveFile(index, index+1)} disabled={index===uploadedFiles.length-1} className="px-1.5 py-0.5 rounded bg-[#0B1120]/70 text-xs text-gray-200 hover:bg-blue-600 disabled:opacity-40">↓</button>
+                                  <button type="button" aria-label="Move up" onClick={() => moveFile(index, index-1)} disabled={index===0 || uploadingPhotos} className="px-1.5 py-0.5 rounded bg-[#0B1120]/70 text-xs text-gray-200 hover:bg-blue-600 disabled:opacity-40">↑</button>
+                                  <button type="button" aria-label="Move down" onClick={() => moveFile(index, index+1)} disabled={index===uploadedFiles.length-1 || uploadingPhotos} className="px-1.5 py-0.5 rounded bg-[#0B1120]/70 text-xs text-gray-200 hover:bg-blue-600 disabled:opacity-40">↓</button>
                                 </div>
                                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1.5 text-[10px] text-gray-200 flex items-center justify-between">
                                   <span className="truncate max-w-[70%]" title={file.name}>{index+1}. {file.name}</span>
-                                  <button type="button" aria-label="Remove image" onClick={() => setUploadedFiles(prev => prev.filter((_,i)=>i!==index))} className="text-red-400 hover:text-red-300 font-semibold">✕</button>
+                                  <button type="button" aria-label="Remove image" disabled={uploadingPhotos} onClick={() => setUploadedFiles(prev => prev.filter((_,i)=>i!==index))} className="text-red-400 hover:text-red-300 font-semibold disabled:opacity-40">✕</button>
                                 </div>
                               </div>
                             );
