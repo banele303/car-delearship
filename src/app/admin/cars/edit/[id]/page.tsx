@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB } from "@/config/uploadLimits";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, XCircle, Car } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -247,7 +248,9 @@ export default function EditCarPage({ params }: PageProps) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const MAX_PHOTOS = 25;
+  const MAX_PHOTOS = 25; // unified cap
+  const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
+  const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB; // warn only
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const currentCount = items.filter(i => i.source==='existing' && !removedExisting.has(i.url)).length + items.filter(i => i.source==='new').length;
@@ -255,8 +258,24 @@ export default function EditCarPage({ params }: PageProps) {
     const remaining = MAX_PHOTOS - currentCount;
     if (remaining <= 0) { toast.error(`Maximum ${MAX_PHOTOS} images reached.`); e.target.value=''; return; }
     const allowed = files.slice(0, remaining);
+    // Size validation (single file)
+    for (const f of allowed) {
+      const mb = f.size / (1024*1024);
+      if (mb > MAX_SINGLE_MB) {
+        toast.error(`${f.name} ${(mb).toFixed(1)}MB > ${MAX_SINGLE_MB}MB limit – skipped`);
+        return; // abort all to let user pick smaller images
+      }
+    }
     if (files.length > allowed.length) toast.error(`Only ${allowed.length} added (cap ${MAX_PHOTOS}).`); else toast.success(`${allowed.length} added.`);
-    const newItems = allowed.map((file, idx) => ({ id: `new-${Date.now()}-${idx}-${file.name}`, source:'new' as const, url: URL.createObjectURL(file), file }));
+    let newItems = allowed.map((file, idx) => ({ id: `new-${Date.now()}-${idx}-${file.name}`, source:'new' as const, url: URL.createObjectURL(file), file }));
+    // Warn if total size high (no trimming) so user keeps all 25 if desired.
+    if (MAX_TOTAL_MB > 0) {
+      const totalBytes = [...items.filter(i=>i.source==='existing' && !removedExisting.has(i.url)), ...newItems].reduce((sum,i)=> sum + (i.file?.size || 0), 0);
+      const totalMb = totalBytes / (1024*1024);
+      if (totalMb > MAX_TOTAL_MB) {
+        toast.warning(`Total selected ≈${totalMb.toFixed(1)}MB exceeds recommended ${MAX_TOTAL_MB}MB. Uploads may be slower.` as any);
+      }
+    }
     setItems(prev => [...prev, ...newItems]);
     e.target.value='';
   };

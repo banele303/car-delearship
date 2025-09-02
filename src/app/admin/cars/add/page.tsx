@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Plus, XCircle, Car } from "lucide-react";
 import { concurrentUpload } from "@/lib/concurrentUploads";
+import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB } from "@/config/uploadLimits";
 import { configureAdminAuth, fetchAuthSession } from "../../../admin/adminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,8 +98,8 @@ export default function AddCarPage() {
     setNewFeature("");
   };
 
-  // Central photo cap (adjust here if business rules change)
-  const MAX_PHOTOS = 25; // Updated cap per request
+  // Central photo cap for admin add flow (explicitly 25 per business request)
+  const MAX_PHOTOS = 25; // Do not raise without confirming UI layout & performance
 
   
   useEffect(() => {
@@ -232,11 +233,12 @@ const handleSelectChange = (name: keyof CarFormData, value: string): void => {
 };
 
   
-// Client-side limits (mirrors server; can be relaxed via env vars exposed if needed).
-// Set NEXT_PUBLIC_CAR_UPLOAD_TOTAL_MAX_MB=0 to disable total size enforcement client-side.
-const MAX_SINGLE_FILE_MB = Number(process.env.NEXT_PUBLIC_CAR_UPLOAD_SINGLE_MAX_MB || 15);
-const rawClientTotal = process.env.NEXT_PUBLIC_CAR_UPLOAD_TOTAL_MAX_MB;
-const MAX_TOTAL_MB = rawClientTotal === '0' ? 0 : Number(rawClientTotal || 120);
+// Client-side limits now source from centralized config so they stay in sync with API route.
+// We intentionally disable the aggregate size trimming (set effective total cap to server value or 0 to disable)
+// because users reported only 16 of 25 images surviving when large originals exceeded the previous 120MB soft cap.
+const MAX_SINGLE_FILE_MB = CAR_UPLOAD_SINGLE_MAX_MB; // matches server (currently 35MB)
+// Use server total cap; if you want to completely disable client total enforcement set this to 0.
+const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB; // currently 400MB (ample for 25 compressed images)
 
 const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
   if (!e.target.files) return;
@@ -276,23 +278,14 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     toast.error(`Photo cap ${MAX_PHOTOS}: trimmed ${rejected} excess.`);
   }
 
-  // Enforce total size limit only if enabled (>0)
+  // Previously we trimmed images when total size exceeded a low (120MB) client cap, which caused
+  // only ~16 images to remain for larger originals. We now only WARN and keep all selections up to MAX_PHOTOS.
   if (MAX_TOTAL_MB > 0) {
     const totalBytes = finalList.reduce((sum, f) => sum + f.size, 0);
     const totalMb = totalBytes / (1024 * 1024);
     if (totalMb > MAX_TOTAL_MB) {
-      // Trim from the end until under cap
-      const trimmed: File[] = [];
-      let running = 0;
-      for (const f of finalList) {
-        if ((running + f.size) / (1024 * 1024) > MAX_TOTAL_MB) {
-          break;
-        }
-        trimmed.push(f);
-        running += f.size;
-      }
-      toast.error(`Total size ${totalMb.toFixed(1)}MB > ${MAX_TOTAL_MB}MB. Keeping first ${trimmed.length} images.`);
-      finalList = trimmed;
+      toast.warning(`Total selected ≈${totalMb.toFixed(1)}MB exceeds recommended ${MAX_TOTAL_MB}MB. Uploads may be slower.` as any);
+      // No trimming: server will still enforce its hard limits; user explicitly wants all 25.
     }
   }
 
