@@ -818,19 +818,28 @@ export default function AdminCarsPage() {
 
       {/* Page Size Selector + Pagination */}
       <div className="flex flex-col md:flex-row md:items-center gap-4 mt-6">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-600 dark:text-slate-300">Rows per page:</span>
-          <Select value={String(carsPerPage)} onValueChange={(v) => { setCarsPerPage(parseInt(v,10)); setCurrentPage(1); }}>
-            <SelectTrigger className="w-24" aria-label="Rows per page">
-              {carsPerPage}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Showing {Math.min(endIndex, totalCars)} of {totalCars}</span>
+        <div className="flex flex-wrap items-center gap-3 rounded-md bg-slate-50 dark:bg-slate-800/40 px-3 py-2 border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Rows per page</span>
+            <Select value={String(carsPerPage)} onValueChange={(v) => { setCarsPerPage(parseInt(v,10)); setCurrentPage(1); }}>
+              <SelectTrigger className="h-8 w-20" aria-label="Rows per page">
+                {carsPerPage}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <span className="text-xs md:text-sm text-slate-600 dark:text-slate-300 font-medium tracking-wide">
+            {(() => {
+              if (totalCars === 0) return 'No items';
+              const from = totalCars === 0 ? 0 : startIndex + 1;
+              const to = Math.min(endIndex, totalCars);
+              return `Showing ${from} to ${to} of ${totalCars} items`;
+            })()}
+          </span>
         </div>
         {totalCars > 0 && (
           <Pagination
