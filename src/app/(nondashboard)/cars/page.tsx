@@ -372,11 +372,6 @@ const CarsContent = () => {
           <p className="text-gray-600 dark:text-gray-400">
             Showing {filteredCars.length} of {carsData?.length || 0} vehicles
           </p>
-          <div className="flex gap-2">
-            <Badge variant="secondary">Premium Quality</Badge>
-            <Badge variant="secondary">Certified</Badge>
-            <Badge variant="secondary">Warranty Included</Badge>
-          </div>
         </div>
 
         

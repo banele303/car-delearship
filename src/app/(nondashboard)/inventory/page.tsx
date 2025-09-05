@@ -396,11 +396,6 @@ const InventoryContent = () => {
           <p className="text-gray-600 dark:text-gray-400">
             Showing {filteredCars.length} vehicle{filteredCars.length !== 1 ? 's' : ''}
           </p>
-          <div className="flex gap-2">
-            <Badge variant="secondary">Premium Quality</Badge>
-            <Badge variant="secondary">Certified</Badge>
-            <Badge variant="secondary">Warranty Included</Badge>
-          </div>
         </div>
 
         

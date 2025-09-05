@@ -246,6 +246,16 @@ export const generateFormPdf = (application: Application): void => {
     
     drawSectionHeader('PERSONAL DETAILS');
     
+    // Newly added identity fields moved out of ADDITIONAL INFORMATION
+    // Title & Initials (two column)
+    drawTwoColumnFields(
+      { label: 'Title', value: details.title || 'None' },
+      { label: 'Initials', value: details.initials || 'None' }
+    );
+
+    // ID Number (full width) – previously appeared incorrectly under Additional Information
+    drawFullWidthField('ID Number', details.idNumber || 'None');
+
     // Always show address
     drawFullWidthField('Address', details.address || 'None');
     
@@ -274,6 +284,9 @@ export const generateFormPdf = (application: Application): void => {
       { label: 'Employer Name', value: details.employerName || 'None' },
       { label: 'Job Title', value: details.jobTitle || 'None' }
     );
+
+  // Employment Years (moved out of ADDITIONAL INFORMATION)
+  drawFullWidthField('Employment Years', details.employmentYears || 'None');
 
     currentY += sectionSpacing;
 
@@ -318,6 +331,11 @@ export const generateFormPdf = (application: Application): void => {
         'filesBankStatements', 'filesDriversLicense', 'legalCapacity', 'filesProofOfResidence', 
         'marketingCommunicationConsent', 'creditRecordDeclaration', 'agreeTerms',
         'vehicleKM', 'vehicleCondition', 'vehicleTransmission', 'legalCapacityConfirm',
+  // Duplicate core personal/employment/financial fields now displayed in proper sections
+  'city','state','title','idNumber','jobTitle','postalCode','employmentStatus','monthlyIncomeGross',
+  'employerName','employmentYears','initials','address','housingStatus','monthlyIncomeNet','otherIncome','otherIncomeSource',
+  // Various file keys / payslips variants
+  'filesPayslips3Months','files_payslips_3_months','filesPayslips','payslips','files_payslips',
         // Additional file-related fields to exclude from ADDITIONAL INFORMATION
         'filesIdDoc', 'filesBankStatements', 'filesDriversLicense', 
         'filesProofOfResidence', 'files_id_doc', 'files_bank_statements',
