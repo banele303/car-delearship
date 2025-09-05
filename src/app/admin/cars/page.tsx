@@ -437,7 +437,7 @@ export default function AdminCarsPage() {
         
         <Skeleton className="h-12 w-full rounded-lg" />
         
-        <Card className="border-slate-200 dark:border-slate-700 shadow-md overflow-hidden">
+  <Card className="border-slate-200 dark:border-slate-700 shadow-md overflow-visible">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -733,8 +733,8 @@ export default function AdminCarsPage() {
                         {car.status || "AVAILABLE"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="relative">
-                      <div className="dropdown-container" style={{ position: 'relative' }}>
+                    <TableCell className="relative z-10">
+                      <div className="dropdown-container" style={{ position: 'relative', overflow: 'visible' }}>
                         <Button 
                           variant="ghost" 
                           className="h-8 w-8 p-0 hover:bg-transparent"
@@ -748,14 +748,9 @@ export default function AdminCarsPage() {
                         </Button>
                         
                         {openDropdownId === car.id && (
-                          <div 
-                            className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50"
-                            style={{
-                              position: 'absolute',
-                              top: '100%',
-                              right: 0,
-                              zIndex: 50,
-                            }}
+                          <div
+                            className="absolute right-0 mt-1 w-44 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black/5 border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in zoom-in"
+                            style={{ top: 'calc(100% + 4px)' }}
                           >
                             <div 
                               className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center"
@@ -817,7 +812,7 @@ export default function AdminCarsPage() {
       </Card>
 
       {/* Page Size Selector + Pagination */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4 mt-6">
+  <div className="flex flex-col md:flex-row md:items-center gap-4 mt-6 pb-4">
         <div className="flex flex-wrap items-center gap-3 rounded-md bg-slate-50 dark:bg-slate-800/40 px-3 py-2 border border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Rows per page</span>
@@ -853,55 +848,7 @@ export default function AdminCarsPage() {
       </div>
       
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-        <Card className="border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 hover:shadow-lg group">
-          <CardContent className="p-6 mx-3 rounded-md bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20 group-hover:from-blue-100 group-hover:to-blue-200 dark:group-hover:from-blue-900/30 dark:group-hover:to-blue-800/30 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Cars</p> 
-                <h3 className="text-2xl font-bold mt-1 text-blue-600 dark:text-blue-400">{cars?.length || 0}</h3> 
-              </div>
-              <div className="h-12 w-12 bg-blue-200 dark:bg-blue-800/50 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-transform duration-200">
-                <Car className="h-6 w-6 text-blue-600 dark:text-blue-400" /> 
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 hover:shadow-lg group">
-          <CardContent className="p-6 mx-3 rounded-md bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/20 group-hover:from-purple-100 group-hover:to-purple-200 dark:group-hover:from-purple-900/30 dark:group-hover:to-purple-800/30 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Employees</p> 
-                <h3 className="text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400">
-                  {cars ? new Set(cars.map(c => (c as any).employeeId || 'Unknown')).size : 0} 
-                </h3>
-              </div>
-              <div className="h-12 w-12 bg-purple-200 dark:bg-purple-800/50 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-transform duration-200">
-                <User className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 hover:shadow-lg group">
-          <CardContent className="p-6 mx-3 rounded-md bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20 group-hover:from-green-100 group-hover:to-green-200 dark:group-hover:from-green-900/30 dark:group-hover:to-green-800/30 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Price</p> 
-                <h3 className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
-                  {cars && cars.length > 0
-                    ? `R${(cars.reduce((sum, c) => sum + c.price, 0) / cars.length).toLocaleString()}` 
-                    : "R0"}
-                </h3>
-              </div>
-              <div className="h-12 w-12 bg-green-200 dark:bg-green-800/50 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-transform duration-200">
-                <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+  {/* Stats cards removed per request */}
 
       
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
