@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import {
   Search,
@@ -90,7 +90,14 @@ export default function AdminCarsPage() {
   const [sortBy, setSortBy] = useState('make');
   const [sortOrder, setSortOrder] = useState('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [carsPerPage] = useState(10);
+  const searchParams = useSearchParams();
+  const [carsPerPage, setCarsPerPage] = useState<number>(() => {
+    try {
+      const ps = searchParams?.get('pageSize');
+      const parsed = ps ? parseInt(ps, 10) : 10;
+      return [10,20,50].includes(parsed) ? parsed : 10;
+    } catch { return 10; }
+  });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
@@ -210,10 +217,25 @@ export default function AdminCarsPage() {
 
   // Pagination logic
   const totalCars = sortedCars.length;
-  const totalPages = Math.ceil(totalCars / carsPerPage);
+  const totalPages = Math.max(1, Math.ceil(totalCars / carsPerPage));
   const startIndex = (currentPage - 1) * carsPerPage;
   const endIndex = startIndex + carsPerPage;
   const paginatedCars = sortedCars.slice(startIndex, endIndex);
+
+  // Clamp current page if page size change reduces total pages
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1);
+  }, [carsPerPage, totalPages, currentPage]);
+
+  // Persist page size & page in URL (client-side only)
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('pageSize', String(carsPerPage));
+      url.searchParams.set('page', String(currentPage));
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
+  }, [carsPerPage, currentPage]);
 
   // Reset to first page when search/filter changes
   useEffect(() => {
@@ -794,16 +816,32 @@ export default function AdminCarsPage() {
         </div>
       </Card>
 
-      {/* Pagination */}
-      {totalCars > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalCars}
-          itemsPerPage={carsPerPage}
-          onPageChange={setCurrentPage}
-        />
-      )}
+      {/* Page Size Selector + Pagination */}
+      <div className="flex flex-col md:flex-row md:items-center gap-4 mt-6">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-600 dark:text-slate-300">Rows per page:</span>
+          <Select value={String(carsPerPage)} onValueChange={(v) => { setCarsPerPage(parseInt(v,10)); setCurrentPage(1); }}>
+            <SelectTrigger className="w-24" aria-label="Rows per page">
+              {carsPerPage}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Showing {Math.min(endIndex, totalCars)} of {totalCars}</span>
+        </div>
+        {totalCars > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalCars}
+            itemsPerPage={carsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
+      </div>
       
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">

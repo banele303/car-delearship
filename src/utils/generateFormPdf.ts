@@ -274,6 +274,57 @@ export const generateFormPdf = (application: Application): void => {
       { label: 'Housing Status', value: details.housingStatus || 'None' }
     );
 
+    // Integrate former "Additional Information" fields directly under PERSONAL DETAILS
+    if (details.extraData) {
+      const extraEntries = Object.entries(details.extraData);
+      const excludedKeys = new Set([
+        // Core identity/contact already rendered
+        'firstName','lastName','email','phone','dateOfBirth','title','initials','idNumber','address','city','state','postalCode','housingStatus',
+        // Employment / financial handled elsewhere
+        'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross','monthlyIncomeNet','otherIncome','otherIncomeSource',
+        // Vehicle / loan / system specific
+        'vehicleMake','vehicleModel','vehicleYear','cashPrice','loanAmount','termMonths','loanTermMonths','monthlyPayment','interestRate',
+        'team','Team','assignedTeam','salesTeam',
+        // Explicit removals per request
+        'hasTradeIn','tradeInDetails','has_trade_in','trade_in_details',
+        // File / consent / legal fields not to display here
+        'fileIdDoc','filesIdDoc','filesBankStatements','filesDriversLicense','filesProofOfResidence','files_id_doc','files_bank_statements','files_drivers_license','files_proof_of_residence',
+        'consentCheck','consentCreditCheck','marketingCommunicationConsent','creditRecordDeclaration','agreeTerms','legalCapacity','legalCapacityConfirm',
+        // Expense fields (separate section later)
+        'expenseRentBond','expenseRatesUtilities','expenseVehicleInstalments','expensePersonalLoans','expenseCreditCardRepayment','expenseFurniture','expenseClothing','expenseOverdraft','expenseInsurance','expenseTelephone','expenseTransport','expenseFoodEntertainment','expenseEducation','expenseMaintenance','expenseHousehold','expenseOther','totalMonthlyHouseholdExpenses'
+      ]);
+
+      const relevantEntries = extraEntries.filter(([key, value]) => {
+        if (value === undefined || value === null || value === '') return false;
+        if (excludedKeys.has(key)) return false;
+        // Exclude any annual income variants or keys containing 'annual'
+        if (/annual/i.test(key)) return false;
+        return true;
+      });
+
+      // Render inline (two-column pairs) without a separate section header
+      for (let i = 0; i < relevantEntries.length; i += 2) {
+        const leftEntry = relevantEntries[i];
+        const rightEntry = relevantEntries[i + 1];
+
+        const formatLabel = (raw: string) => raw.replace(/([A-Z])/g,' $1').replace(/_/g,' ').replace(/\s+/g,' ').trim();
+        const formatValue = (k: string, v: any) => {
+          if (typeof v === 'object') v = JSON.stringify(v);
+          const isMoney = /payment|income|amount|price|cost/i.test(k) && !isNaN(Number(v));
+          return isMoney ? formatCurrency(Number(v)) : String(v);
+        };
+
+        if (rightEntry) {
+          drawTwoColumnFields(
+            { label: formatLabel(leftEntry[0]), value: formatValue(leftEntry[0], leftEntry[1]) },
+            { label: formatLabel(rightEntry[0]), value: formatValue(rightEntry[0], rightEntry[1]) }
+          );
+        } else {
+          drawFullWidthField(formatLabel(leftEntry[0]), formatValue(leftEntry[0], leftEntry[1]));
+        }
+      }
+    }
+
     currentY += sectionSpacing;
 
     // Employment Information - always show
@@ -307,97 +358,10 @@ export const generateFormPdf = (application: Application): void => {
 
     currentY += sectionSpacing;
 
-    // Co-Applicant Information - always show
-    drawSectionHeader('CO-APPLICANT INFORMATION');
-    
-    // Always show co-applicant name
-    drawFullWidthField('Co-Applicant Name', details.coApplicantName || 'None');
-    
-    // Always show co-applicant income and relationship
-    drawTwoColumnFields(
-      { label: 'Co-Applicant Income', value: details.coApplicantIncome ? formatCurrency(details.coApplicantIncome) : 'None' },
-      { label: 'Relationship', value: details.coApplicantRelationship || 'None' }
-    );
+  // Co-Applicant section removed per request
+  // (Previously displayed Co-Applicant Name, Income, Relationship)
+  // Intentionally skipping sectionSpacing adjustment formerly tied to this block
 
-    currentY += sectionSpacing;
-
-    // Additional Information from extraData
-    if (details.extraData) {
-      const extraEntries = Object.entries(details.extraData);
-      const excludedKeys = new Set([
-        'firstName', 'lastName', 'email', 'phone', 'dateOfBirth', 
-        'vehicleMake', 'vehicleModel', 'vehicleYear', 'cashPrice', 
-        'loanAmount', 'termMonths', 'loanTermMonths', 'monthlyPayment', 'interestRate', 
-        'team', 'Team', 'assignedTeam', 'salesTeam',
-        // Remove these specific fields from PDF
-        'fileIdDoc', 'vehicleFuelType', 'vehicleType', 'consentCheck', 'consentCreditCheck', 
-        'filesBankStatements', 'filesDriversLicense', 'legalCapacity', 'filesProofOfResidence', 
-        'marketingCommunicationConsent', 'creditRecordDeclaration', 'agreeTerms',
-        'vehicleKM', 'vehicleCondition', 'vehicleTransmission', 'legalCapacityConfirm',
-  // Duplicate core personal/employment/financial fields now displayed in proper sections
-  'city','state','title','idNumber','jobTitle','postalCode','employmentStatus','monthlyIncomeGross',
-  'employerName','employmentYears','initials','address','housingStatus','monthlyIncomeNet','otherIncome','otherIncomeSource',
-  // Various file keys / payslips variants
-  'filesPayslips3Months','files_payslips_3_months','filesPayslips','payslips','files_payslips',
-        // Additional file-related fields to exclude from ADDITIONAL INFORMATION
-        'filesIdDoc', 'filesBankStatements', 'filesDriversLicense', 
-        'filesProofOfResidence', 'files_id_doc', 'files_bank_statements',
-        'files_drivers_license', 'files_proof_of_residence',
-        // Exclude all expense fields since they'll have their own section
-        'expenseRentBond', 'expenseRatesUtilities', 'expenseVehicleInstalments', 
-        'expensePersonalLoans', 'expenseCreditCardRepayment', 'expenseFurniture', 
-        'expenseClothing', 'expenseOverdraft', 'expenseInsurance', 'expenseTelephone', 
-        'expenseTransport', 'expenseFoodEntertainment', 'expenseEducation', 
-        'expenseMaintenance', 'expenseHousehold', 'expenseOther', 'totalMonthlyHouseholdExpenses'
-      ]);
-      
-      const relevantEntries = extraEntries.filter(([key, value]) => 
-        value !== undefined && 
-        value !== null && 
-        value !== '' && 
-        !excludedKeys.has(key)
-      );
-
-      if (relevantEntries.length > 0) {
-        drawSectionHeader('ADDITIONAL INFORMATION');
-        
-        // Process entries in pairs for two-column layout
-        for (let i = 0; i < relevantEntries.length; i += 2) {
-          const leftEntry = relevantEntries[i];
-          const rightEntry = relevantEntries[i + 1];
-          
-          const leftLabel = leftEntry[0].replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-          let leftValue = typeof leftEntry[1] === 'object' ? JSON.stringify(leftEntry[1]) : String(leftEntry[1]);
-          
-          // Check if it's a monetary value
-          const isLeftMoney = /payment|income|amount|price|cost/i.test(leftEntry[0]) && !isNaN(Number(leftEntry[1]));
-          if (isLeftMoney) {
-            leftValue = formatCurrency(Number(leftEntry[1]));
-          }
-          
-          if (rightEntry) {
-            // Two column layout
-            const rightLabel = rightEntry[0].replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-            let rightValue = typeof rightEntry[1] === 'object' ? JSON.stringify(rightEntry[1]) : String(rightEntry[1]);
-            
-            const isRightMoney = /payment|income|amount|price|cost/i.test(rightEntry[0]) && !isNaN(Number(rightEntry[1]));
-            if (isRightMoney) {
-              rightValue = formatCurrency(Number(rightEntry[1]));
-            }
-            
-            drawTwoColumnFields(
-              { label: leftLabel, value: leftValue },
-              { label: rightLabel, value: rightValue }
-            );
-          } else {
-            // Single field for odd number of entries
-            drawFullWidthField(leftLabel, leftValue);
-          }
-        }
-        
-        currentY += sectionSpacing;
-      }
-    }
   }
 
   // Always show Monthly Household Expenses Section (moved outside details conditional)

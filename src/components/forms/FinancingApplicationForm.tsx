@@ -48,7 +48,8 @@ const schema = z.object({
   otherIncomeSource: z.string().optional(),
   creditScoreRange: z.string().optional(),
   creditScore: z.string().optional(),
-  annualIncome: z.string().optional(),
+  // Net Income now required
+  annualIncome: z.string().min(1, 'Net income required'),
   downPaymentAmount: z.string().optional(),
   // preferredContactMethod removed per request
   hasTradeIn: z.boolean().optional(),
@@ -184,7 +185,7 @@ const REQUIRED_FIELDS = new Set<keyof FinancingPublicForm>([
   // Next of kin - marked as required
   'nextOfKinName','nextOfKinRelationship','nextOfKinAddress','nextOfKinCell',
   // Employment - marked as required
-  'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross',
+  'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross','annualIncome',
   // Vehicle info - marked as required
   'vehicleCondition','cashPrice','vehicleMake','vehicleModel',
   // Essential declarations will be handled separately
@@ -214,6 +215,7 @@ const REQUIRED_MESSAGES: Partial<Record<keyof FinancingPublicForm, string>> = {
   jobTitle: 'Job title is required',
   employmentYears: 'Years in job is required',
   monthlyIncomeGross: 'Gross monthly income is required',
+  annualIncome: 'Net income is required',
   vehicleCondition: 'Vehicle condition is required',
   cashPrice: 'Cash price is required',
   vehicleMake: 'Vehicle make is required',
