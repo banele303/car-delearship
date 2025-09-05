@@ -286,6 +286,8 @@ export const generateFormPdf = (application: Application): void => {
       const excludedKeys = new Set([
         // Core identity/contact already rendered
         'firstName','lastName','email','phone','dateOfBirth','title','initials','idNumber','address','city','state','postalCode','housingStatus',
+  // Remove telephone home per request
+  'telephoneHome','telephone_home','telephone_home_number','telephoneHomeNumber',
         // Employment / financial handled elsewhere
         'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross','monthlyIncomeNet','otherIncome','otherIncomeSource',
         // Vehicle / loan / system specific
@@ -372,8 +374,13 @@ export const generateFormPdf = (application: Application): void => {
     // Always show monthly gross income
     drawFullWidthField('Monthly Gross Income', details.monthlyIncomeGross ? formatCurrency(details.monthlyIncomeGross) : 'None');
     
-    // Always show net income
-    drawFullWidthField('Monthly Net Income', details.monthlyIncomeNet ? formatCurrency(details.monthlyIncomeNet) : 'None');
+    // Always show net income (fallback to annualIncome if monthlyIncomeNet missing)
+    const netIncomeRaw =
+      details.monthlyIncomeNet ??
+      details.annualIncome ??
+      details.extraData?.monthlyIncomeNet ??
+      details.extraData?.annualIncome;
+    drawFullWidthField('Net Income', netIncomeRaw ? formatCurrency(Number(netIncomeRaw)) : 'None');
     
     // Always show other income only (removed down payment)
     drawFullWidthField('Other Income', details.otherIncome ? formatCurrency(details.otherIncome) : 'None');
