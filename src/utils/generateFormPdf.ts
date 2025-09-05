@@ -136,7 +136,7 @@ export const generateFormPdf = (application: Application): void => {
     currentY += 35;
   };
 
-  const drawField = (label: string, value: string, width?: number) => {
+  const drawField = (label: string, value: any, width?: number) => {
     const fieldWidth = width || contentWidth / 2 - 10;
     const fieldHeight = 30; // Increased height for better readability
     
@@ -163,13 +163,15 @@ export const generateFormPdf = (application: Application): void => {
     // Value text with better positioning
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const displayValue = value || '-';
-    doc.text(displayValue, margin + 8, currentY + 25);
+  // Coerce all values to string to avoid jsPDF text type errors when numbers/booleans passed
+  const displayValue = (value === 0 ? '0' : value) ?? '-';
+  const displayStr = Array.isArray(displayValue) ? displayValue.join(', ') : String(displayValue);
+  doc.text(displayStr === '' ? '-' : displayStr, margin + 8, currentY + 25);
     
     return fieldWidth;
   };
 
-  const drawTwoColumnFields = (field1: { label: string; value: string }, field2: { label: string; value: string }) => {
+  const drawTwoColumnFields = (field1: { label: string; value: any }, field2: { label: string; value: any }) => {
     const fieldWidth = (contentWidth - 20) / 2;
     
     drawField(field1.label, field1.value, fieldWidth);
@@ -198,8 +200,9 @@ export const generateFormPdf = (application: Application): void => {
     // Value for second field
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const displayValue = field2.value || '-';
-    doc.text(displayValue, secondFieldX + 8, currentY + 25); // Updated positioning
+  const displayValue2 = (field2.value === 0 ? '0' : field2.value) ?? '-';
+  const displayStr2 = Array.isArray(displayValue2) ? displayValue2.join(', ') : String(displayValue2);
+  doc.text(displayStr2 === '' ? '-' : displayStr2, secondFieldX + 8, currentY + 25); // Updated positioning
     
     currentY += 35; // Updated spacing
   };
