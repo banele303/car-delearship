@@ -231,15 +231,21 @@ export const generateFormPdf = (application: Application): void => {
 
   currentY += sectionSpacing;
 
-  // Vehicle Information Section
-  if (application.car) {
+  // Vehicle Information Section (now also shows vehicle condition if present even without car object)
+  const detailsVehicleCondition = application.details?.vehicleCondition ?? application.details?.extraData?.vehicleCondition;
+  if (application.car || detailsVehicleCondition) {
     drawSectionHeader('VEHICLE INFORMATION');
-    
-    const vehicleInfo = `${application.car.year} ${application.car.make} ${application.car.model}`;
-    
-    drawFullWidthField('Vehicle', vehicleInfo);
-    drawFullWidthField('Vehicle Price', formatCurrency(application.car.price));
-    
+
+    if (application.car) {
+      const vehicleInfo = `${application.car.year} ${application.car.make} ${application.car.model}`;
+      drawFullWidthField('Vehicle', vehicleInfo);
+      drawFullWidthField('Vehicle Price', formatCurrency(application.car.price));
+    }
+
+    if (detailsVehicleCondition) {
+      drawFullWidthField('Vehicle Condition', String(detailsVehicleCondition));
+    }
+
     currentY += sectionSpacing;
   }
 
@@ -284,6 +290,8 @@ export const generateFormPdf = (application: Application): void => {
         'employmentStatus','employerName','jobTitle','employmentYears','monthlyIncomeGross','monthlyIncomeNet','otherIncome','otherIncomeSource',
         // Vehicle / loan / system specific
         'vehicleMake','vehicleModel','vehicleYear','cashPrice','loanAmount','termMonths','loanTermMonths','monthlyPayment','interestRate',
+        // Moved to Vehicle Information section
+        'vehicleCondition',
         'team','Team','assignedTeam','salesTeam',
         // Explicit removals per request
         'hasTradeIn','tradeInDetails','has_trade_in','trade_in_details',
@@ -307,7 +315,21 @@ export const generateFormPdf = (application: Application): void => {
         const leftEntry = relevantEntries[i];
         const rightEntry = relevantEntries[i + 1];
 
-        const formatLabel = (raw: string) => raw.replace(/([A-Z])/g,' $1').replace(/_/g,' ').replace(/\s+/g,' ').trim();
+        const prettyLabelMap: Record<string,string> = {
+          nextOfKinName: 'Next of Kin Name',
+          nextOfKinRelationship: 'Next of Kin Relationship',
+          nextOfKinAddress: 'Next of Kin Address',
+          nextOfKinCell: 'Next of Kin Cell'
+        };
+        const formatLabel = (raw: string) => {
+          if (prettyLabelMap[raw]) return prettyLabelMap[raw];
+          return raw
+            .replace(/([A-Z])/g,' $1')
+            .replace(/_/g,' ')
+            .replace(/\s+/g,' ')
+            .trim()
+            .replace(/^\w/, c => c.toUpperCase());
+        };
         const formatValue = (k: string, v: any) => {
           if (typeof v === 'object') v = JSON.stringify(v);
           const isMoney = /payment|income|amount|price|cost/i.test(k) && !isNaN(Number(v));

@@ -1384,7 +1384,7 @@ export default function FinancingApplicationForm() {
           <h4 className='text-sm font-semibold tracking-wide text-slate-600 mb-3'>Work & Income Details</h4>
           <div className='grid md:grid-cols-4 gap-4'>
             <div>
-              <Label className='text-sm font-medium'>Employment Status *</Label>
+              <Label className='text-sm font-medium'>Employment Status <span className='text-red-500'>*</span></Label>
               <Select value={form.employmentStatus||''} onValueChange={onChangeHandlers.employmentStatus}>
                 <SelectTrigger id='employmentStatus' className={'mt-1 ' + (errors.employmentStatus ? 'border-red-500 focus-visible:ring-red-500 shadow-sm shadow-red-200' : '')}><SelectValue placeholder='Select' /></SelectTrigger>
                 <SelectContent>
@@ -1480,19 +1480,19 @@ export default function FinancingApplicationForm() {
           <div className='flex items-start gap-4'>
             <Checkbox id='legalCapacityConfirm' checked={form.legalCapacityConfirm} onCheckedChange={onChangeHandlers.legalCapacityConfirmChecked} />
             <Label htmlFor='legalCapacityConfirm' className='font-normal cursor-pointer leading-[1.75]'>
-              I confirm that I am not a minor; I have never been declared mentally unfit by a court; I am not subject to an administration order; I do not have any current application pending for debt restructuring or alleviation; I am not under sequestration; I do not have any current debt rearrangement in existence; I have not previously applied for a debt re‑arrangement; I do not have any applications pending for credit, nor opened quotations as envisaged in section 92 of the National Credit Act.
+              <span className='text-red-500 font-semibold'>*</span>{' '}I confirm that I am not a minor; I have never been declared mentally unfit by a court; I am not subject to an administration order; I do not have any current application pending for debt restructuring or alleviation; I am not under sequestration; I do not have any current debt rearrangement in existence; I have not previously applied for a debt re‑arrangement; I do not have any applications pending for credit, nor opened quotations as envisaged in section 92 of the National Credit Act.
             </Label>
           </div>
           <div className='flex items-start gap-4'>
             <Checkbox id='creditRecordDeclaration' checked={form.creditRecordDeclaration} onCheckedChange={onChangeHandlers.creditRecordDeclarationChecked} />
             <Label htmlFor='creditRecordDeclaration' className='font-normal cursor-pointer leading-[1.75]'>
-              Declaration by client – I hereby give consent to FNI services to make enquiries about my credit record with any credit agency and to obtain whatever information relating to me they might require. I also expressly give consent that the result of my credit record enquiry may be shared by FNI services with any third parties they deem fit. I also give consent that the authorised institution may submit my vehicle finance application to any of the credit providers they have access to.
+              <span className='text-red-500 font-semibold'>*</span>{' '}Declaration by client – I hereby give consent to FNI services to make enquiries about my credit record with any credit agency and to obtain whatever information relating to me they might require. I also expressly give consent that the result of my credit record enquiry may be shared by FNI services with any third parties they deem fit. I also give consent that the authorised institution may submit my vehicle finance application to any of the credit providers they have access to.
             </Label>
           </div>
           <div className='flex items-start gap-4'>
             <Checkbox id='marketingCommunicationConsent' checked={form.marketingCommunicationConsent} onCheckedChange={onChangeHandlers.marketingCommunicationConsentChecked} />
             <Label htmlFor='marketingCommunicationConsent' className='font-normal cursor-pointer leading-[1.75]'>
-              I hereby grant FNI services the right to communicate with me through any electronic / written media or verbally regarding their product offerings, including offerings by their service providers and partners. I further confirm that FNI services may share my details with third‑party product and service providers for marketing purposes. I understand I may opt out at any time by submitting a written request to FNI services or directly to any third party contacting me.
+              <span className='text-red-500 font-semibold'>*</span>{' '}I hereby grant FNI services the right to communicate with me through any electronic / written media or verbally regarding their product offerings, including offerings by their service providers and partners. I further confirm that FNI services may share my details with third‑party product and service providers for marketing purposes. I understand I may opt out at any time by submitting a written request to FNI services or directly to any third party contacting me.
             </Label>
           </div>
         </div>
