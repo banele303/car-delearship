@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Building2, Users, Home, Banknote, MapPin } from "lucide-react";
+import { Building2, Users, Home, Banknote, MapPin, Fuel, CheckCircle, ShoppingCart, PowerOff, ShieldCheck, Activity } from "lucide-react";
 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'];
@@ -25,7 +25,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("month");
   const { data: authUser } = useGetAuthUserQuery();
-  const { data: cars = [] } = useGetCarsQuery({});
+  const { data: cars = [] } = useGetCarsQuery({ showAll: 'true' });
   const { data: employees = [] } = useGetAllEmployeesQuery({});
   const { data: customers = [] } = useGetAllCustomersQuery();
   const { data: sales = [] } = useGetSalesQuery({});
@@ -111,7 +111,29 @@ export default function AnalyticsPage() {
   const totalCars = cars.length;
   const totalEmployees = employees.length;
   const totalCustomers = customers.length;
-  const totalSales = sales.length;
+  const totalSalesCount = sales.length;
+
+  const statusMetrics = useMemo(() => {
+    const counts = { AVAILABLE: 0, SOLD: 0, INACTIVE: 0, RESERVED: 0, MAINTENANCE: 0 };
+    cars.forEach(c => {
+      const s = c.status as keyof typeof counts;
+      if (counts[s] !== undefined) counts[s]++;
+    });
+    return counts;
+  }, [cars]);
+
+  const totalRevenue = useMemo(() => {
+    return sales.reduce((acc, s) => acc + (s.salePrice || 0), 0);
+  }, [sales]);
+
+  const carStatusPieData = useMemo(() => {
+    return Object.entries(statusMetrics)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value]) => ({ name, value }));
+  }, [statusMetrics]);
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(val);
 
   return (
     <div className="space-y-6">
@@ -139,51 +161,107 @@ export default function AnalyticsPage() {
       </div>
 
       
+      {/* Top Level Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-4 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="p-6 bg-white dark:bg-gray-900 border-none shadow-sm hover:shadow-md transition-all rounded-3xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cars</p>
-              <h3 className="text-2xl font-bold">{totalCars}</h3>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Inventory</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-white">{totalCars}</h3>
+              <p className="text-[10px] text-gray-400 mt-1">Vehicles in system</p>
             </div>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
               <Home className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="p-6 bg-white dark:bg-gray-900 border-none shadow-sm hover:shadow-md transition-all rounded-3xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Employees</p>
-              <h3 className="text-2xl font-bold">{totalEmployees}</h3>
+              <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-1">Available</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-white">{statusMetrics.AVAILABLE}</h3>
+              <p className="text-[10px] text-gray-400 mt-1">Ready for sale</p>
             </div>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
-              <Building2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl">
+              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="p-6 bg-white dark:bg-gray-900 border-none shadow-sm hover:shadow-md transition-all rounded-3xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Customers</p>
-              <h3 className="text-2xl font-bold">{totalCustomers}</h3>
+              <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-1">Sold Units</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-white">{statusMetrics.SOLD}</h3>
+              <p className="text-[10px] text-gray-400 mt-1">Total turnover</p>
             </div>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-full">
-              <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-2xl">
+              <ShoppingCart className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="p-6 bg-white dark:bg-gray-900 border-none shadow-sm hover:shadow-md transition-all rounded-3xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Sales</p>
-              <h3 className="text-2xl font-bold">{totalSales}</h3>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Inactive</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-white">{statusMetrics.INACTIVE + statusMetrics.MAINTENANCE}</h3>
+              <p className="text-[10px] text-gray-400 mt-1">Internal / Hidden</p>
             </div>
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-full">
-              <Banknote className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+              <PowerOff className="w-6 h-6 text-gray-400" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Financial & Operational Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="p-6 bg-white dark:bg-gray-900 border-none shadow-sm hover:shadow-md transition-all rounded-3xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-[#00A211] uppercase tracking-widest mb-1">Gross Revenue</p>
+              <h3 className="text-2xl font-black text-gray-900 dark:text-white">{formatCurrency(totalRevenue)}</h3>
+            </div>
+            <div className="p-3 bg-[#00A211]/10 rounded-2xl">
+              <Banknote className="w-6 h-6 text-[#00A211]" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 bg-white dark:bg-gray-900 border-none shadow-sm hover:shadow-md transition-all rounded-3xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Sales</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-white">{totalSalesCount}</h3>
+            </div>
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl">
+              <ShieldCheck className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 bg-white dark:bg-gray-900 border-none shadow-sm hover:shadow-md transition-all rounded-3xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Customers</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-white">{totalCustomers}</h3>
+            </div>
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
+              <Users className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 bg-white dark:bg-gray-900 border-none shadow-sm hover:shadow-md transition-all rounded-3xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Lead Count</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-white">{inquiries.length}</h3>
+            </div>
+            <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-2xl">
+              <Activity className="w-6 h-6 text-pink-600 dark:text-pink-400" />
             </div>
           </div>
         </Card>
@@ -270,27 +348,30 @@ export default function AnalyticsPage() {
             
             
             <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-4">Car Status</h3>
+              <h3 className="text-lg font-semibold mb-4">Inventory Status</h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={[
-                        { name: 'Available', value: 85 },
-                        { name: 'Sold', value: 110 },
-                        { name: 'Under Maintenance', value: 15 },
-                      ]}
+                      data={carStatusPieData}
                       cx="50%"
                       cy="50%"
-                      labelLine={true}
-                      label={({ name, percent }: { name: string; percent: number }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      innerRadius={60}
                       outerRadius={80}
-                      fill="#8884d8"
+                      paddingAngle={5}
                       dataKey="value"
                     >
-                      <Cell fill="#82ca9d" />
-                      <Cell fill="#8884d8" />
-                      <Cell fill="#ffc658" />
+                      {carStatusPieData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={
+                            entry.name === 'AVAILABLE' ? '#00A211' :
+                            entry.name === 'SOLD' ? '#ff5533' :
+                            entry.name === 'INACTIVE' ? '#99aab5' :
+                            COLORS[index % COLORS.length]
+                          } 
+                        />
+                      ))}
                     </Pie>
                     <Tooltip />
                     <Legend />

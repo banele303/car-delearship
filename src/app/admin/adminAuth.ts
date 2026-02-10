@@ -164,23 +164,18 @@ export async function logoutAdmin() {
  */
 export async function checkAdminAuth() {
   try {
-    // Always check the session from Cognito first
+    // Always check the session from Cognito first.
+    // NOTE: We rely on awsFetchAuthSession to automatically refresh the session tokens 
+    // using the refresh token. We don't manually check expiration here to allow for 
+    // long-running sessions (up to 24 hours as defined by our cookies and up to 30 days by Cognito).
     const session = await awsFetchAuthSession();
     if (!session?.tokens?.idToken) {
       clearAdminAuthState();
       return { isAuthenticated: false, adminData: null };
     }
 
-    // Check token expiration
-    const expiration = session.tokens.idToken.payload.exp;
-    const now = Math.floor(Date.now() / 1000);
-    if (expiration && expiration < now) {
-      console.log("❌ Admin token expired");
-      clearAdminAuthState();
-      return { isAuthenticated: false, adminData: null };
-    }
-    
     // Extract user information from token
+    const expiration = session.tokens.idToken.payload.exp;
     const userRole = session.tokens.idToken.payload?.['custom:role'] as string;
     const userEmail = session.tokens.idToken.payload?.email as string;
     
