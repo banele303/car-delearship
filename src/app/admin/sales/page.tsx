@@ -68,7 +68,7 @@ const AdminSalesPage = () => {
   );
   
   const { data: cars, isLoading: carsLoading } = useGetCarsQuery(
-    undefined, 
+    { showAll: 'true' }, 
     { skip: !adminUser?.cognitoId }
   );
 

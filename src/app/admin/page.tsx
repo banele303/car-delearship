@@ -113,7 +113,7 @@ export default function AdminDashboard() {
   }
 
   
-  const { data: cars, isLoading: carsLoading } = useGetCarsQuery(undefined, { skip: !adminUser?.cognitoId });
+  const { data: cars, isLoading: carsLoading } = useGetCarsQuery({ showAll: 'true' }, { skip: !adminUser?.cognitoId });
   const { data: employees, isLoading: employeesLoading } = useGetAllEmployeesQuery({}, { skip: !adminUser?.cognitoId });
   const { data: customers, isLoading: customersLoading } = useGetAllCustomersQuery(undefined, { skip: !adminUser?.cognitoId });
   const { data: sales, isLoading: salesLoading } = useGetSalesQuery(undefined, { skip: !adminUser?.cognitoId });
