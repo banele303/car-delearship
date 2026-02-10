@@ -58,6 +58,12 @@ const CarsContent = () => {
   const filteredCars = React.useMemo(() => {
     if (!carsData) return [];
     let filtered = carsData.filter((car) => {
+      // STRICT FILTER: Public users should only see AVAILABLE cars
+      // (Optionally could include RESERVED or PENDING if they are allowed to see them)
+      if (car.status !== "AVAILABLE") {
+        return false;
+      }
+
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         if (!car.make.toLowerCase().includes(query) &&
@@ -111,13 +117,15 @@ const CarsContent = () => {
   
   const carMakes = React.useMemo(() => {
     if (!carsData) return [];
-    return [...new Set(carsData.map(car => car.make))];
+    return [...new Set(carsData.filter(c => c.status === "AVAILABLE").map(car => car.make))];
   }, [carsData]);
 
   const carTypes = ["Sedan", "SUV", "Hatchback", "Pickup Truck", "Convertible", "Sports Car"];
   const conditions = React.useMemo(() => {
     if (!carsData) return [];
-    return [...new Set(carsData.map(car => car.status))];
+    // Only show relevant public statuses in the filter
+    const allowed = ["AVAILABLE", "RESERVED", "PENDING"];
+    return [...new Set(carsData.filter(c => allowed.includes(c.status)).map(car => car.status))];
   }, [carsData]);
 
   const fuelTypes = React.useMemo(() => {

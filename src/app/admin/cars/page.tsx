@@ -578,367 +578,232 @@ export default function AdminCarsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 p-6 rounded-xl shadow-sm">
-        <div>
-          <h1 className="text-2xl font-heading font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-            Cars Management
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            View and manage all cars across the platform
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => router.push('/admin')}
-            className="border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all duration-200"
-          >
-            <Home className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-          <Button
-            variant="default"
-            onClick={() => router.push('/admin/cars/add')} 
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Car
-          </Button>
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950 p-6 lg:p-10">
+      {/* Header Section */}
+      <div className="max-w-7xl mx-auto mb-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
+              <Car className="h-10 w-10 text-[#00A211]" />
+              Cars Showcase
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">
+              Manage your inventory with precision and style.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/admin')}
+              className="rounded-2xl border-gray-200 dark:border-gray-800 font-semibold"
+            >
+              Dashboard
+            </Button>
+            <Button
+              onClick={() => router.push('/admin/cars/add')} 
+              className="bg-[#00A211] hover:bg-[#009210] text-white rounded-2xl px-6 font-bold shadow-lg shadow-[#00A211]/20 flex items-center gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              New Entry
+            </Button>
+          </div>
         </div>
       </div>
-      
-      
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search cars by make, model, VIN, or employee..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <div className="flex gap-2 flex-wrap">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Filter className="h-4 w-4" />
-                <span>{filterCity || "All Cities"}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => setFilterCity("")}>
-                All Cities
-              </DropdownMenuItem>
-              {cities.map((city) => (
-                <DropdownMenuItem key={city} onClick={() => setFilterCity(city)}>
-                  {city}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
 
-          {/* Status filter */}
-          <Select
-            value={filterStatus || 'ALL'}
-            onValueChange={(value) => setFilterStatus(value === 'ALL' ? '' : value)}
-          >
-            <SelectTrigger className="w-[160px]">
-              <div className="flex items-center gap-2">
-                <Power className="h-4 w-4" />
-                <span>{filterStatus || 'All Status'}</span>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
-              <SelectItem value="AVAILABLE">Available</SelectItem>
-              <SelectItem value="SOLD">Sold</SelectItem>
-              <SelectItem value="INACTIVE">Inactive</SelectItem>
-              <SelectItem value="RESERVED">Reserved</SelectItem>
-              <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Modern Filter Shelf */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-100 dark:border-gray-800 rounded-3xl p-4 shadow-sm flex flex-col lg:flex-row items-center gap-4">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              placeholder="Search make, model, or VIN..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 h-12 bg-transparent border-none focus-visible:ring-0 text-lg font-medium"
+            />
+          </div>
           
-          <Select
-            value={sortBy}
-            onValueChange={(value) => setSortBy(value as any)}
-          >
-            <SelectTrigger className="w-[180px]">
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4" />
-                <span>Sort by: {sortBy}</span>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="make">Make</SelectItem>
-              <SelectItem value="price">Price</SelectItem>
-              <SelectItem value="year">Year</SelectItem> 
-              <SelectItem value="dealership">Dealership</SelectItem> 
-            </SelectContent>
-          </Select>
-          
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleSortOrder}
-            className="h-10 w-10"
-          >
-            {sortOrder === "asc" ? "↑" : "↓"}
-          </Button>
+          <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
+            <Select value={filterStatus || 'ALL'} onValueChange={(v) => setFilterStatus(v === 'ALL' ? '' : v)}>
+              <SelectTrigger className="h-12 w-[160px] rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800">
+                <span className="font-semibold">{filterStatus || 'All Status'}</span>
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="AVAILABLE">Available</SelectItem>
+                <SelectItem value="SOLD">Sold</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+              <SelectTrigger className="h-12 w-[160px] rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800">
+                <span className="font-semibold">Sort: {sortBy}</span>
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="make">Make</SelectItem>
+                <SelectItem value="price">Price</SelectItem>
+                <SelectItem value="year">Year</SelectItem> 
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleSortOrder}
+              className="h-12 w-12 rounded-2xl border-gray-100 dark:border-gray-800"
+            >
+              {sortOrder === "asc" ? "↑" : "↓"}
+            </Button>
+          </div>
         </div>
       </div>
-      
-      
-      <div className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex items-center">
-        <Filter className="h-4 w-4 mr-2 text-blue-500" />
-        Showing <span className="font-semibold mx-1 text-blue-600 dark:text-blue-400">{Math.min(startIndex + 1, totalCars)}-{Math.min(endIndex, totalCars)}</span> of <span className="font-semibold mx-1 text-blue-600 dark:text-blue-400">{totalCars}</span> cars
-        {totalCars !== (cars?.length || 0) && (
-          <span className="ml-2 text-xs">
-            (filtered from {cars?.length || 0} total)
-          </span>
-        )}
-      </div>
-      
-      
-      <Card className="border-slate-200 dark:border-slate-700 shadow-md overflow-visible">
-        <div className="overflow-visible">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Car</TableHead>
-                <TableHead>Dealership</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedCars.length > 0 ? (
-                paginatedCars.map((car: EnhancedCar) => ( 
-                  <TableRow key={car.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-12 w-12 rounded-md overflow-hidden flex-shrink-0">
-                          {car.photoUrls && car.photoUrls.length > 0 ? (
-                            <Image
-                              src={car.photoUrls[0]}
-                              alt={`${car.make} ${car.model}`}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="bg-slate-200 dark:bg-slate-700 h-full w-full flex items-center justify-center">
-                              <Car className="h-6 w-6 text-slate-400" /> 
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-medium">{`${car.year} ${car.make} ${car.model}`}</div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400">
-                            VIN: {car.vin}
-                          </div>
-                        </div>
+
+      {/* Main Content Grid */}
+      <div className="max-w-7xl mx-auto">
+        {carsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-[280px] rounded-3xl bg-gray-100 dark:bg-gray-900 animate-pulse" />
+            ))}
+          </div>
+        ) : paginatedCars.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {paginatedCars.map((car: EnhancedCar) => (
+              <div
+                key={car.id}
+                className="group bg-white dark:bg-gray-900 rounded-[2.5rem] p-6 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-2xl hover:shadow-[#00A211]/5 transition-all duration-300 relative overflow-hidden"
+              >
+                {/* Status Glow Overlay */}
+                <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full blur-3xl opacity-10 ${
+                  car.status === "AVAILABLE" ? "bg-green-500" : car.status === "SOLD" ? "bg-red-500" : "bg-gray-500"
+                }`} />
+
+                <div className="flex gap-5">
+                  <div className="relative h-24 w-24 rounded-3xl overflow-hidden flex-shrink-0 bg-gray-100">
+                    {car.photoUrls?.[0] ? (
+                      <Image src={car.photoUrls[0]} alt="" fill className="object-cover transition-transform group-hover:scale-110" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-gray-300">
+                        <Car size={32} />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="text-sm">{car.dealership?.name || 'No dealership available'}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
-                            {car.dealership?.city || 'Unknown'}{car.dealership?.state ? `, ${car.dealership.state}` : ''}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-slate-400" />
-                        <span>{car.employee?.name || (car as any).employeeId || "Unknown"}</span> 
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1">
-                          <Car className="h-4 w-4 text-slate-400" /> 
-                          <span>{car.carType}</span> 
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Fuel className="h-4 w-4 text-slate-400" /> 
-                          <span>{car.fuelType}</span> 
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">R{car.price.toLocaleString()}</div> 
-                      <div className="text-xs text-slate-500 dark:text-slate-400"></div>
-                    </TableCell>
-                    <TableCell>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-[#00A211] uppercase tracking-widest">{car.year} Model</span>
                       <Badge 
-                        variant={car.status === "AVAILABLE" ? "default" : 
-                               car.status === "SOLD" ? "destructive" : 
-                               car.status === "INACTIVE" ? "secondary" : "outline"}
-                        className={car.status === "AVAILABLE" ? "bg-green-600 hover:bg-green-700" : 
-                                   car.status === "INACTIVE" ? "bg-gray-500 hover:bg-gray-600 text-white" : ""}
+                        variant="outline"
+                        className={`rounded-full px-3 py-0 border-none ${
+                          car.status === "AVAILABLE" ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400" : 
+                          car.status === "SOLD" ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400" : 
+                          "bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                        }`}
                       >
                         {car.status || "AVAILABLE"}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="relative z-10">
-                      <div className="dropdown-container" style={{ position: 'relative', overflow: 'visible' }}>
-                        <Button 
-                          variant="ghost" 
-                          className="h-8 w-8 p-0 hover:bg-transparent"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenDropdownId(openDropdownId === car.id ? null : car.id);
-                          }}
-                        >
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                        
-                        {openDropdownId === car.id && (
-                          <div
-                            className="absolute right-0 mt-1 w-52 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black/5 border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in zoom-in"
-                            style={{ top: 'calc(100% + 4px)' }}
-                          >
-                            <div 
-                              className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenDropdownId(null);
-                                router.push(`/admin/cars/edit/${car.id}`);
-                              }}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              <span>Edit</span>
-                            </div>
-                            <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
-                            {/* Status actions */}
-                            {car.status !== 'AVAILABLE' && (
-                              <div 
-                                className={`px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center ${updatingStatusId === car.id ? 'opacity-50 pointer-events-none' : ''}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(car.id, 'AVAILABLE', `${car.year} ${car.make} ${car.model}`);
-                                }}
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                <span>Activate</span>
-                              </div>
-                            )}
-                            {car.status !== 'INACTIVE' && (
-                              <div 
-                                className={`px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center ${updatingStatusId === car.id ? 'opacity-50 pointer-events-none' : ''}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(car.id, 'INACTIVE', `${car.year} ${car.make} ${car.model}`);
-                                }}
-                              >
-                                <PowerOff className="mr-2 h-4 w-4" />
-                                <span>Deactivate</span>
-                              </div>
-                            )}
-                            {car.status !== 'SOLD' && (
-                              <div 
-                                className={`px-4 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center ${updatingStatusId === car.id ? 'opacity-50 pointer-events-none' : ''}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(car.id, 'SOLD', `${car.year} ${car.make} ${car.model}`);
-                                }}
-                              >
-                                <ShoppingCart className="mr-2 h-4 w-4" />
-                                <span>Mark as Sold</span>
-                              </div>
-                            )}
-                            <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
-                            <div 
-                              className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenDropdownId(null);
-                                openDeleteDialog(car);
-                              }}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              <span>Delete</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500 dark:text-slate-400">
-                    {searchTerm || filterCity ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <Search className="h-8 w-8 text-slate-300 dark:text-slateon-600" />
-                        <p>No cars match your search criteria</p>
-                        <Button 
-                          variant="link" 
-                          onClick={() => {
-                            setSearchTerm("");
-                            setFilterCity("");
-                          }}
-                        >
-                          Clear filters
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2">
-                        <Car className="h-8 w-8 text-slate-300 dark:text-slate-600" /> 
-                        <p>No cars found in the system</p> 
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate pr-2">
+                      {car.make} {car.model}
+                    </h3>
+                    <p className="text-xs text-gray-400 font-medium truncate mb-2">VIN: {car.vin}</p>
+                    <div className="text-2xl font-black text-gray-900 dark:text-white">
+                      {new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(car.price)}
+                    </div>
+                  </div>
+                </div>
 
-      {/* Page Size Selector + Pagination */}
-  <div className="flex flex-col md:flex-row md:items-center gap-4 mt-6 pb-4">
-        <div className="flex flex-wrap items-center gap-3 rounded-md bg-slate-50 dark:bg-slate-800/40 px-3 py-2 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Rows per page</span>
-            <Select value={String(carsPerPage)} onValueChange={(v) => { setCarsPerPage(parseInt(v,10)); setCurrentPage(1); }}>
-              <SelectTrigger className="h-8 w-20" aria-label="Rows per page">
-                {carsPerPage}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+                <div className="mt-6 flex items-center justify-between gap-4 py-4 border-t border-dashed border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <User size={14} className="text-[#00A211]" />
+                    <span className="text-xs font-bold truncate">{car.employee?.name || "Unassigned"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <MapPin size={14} className="text-[#00A211]" />
+                    <span className="text-xs font-bold">{car.dealership?.city || "Local"}</span>
+                  </div>
+                </div>
+
+                {/* Quick Actions Shelf */}
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-10 rounded-xl font-bold text-xs border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    onClick={() => router.push(`/admin/cars/edit/${car.id}`)}
+                  >
+                    Edit
+                  </Button>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="h-10 w-12 rounded-xl border-gray-100 dark:border-gray-800">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-2xl w-48 p-2">
+                      {car.status !== 'AVAILABLE' && (
+                        <DropdownMenuItem className="rounded-xl font-semibold text-green-600" onClick={() => handleStatusChange(car.id, 'AVAILABLE', car.make)}>
+                          <CheckCircle className="mr-2 h-4 w-4" /> Activate
+                        </DropdownMenuItem>
+                      )}
+                      {car.status !== 'INACTIVE' && (
+                        <DropdownMenuItem className="rounded-xl font-semibold text-gray-600" onClick={() => handleStatusChange(car.id, 'INACTIVE', car.make)}>
+                          <PowerOff className="mr-2 h-4 w-4" /> Deactivate
+                        </DropdownMenuItem>
+                      )}
+                      {car.status !== 'SOLD' && (
+                        <DropdownMenuItem className="rounded-xl font-semibold text-orange-600" onClick={() => handleStatusChange(car.id, 'SOLD', car.make)}>
+                          <ShoppingCart className="mr-2 h-4 w-4" /> Mark Sold
+                        </DropdownMenuItem>
+                      )}
+                      <div className="h-px bg-gray-100 my-1" />
+                      <DropdownMenuItem className="rounded-xl font-semibold text-red-600" onClick={() => openDeleteDialog(car)}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
           </div>
-          <span className="text-xs md:text-sm text-slate-600 dark:text-slate-300 font-medium tracking-wide">
-            {(() => {
-              if (totalCars === 0) return 'No items';
-              const from = totalCars === 0 ? 0 : startIndex + 1;
-              const to = Math.min(endIndex, totalCars);
-              return `Showing ${from} to ${to} of ${totalCars} items`;
-            })()}
-          </span>
-        </div>
+        ) : (
+          <div className="text-center py-20">
+            <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 mb-4">
+              <Search size={32} className="text-gray-300" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">No matches found</h3>
+            <p className="text-gray-500 mt-1">Try adjusting your filters or search terms.</p>
+          </div>
+        )}
+
+        {/* Pagination Shelf */}
         {totalCars > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalCars}
-            itemsPerPage={carsPerPage}
-            onPageChange={setCurrentPage}
-          />
+          <div className="mt-12 flex flex-col md:flex-row items-center justify-between gap-6 bg-white dark:bg-gray-900 p-4 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
+            <div className="flex items-center gap-2 pl-4">
+              <span className="text-sm font-medium text-gray-500">Display:</span>
+              <Select value={String(carsPerPage)} onValueChange={(v) => { setCarsPerPage(parseInt(v,10)); setCurrentPage(1); }}>
+                <SelectTrigger className="h-10 w-20 rounded-xl border-none bg-gray-50 dark:bg-gray-800">
+                  {carsPerPage}
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalCars}
+              itemsPerPage={carsPerPage}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          </div>
         )}
       </div>
       
