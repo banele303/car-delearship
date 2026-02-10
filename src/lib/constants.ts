@@ -233,6 +233,7 @@ export enum CarStatus {
   SOLD = "SOLD",
   RESERVED = "RESERVED",
   MAINTENANCE = "MAINTENANCE",
+  INACTIVE = "INACTIVE",
 }
 
 export enum InquiryStatus {

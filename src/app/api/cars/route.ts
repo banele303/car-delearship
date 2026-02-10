@@ -11,12 +11,22 @@ export async function GET(req: NextRequest) {
   const takeParam = searchParams.get('limit');
   const featuredParam = searchParams.get('featured');
   const orderParam = searchParams.get('order');
+  const showAll = searchParams.get('showAll') === 'true'; // admin: see all statuses
+  const statusParam = searchParams.get('status'); // filter by specific status
   const orderDir = orderParam === 'asc' ? 'asc' : 'desc';
   const take = takeParam ? Number(takeParam) : undefined;
   if (take !== undefined && (isNaN(take) || take <= 0)) {
     return NextResponse.json({ message: 'Invalid limit parameter' }, { status: 400 });
   }
   if (featuredParam === 'true') query.featured = true;
+
+  // Status filtering: by default only show AVAILABLE cars to public users
+  // Admin pages pass ?showAll=true to see everything
+  if (statusParam) {
+    query.status = statusParam;
+  } else if (!showAll) {
+    query.status = 'AVAILABLE';
+  }
 
   try {
     const cars = await prisma.car.findMany({

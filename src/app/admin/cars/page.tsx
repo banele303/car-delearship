@@ -18,7 +18,11 @@ import {
   Plus, 
   Edit,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Power,
+  PowerOff,
+  ShoppingCart,
+  CheckCircle
 } from 'lucide-react'; 
 interface Car {
   id: number;
@@ -87,8 +91,10 @@ export default function AdminCarsPage() {
   const [authInitialized, setAuthInitialized] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCity, setFilterCity] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [sortBy, setSortBy] = useState('make');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const searchParams = useSearchParams();
   const [carsPerPage, setCarsPerPage] = useState<number>(() => {
@@ -149,7 +155,7 @@ export default function AdminCarsPage() {
     skip: !authInitialized
   });
   
-  const { data: cars, isLoading: carsLoading, error } = useGetCarsQuery(undefined, {
+  const { data: cars, isLoading: carsLoading, error, refetch: refetchCars } = useGetCarsQuery({ showAll: 'true' }, {
     skip: !authInitialized || !authUser
   });
   
@@ -194,8 +200,9 @@ export default function AdminCarsPage() {
       employeeId.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCity = !filterCity || enhancedCar.dealership?.city === filterCity;
+    const matchesStatus = !filterStatus || enhancedCar.status === filterStatus;
     
-    return matchesSearch && matchesCity;
+    return matchesSearch && matchesCity && matchesStatus;
   }) || []; 
 
   // Filter and sort cars
@@ -240,7 +247,7 @@ export default function AdminCarsPage() {
   // Reset to first page when search/filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterCity]);
+  }, [searchTerm, filterCity, filterStatus]);
   
   const toggleSortOrder = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -252,7 +259,6 @@ export default function AdminCarsPage() {
 
     setIsDeleting(true);
     try {
-      
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
       
@@ -276,14 +282,40 @@ export default function AdminCarsPage() {
       toast.success('Car deleted successfully!');
       setIsDeleteDialogOpen(false);
       setSelectedCar(null);
-      
-      
-      window.location.reload();
+      refetchCars();
     } catch (error: any) {
       console.error('Error deleting car:', error);
       toast.error(error.message || 'Failed to delete car');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleStatusChange = async (carId: number, newStatus: string, carLabel: string) => {
+    setUpdatingStatusId(carId);
+    try {
+      const res = await fetch(`/api/cars/${carId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to update status');
+      }
+      const statusLabels: Record<string, string> = {
+        AVAILABLE: 'activated',
+        INACTIVE: 'deactivated',
+        SOLD: 'marked as sold',
+      };
+      toast.success(`${carLabel} ${statusLabels[newStatus] || 'updated'}`);
+      refetchCars();
+    } catch (error: any) {
+      console.error('Error updating car status:', error);
+      toast.error(error.message || 'Failed to update status');
+    } finally {
+      setUpdatingStatusId(null);
+      setOpenDropdownId(null);
     }
   };
 
@@ -608,6 +640,27 @@ export default function AdminCarsPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Status filter */}
+          <Select
+            value={filterStatus || 'ALL'}
+            onValueChange={(value) => setFilterStatus(value === 'ALL' ? '' : value)}
+          >
+            <SelectTrigger className="w-[160px]">
+              <div className="flex items-center gap-2">
+                <Power className="h-4 w-4" />
+                <span>{filterStatus || 'All Status'}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Status</SelectItem>
+              <SelectItem value="AVAILABLE">Available</SelectItem>
+              <SelectItem value="SOLD">Sold</SelectItem>
+              <SelectItem value="INACTIVE">Inactive</SelectItem>
+              <SelectItem value="RESERVED">Reserved</SelectItem>
+              <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+            </SelectContent>
+          </Select>
           
           <Select
             value={sortBy}
@@ -728,7 +781,10 @@ export default function AdminCarsPage() {
                     <TableCell>
                       <Badge 
                         variant={car.status === "AVAILABLE" ? "default" : 
-                               car.status === "SOLD" ? "secondary" : "outline"}
+                               car.status === "SOLD" ? "destructive" : 
+                               car.status === "INACTIVE" ? "secondary" : "outline"}
+                        className={car.status === "AVAILABLE" ? "bg-green-600 hover:bg-green-700" : 
+                                   car.status === "INACTIVE" ? "bg-gray-500 hover:bg-gray-600 text-white" : ""}
                       >
                         {car.status || "AVAILABLE"}
                       </Badge>
@@ -749,7 +805,7 @@ export default function AdminCarsPage() {
                         
                         {openDropdownId === car.id && (
                           <div
-                            className="absolute right-0 mt-1 w-44 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black/5 border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in zoom-in"
+                            className="absolute right-0 mt-1 w-52 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black/5 border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in zoom-in"
                             style={{ top: 'calc(100% + 4px)' }}
                           >
                             <div 
@@ -763,6 +819,45 @@ export default function AdminCarsPage() {
                               <Edit className="mr-2 h-4 w-4" />
                               <span>Edit</span>
                             </div>
+                            <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
+                            {/* Status actions */}
+                            {car.status !== 'AVAILABLE' && (
+                              <div 
+                                className={`px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center ${updatingStatusId === car.id ? 'opacity-50 pointer-events-none' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(car.id, 'AVAILABLE', `${car.year} ${car.make} ${car.model}`);
+                                }}
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                <span>Activate</span>
+                              </div>
+                            )}
+                            {car.status !== 'INACTIVE' && (
+                              <div 
+                                className={`px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center ${updatingStatusId === car.id ? 'opacity-50 pointer-events-none' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(car.id, 'INACTIVE', `${car.year} ${car.make} ${car.model}`);
+                                }}
+                              >
+                                <PowerOff className="mr-2 h-4 w-4" />
+                                <span>Deactivate</span>
+                              </div>
+                            )}
+                            {car.status !== 'SOLD' && (
+                              <div 
+                                className={`px-4 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center ${updatingStatusId === car.id ? 'opacity-50 pointer-events-none' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(car.id, 'SOLD', `${car.year} ${car.make} ${car.model}`);
+                                }}
+                              >
+                                <ShoppingCart className="mr-2 h-4 w-4" />
+                                <span>Mark as Sold</span>
+                              </div>
+                            )}
+                            <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
                             <div 
                               className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center"
                               onClick={(e) => {

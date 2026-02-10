@@ -273,24 +273,54 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ message: "Invalid car ID" }, { status: 400 });
     }
 
-    const existingCar = await prisma.car.findUnique({ where: { id } });
+    const existingCar = await prisma.car.findUnique({
+      where: { id },
+      include: { sales: true },
+    });
     if (!existingCar) {
       return NextResponse.json({ message: "Car not found" }, { status: 404 });
     }
 
+    // Block deletion if the car has a sale record — use "Mark as Sold" instead
+    if (existingCar.sales) {
+      return NextResponse.json(
+        { message: 'This car has a sale record and cannot be deleted. Use "Mark as Sold" or "Deactivate" instead.' },
+        { status: 409 }
+      );
+    }
+
+    // Delete S3 photos
     if (existingCar.photoUrls && existingCar.photoUrls.length > 0) {
       await Promise.all(existingCar.photoUrls.map(deleteFileFromS3));
     }
 
-    await prisma.car.delete({ where: { id } });
+    // Use a transaction to delete all related records, then the car
+    await prisma.$transaction([
+      // Remove from customer favorites (many-to-many)
+      prisma.$executeRawUnsafe(
+        `DELETE FROM "_CustomerFavorites" WHERE "A" = $1`,
+        id
+      ),
+      // Delete inquiries
+      prisma.inquiry.deleteMany({ where: { carId: id } }),
+      // Delete test drives
+      prisma.testDrive.deleteMany({ where: { carId: id } }),
+      // Delete reviews
+      prisma.review.deleteMany({ where: { carId: id } }),
+      // Finally delete the car
+      prisma.car.delete({ where: { id } }),
+    ]);
 
     return NextResponse.json({ message: "Car deleted successfully", id });
   } catch (err: any) {
     console.error("Error deleting car:", err);
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2014') { // Related records exist
-            return NextResponse.json({ message: `Cannot delete car: it is referenced by other records (e.g., sales, inquiries).` }, { status: 409 });
-        }
+      if (err.code === 'P2003') {
+        return NextResponse.json(
+          { message: 'Cannot delete car: it still has related records. Try deactivating it instead.' },
+          { status: 409 }
+        );
+      }
     }
     return NextResponse.json({ message: `Error deleting car: ${err.message}` }, { status: 500 });
   }
