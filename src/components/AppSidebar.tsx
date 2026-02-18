@@ -91,7 +91,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
     { icon: DollarSign, label: "Sales", href: "/admin/sales" },
     { icon: CreditCard, label: "Financing", href: "/admin/financing" },
     { icon: Building, label: "Dealerships", href: "/admin/dealerships" },
-    // System removed per request
+    { icon: FileText, label: "Blog", href: "/admin/blog" },
   ];
   
   // Bottom links (Settings & Notifications) removed per request
