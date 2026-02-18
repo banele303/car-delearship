@@ -6,7 +6,7 @@ import FeaturedDealer from "./FeaturedDealer";
 import TestimonialsSection from "./TestimonialsSection";
 import FeaturedCars from "./FeaturedCars";
 import ReferralCalloutSection from "./ReferralCalloutSection";
-import AboutUsSection from "./AboutUsSection";
+import BlogSection from "./BlogSection";
 import StatsSection from "./StatsSection";
 
 function Home() { 
@@ -14,11 +14,11 @@ function Home() {
     <div>
   <HeroSection />
   <FeaturedCars />
-  <AboutUsSection />
   <ReferralCalloutSection />
   <StatsSection />
       <FeaturedDealer />
       <TestimonialsSection />
+      <BlogSection />
   <FAQShared />
     </div>
   );

@@ -13,9 +13,11 @@ import { siteConfig } from "@/lib/siteConfig";
 
 const links = [
   { href: "/", label: "Home" },
+  { href: "/about", label: "About Us" },
   { href: "/gallery", label: "Gallery" },
   { href: "/inventory", label: "Showroom" },
   { href: "/financing", label: "Finance Application" },
+  { href: "/blog", label: "Blog" },
   { href: "/contact-us", label: "Contact Us" },
 ];
 
