@@ -28,7 +28,7 @@ import ConditionalFooter from "@/components/ConditionalFooter";
 import React from 'react';
 
 export const metadata: Metadata = {
-  title: "Advance Auto Trader - Your Dream Car Awaits",
+  title: "Advance  Trader - Your Dream Car Awaits",
   description: "Find your next car at Advance Auto Trader. Browse new and used cars, schedule test drives, and get financing options.",
   icons: {
     icon: '/favicon.ico',
