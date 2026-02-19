@@ -776,27 +776,29 @@ export default function AdminCarsPage() {
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="rounded-xl w-48 p-1">
-                                {car.status !== 'AVAILABLE' && (
-                                    <DropdownMenuItem className="rounded-lg font-medium text-green-600 focus:text-green-700 focus:bg-green-50" onClick={() => handleStatusChange(car.id, 'AVAILABLE', car.make)}>
-                                    <CheckCircle className="mr-2 h-4 w-4" /> Activate
-                                    </DropdownMenuItem>
-                                )}
-                                {car.status !== 'INACTIVE' && (
-                                    <DropdownMenuItem className="rounded-lg font-medium text-gray-600 focus:text-gray-700 focus:bg-gray-50" onClick={() => handleStatusChange(car.id, 'INACTIVE', car.make)}>
-                                    <PowerOff className="mr-2 h-4 w-4" /> Deactivate
-                                    </DropdownMenuItem>
-                                )}
-                                {car.status !== 'SOLD' && (
-                                    <DropdownMenuItem className="rounded-lg font-medium text-orange-600 focus:text-orange-700 focus:bg-orange-50" onClick={() => handleStatusChange(car.id, 'SOLD', car.make)}>
-                                    <ShoppingCart className="mr-2 h-4 w-4" /> Mark Sold
-                                    </DropdownMenuItem>
-                                )}
-                                <div className="h-px bg-gray-100 my-1" />
-                                <DropdownMenuItem className="rounded-lg font-medium text-red-600 focus:text-red-700 focus:bg-red-50" onClick={() => openDeleteDialog(car)}>
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                                </DropdownMenuContent>
+                                <DropdownMenuPortal>
+                                  <DropdownMenuContent align="end" className="rounded-xl w-48 p-1">
+                                  {car.status !== 'AVAILABLE' && (
+                                      <DropdownMenuItem className="rounded-lg font-medium text-green-600 focus:text-green-700 focus:bg-green-50" onClick={() => handleStatusChange(car.id, 'AVAILABLE', car.make)}>
+                                      <CheckCircle className="mr-2 h-4 w-4" /> Activate
+                                      </DropdownMenuItem>
+                                  )}
+                                  {car.status !== 'INACTIVE' && (
+                                      <DropdownMenuItem className="rounded-lg font-medium text-gray-600 focus:text-gray-700 focus:bg-gray-50" onClick={() => handleStatusChange(car.id, 'INACTIVE', car.make)}>
+                                      <PowerOff className="mr-2 h-4 w-4" /> Deactivate
+                                      </DropdownMenuItem>
+                                  )}
+                                  {car.status !== 'SOLD' && (
+                                      <DropdownMenuItem className="rounded-lg font-medium text-orange-600 focus:text-orange-700 focus:bg-orange-50" onClick={() => handleStatusChange(car.id, 'SOLD', car.make)}>
+                                      <ShoppingCart className="mr-2 h-4 w-4" /> Mark Sold
+                                      </DropdownMenuItem>
+                                  )}
+                                  <div className="h-px bg-gray-100 my-1" />
+                                  <DropdownMenuItem className="rounded-lg font-medium text-red-600 focus:text-red-700 focus:bg-red-50" onClick={() => openDeleteDialog(car)}>
+                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenuPortal>
                             </DropdownMenu>
                         </div>
                       </TableCell>
