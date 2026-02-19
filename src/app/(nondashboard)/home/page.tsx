@@ -2,7 +2,6 @@ import React from "react";
 import HeroSection from "./HeroSection";
 // CallToActionSection removed per request
 import FAQShared from "@/components/FAQShared";
-import FeaturedDealer from "./FeaturedDealer";
 import TestimonialsSection from "./TestimonialsSection";
 import FeaturedCars from "./FeaturedCars";
 import ReferralCalloutSection from "./ReferralCalloutSection";
@@ -16,7 +15,6 @@ function Home() {
   <FeaturedCars />
   <ReferralCalloutSection />
   <StatsSection />
-      <FeaturedDealer />
       <TestimonialsSection />
       <BlogSection />
   <FAQShared />
