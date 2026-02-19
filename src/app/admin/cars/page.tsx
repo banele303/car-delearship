@@ -662,10 +662,10 @@ export default function AdminCarsPage() {
       {/* Main Content Grid */}
       <div className="max-w-7xl mx-auto">
         {carsLoading ? (
-          <Card className="border-slate-200 dark:border-slate-700 shadow-md overflow-hidden">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm rounded-3xl">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
                   <TableRow>
                      <TableHead className="w-[80px]">Image</TableHead>
                      <TableHead>Make & Model</TableHead>
@@ -696,8 +696,8 @@ export default function AdminCarsPage() {
             </div>
           </Card>
         ) : paginatedCars.length > 0 ? (
-          <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden rounded-3xl">
-            <div className="overflow-x-auto">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm rounded-3xl">
+            <div className="overflow-x-auto min-h-[400px]">
               <Table>
                 <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
                   <TableRow>
@@ -770,14 +770,14 @@ export default function AdminCarsPage() {
                                 <Edit size={16} />
                             </Button>
                             
-                            <DropdownMenu>
+                            <DropdownMenu modal={false}>
                                 <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800">
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuPortal>
-                                  <DropdownMenuContent align="end" className="rounded-xl w-48 p-1">
+                                  <DropdownMenuContent align="end" className="rounded-xl w-48 p-1 z-50">
                                   {car.status !== 'AVAILABLE' && (
                                       <DropdownMenuItem className="rounded-lg font-medium text-green-600 focus:text-green-700 focus:bg-green-50" onClick={() => handleStatusChange(car.id, 'AVAILABLE', car.make)}>
                                       <CheckCircle className="mr-2 h-4 w-4" /> Activate
