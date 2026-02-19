@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { configureAdminAuth, fetchAuthSession } from "../../../adminAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, Save, Trash2, Upload, X, ImageIcon } from "lucide-react";
 import Link from "next/link";
@@ -56,6 +57,11 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
   const [isUploading, setIsUploading] = useState(false);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize Amplify auth on mount (same as car edit page)
+  useEffect(() => {
+    configureAdminAuth();
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -130,12 +136,22 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
     setIsUploading(true);
 
     try {
+      // Get the auth token (same pattern as car edit page)
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString();
+      if (!token) {
+        toast.error("Authentication required. Please log in again.");
+        setIsUploading(false);
+        return;
+      }
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("folder", "blog");
 
       const res = await fetch("/api/uploads/presign", {
         method: "POST",
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       });
 
