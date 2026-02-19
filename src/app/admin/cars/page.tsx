@@ -769,34 +769,57 @@ export default function AdminCarsPage() {
                                 <Edit size={16} />
                             </Button>
                             
-                            <DropdownMenu modal={false}>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="rounded-xl w-48 p-1 z-[9999]" sideOffset={5}>
+                            <div className="relative dropdown-container">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenDropdownId(openDropdownId === car.id ? null : car.id);
+                                }}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                              
+                              {openDropdownId === car.id && (
+                                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-1"
+                                     style={{ zIndex: 9999 }}
+                                >
                                   {car.status !== 'AVAILABLE' && (
-                                    <DropdownMenuItem className="rounded-lg font-medium text-green-600 focus:text-green-700 focus:bg-green-50 cursor-pointer" onClick={() => handleStatusChange(car.id, 'AVAILABLE', car.make)}>
+                                    <button
+                                      className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                                      onClick={() => handleStatusChange(car.id, 'AVAILABLE', car.make)}
+                                    >
                                       <CheckCircle className="mr-2 h-4 w-4" /> Activate
-                                    </DropdownMenuItem>
+                                    </button>
                                   )}
                                   {car.status !== 'INACTIVE' && (
-                                    <DropdownMenuItem className="rounded-lg font-medium text-gray-600 focus:text-gray-700 focus:bg-gray-50 cursor-pointer" onClick={() => handleStatusChange(car.id, 'INACTIVE', car.make)}>
+                                    <button
+                                      className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                      onClick={() => handleStatusChange(car.id, 'INACTIVE', car.make)}
+                                    >
                                       <PowerOff className="mr-2 h-4 w-4" /> Deactivate
-                                    </DropdownMenuItem>
+                                    </button>
                                   )}
                                   {car.status !== 'SOLD' && (
-                                    <DropdownMenuItem className="rounded-lg font-medium text-orange-600 focus:text-orange-700 focus:bg-orange-50 cursor-pointer" onClick={() => handleStatusChange(car.id, 'SOLD', car.make)}>
+                                    <button
+                                      className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                                      onClick={() => handleStatusChange(car.id, 'SOLD', car.make)}
+                                    >
                                       <ShoppingCart className="mr-2 h-4 w-4" /> Mark Sold
-                                    </DropdownMenuItem>
+                                    </button>
                                   )}
-                                  <div className="h-px bg-gray-100 my-1" />
-                                  <DropdownMenuItem className="rounded-lg font-medium text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer" onClick={() => openDeleteDialog(car)}>
+                                  <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
+                                  <button
+                                    className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                    onClick={() => { openDeleteDialog(car); setOpenDropdownId(null); }}
+                                  >
                                     <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                         </div>
                       </TableCell>
                     </TableRow>
