@@ -4,7 +4,7 @@ import { BlogCard } from "@/components/blog/BlogCard";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Blog | SaCar Dealership",
+  title: "Blog | Advance Auto",
   description: "Latest news, reviews, and insights from the automotive world.",
 };
 
