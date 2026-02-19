@@ -19,9 +19,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Trash2, Upload, X, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import {
     AlertDialog,
@@ -42,7 +42,7 @@ const formSchema = z.object({
   slug: z.string().min(3, "Slug is required").regex(/^[a-z0-9-]+$/, "Slug usually contains lowercase letters, numbers, and hyphens only"),
   excerpt: z.string().optional(),
   content: z.string().min(20, "Content must be at least 20 characters"),
-  coverImage: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  coverImage: z.string().optional(),
   published: z.boolean().default(false),
   authorName: z.string().optional(),
   tags: z.string().optional(),
@@ -53,6 +53,9 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -92,6 +95,11 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
           authorName: post.authorName || "",
           tags: post.tags ? post.tags.join(", ") : "",
         });
+
+        // Show existing cover image
+        if (post.coverImage) {
+          setCoverImagePreview(post.coverImage);
+        }
       } catch (error) {
         console.error(error);
         toast.error("Failed to load post details");
@@ -104,6 +112,73 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
         fetchPost();
     }
   }, [params.slug, router, form]);
+
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a valid image (JPEG, PNG, WebP, or GIF)");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "blog");
+
+      const res = await fetch("/api/uploads/presign", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to upload image");
+      }
+
+      const data = await res.json();
+
+      form.setValue("coverImage", data.url);
+      setCoverImagePreview(data.url);
+      toast.success("Cover image uploaded successfully!");
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error(error.message || "Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  }, [form]);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const file = e.dataTransfer.files?.[0];
+      if (file) handleImageUpload(file);
+    },
+    [handleImageUpload]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const removeCoverImage = () => {
+    form.setValue("coverImage", "");
+    setCoverImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -272,7 +347,7 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
               
                <Card>
                 <CardHeader>
-                  <CardTitle>SEO & Meta</CardTitle>
+                  <CardTitle>SEO &amp; Meta</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                      <FormField
@@ -351,26 +426,99 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Media & Tags</CardTitle>
+                  <CardTitle>Cover Image</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Image Upload Area */}
+                  {coverImagePreview ? (
+                    <div className="relative group rounded-lg overflow-hidden border">
+                      <img
+                        src={coverImagePreview}
+                        alt="Cover preview"
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Replace
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={removeCoverImage}
+                          className="gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                    >
+                      {isUploading ? (
+                        <div className="flex flex-col items-center gap-2 py-4">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          <p className="text-sm text-muted-foreground">Uploading image...</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 py-4">
+                          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Click to upload or drag & drop</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              JPEG, PNG, WebP or GIF (max 5MB)
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file);
+                    }}
+                  />
+
+                  {/* Hidden form field for the URL */}
                   <FormField
                     control={form.control}
                     name="coverImage"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cover Image URL</FormLabel>
+                      <FormItem className="hidden">
                         <FormControl>
-                          <Input placeholder="https://example.com/image.jpg" {...field} />
+                          <Input type="hidden" {...field} />
                         </FormControl>
-                        <FormDescription>
-                            Full URL to the cover image.
-                        </FormDescription>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
+                </CardContent>
+              </Card>
 
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tags</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
                     name="tags"
@@ -380,6 +528,9 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
                         <FormControl>
                           <Input placeholder="Reviews, News, SUV" {...field} />
                         </FormControl>
+                        <FormDescription>
+                          Add tags to categorize your post.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
