@@ -136,9 +136,19 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
     setIsUploading(true);
 
     try {
-      // Get the auth token (same pattern as car edit page)
-      const session = await fetchAuthSession();
+      // Always ensure Amplify is configured before fetching session
+      configureAdminAuth();
+      
+      // Force refresh to get a fresh token every time
+      const session = await fetchAuthSession({ forceRefresh: true });
       const token = session.tokens?.idToken?.toString();
+      
+      console.log('[EditPost] Auth session:', {
+        hasTokens: !!session.tokens,
+        hasIdToken: !!session.tokens?.idToken,
+        tokenLength: token?.length ?? 0,
+      });
+      
       if (!token) {
         toast.error("Authentication required. Please log in again.");
         setIsUploading(false);
