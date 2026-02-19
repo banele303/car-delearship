@@ -20,7 +20,9 @@ const nextConfig = {
   },
   // Experimental features
   experimental: {
-    // serverMaxBodySize is not a valid Next.js option
+    serverActions: {
+      bodySizeLimit: '6mb',
+    },
   },
   // Add environment variables from .env files
   env: {

@@ -96,12 +96,17 @@ export default function CreatePostPage() {
         body: formData,
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to upload image");
+      const text = await res.text();
+      let data: any;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error("Server returned an invalid response. The file may be too large.");
       }
 
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to upload image");
+      }
 
       form.setValue("coverImage", data.url);
       setCoverImagePreview(data.url);
