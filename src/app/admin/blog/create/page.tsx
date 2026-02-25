@@ -116,7 +116,7 @@ export default function CreatePostPage() {
       formData.append("file", file);
       formData.append("folder", "blog");
 
-      const res = await fetch("/api/uploads/presign", {
+      const res = await fetch("/api/presign-uploads", {
         method: "POST",
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
