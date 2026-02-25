@@ -131,7 +131,7 @@ export default function CreatePostPage() {
       }
 
       if (!res.ok) {
-        throw new Error(data.message || "Failed to upload image");
+        throw new Error(data.error || data.message || `Failed to upload image (Status: ${res.status})`);
       }
 
       form.setValue("coverImage", data.url);
