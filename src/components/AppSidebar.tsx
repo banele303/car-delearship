@@ -31,6 +31,7 @@ import {
   Key,
   Gauge,
   Building,
+  Activity,
 } from "lucide-react";
 import { NAVBAR_HEIGHT } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -83,6 +84,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
   const adminLinks = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
     { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
+    { icon: Activity, label: "Web Traffic", href: "/admin/analytics/traffic" },
     { icon: Car, label: "Cars", href: "/admin/cars" },
     // Inventory removed per request
     { icon: Users, label: "Employees", href: "/admin/employees" },
