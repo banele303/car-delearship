@@ -25,7 +25,8 @@ import "@aws-amplify/ui-react/styles.css";
 import Providers from "./providers";
 import ConditionalFloatingWhatsApp from "@/components/ConditionalFloatingWhatsApp";
 import ConditionalFooter from "@/components/ConditionalFooter";
-import React from 'react';
+import React, { Suspense } from 'react';
+import PostHogPageView from './PostHogPageView';
 
 export const metadata: Metadata = {
   title: "Advance  Trader - Your Dream Car Awaits",
@@ -42,6 +43,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} ${montserrat.variable} ${outfit.variable} font-sans antialiased`} suppressHydrationWarning>
         <Providers>
+          <Suspense>
+            <PostHogPageView />
+          </Suspense>
           <div className="flex min-h-screen flex-col">
             <main className="flex-1">{children}</main>
             <ConditionalFooter />
