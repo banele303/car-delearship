@@ -195,11 +195,9 @@ function ModernCarCard({
 
           
           <div className="flex flex-wrap gap-1 mt-1">
-            {car.condition && (
-              <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-[8px] px-1.5 py-0.5 rounded-full font-medium border border-green-300 dark:border-green-700">
-                {car.condition.replace(/_/g, ' ')}
-              </span>
-            )}
+            <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-[8px] px-1.5 py-0.5 rounded-full font-medium border border-green-300 dark:border-green-700">
+              Available
+            </span>
             {car.fuelType && (
               <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-[8px] px-1.5 py-0.5 rounded-full font-medium border border-blue-300 dark:border-blue-700">
                 {car.fuelType.replace(/_/g, ' ')}

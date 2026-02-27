@@ -88,10 +88,10 @@ const CarCard: React.FC<CarCardProps> = ({
           className="object-cover group-hover:scale-105 transition-transform duration-300"
         />
         
-        
+        {/* Floating Badge */}
         <div className="absolute top-3 left-3">
-          <Badge className={`${getConditionColor(condition)} font-semibold px-3 py-1 rounded-full text-xs`}>
-            {condition}
+          <Badge className="bg-[#00A211] hover:bg-[#009210] text-white font-semibold px-3 py-1 rounded-full text-xs">
+            Available
           </Badge>
         </div>
 

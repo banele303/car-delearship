@@ -115,15 +115,10 @@ const FeaturedCars = () => {
                   loading="lazy"
                 />
                 
-                {/* Floating Badges */}
-                <div className="absolute top-4 left-4 flex flex-col gap-2">
-                  {car.featured && (
-                    <div className="bg-[#00A211] text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center shadow-lg">
-                      <Star size={10} className="mr-1 fill-white" /> Featured
-                    </div>
-                  )}
-                  <div className="bg-white/90 backdrop-blur-md text-gray-900 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                    {car.condition}
+                {/* Floating Badge */}
+                <div className="absolute top-4 left-4">
+                  <div className="bg-[#00A211] text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center shadow-lg">
+                    Available
                   </div>
                 </div>
 

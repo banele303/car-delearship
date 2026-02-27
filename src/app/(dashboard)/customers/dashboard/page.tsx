@@ -176,8 +176,8 @@ const CustomerDashboard = () => {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded">
-                    {car.condition}
+                  <span className="text-xs text-white bg-green-600 px-2 py-1 rounded">
+                    Available
                   </span>
                   <Link 
                     href={`/cars/${car.id}`}
