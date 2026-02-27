@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 
-// NOTE: us.i.posthog.com is the INGESTION host (for sending events from the browser).
-//       HogQL API queries must go to us.posthog.com (the main app host) instead.
+// NOTE: us.i.posthog.com is the INGESTION host (for browser SDK events).
+//       HogQL API queries must use us.posthog.com (the main dashboard host).
 const POSTHOG_API_HOST = 'https://us.posthog.com';
 const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY;
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID;
@@ -15,11 +15,26 @@ export async function GET(request: NextRequest) {
     }
 
     if (!POSTHOG_PERSONAL_API_KEY || !POSTHOG_PROJECT_ID) {
-      return NextResponse.json({ 
-        error: 'PostHog API keys missing', 
-        setup_required: true 
+      return NextResponse.json({
+        error: 'PostHog API keys missing',
+        setup_required: true
       }, { status: 200 });
     }
+
+    // Date range from query param: 1d | 7d | 30d | 90d | 6m | 12m
+    const { searchParams } = new URL(request.url);
+    const range = searchParams.get('range') || '30d';
+
+    // Map range to HogQL interval expression
+    const intervalMap: Record<string, string> = {
+      '1d':  'interval 1 day',
+      '7d':  'interval 7 day',
+      '30d': 'interval 30 day',
+      '90d': 'interval 90 day',
+      '6m':  'interval 6 month',
+      '12m': 'interval 12 month',
+    };
+    const interval = intervalMap[range] || 'interval 30 day';
 
     const fetchHogQL = async (query: string) => {
       const res = await fetch(`${POSTHOG_API_HOST}/api/projects/${POSTHOG_PROJECT_ID}/query/`, {
@@ -28,30 +43,23 @@ export async function GET(request: NextRequest) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${POSTHOG_PERSONAL_API_KEY}`
         },
-        body: JSON.stringify({
-          query: {
-            kind: 'HogQLQuery',
-            query: query
-          }
-        }),
-        // Do NOT cache on the server — we always want fresh data
+        body: JSON.stringify({ query: { kind: 'HogQLQuery', query } }),
         cache: 'no-store',
       });
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`PostHog API error: ${res.status} ${res.statusText} — ${errText.slice(0, 300)}`);
+        throw new Error(`PostHog ${res.status}: ${errText.slice(0, 400)}`);
       }
       return res.json();
     };
 
     // ─────────────────────────────────────────────────────────────────────────
-    // IMPORTANT: All $ signs inside backtick template literals MUST be escaped
-    // as \$ to prevent JavaScript from treating them as template expressions.
-    // e.g. '$pageview' in a template literal becomes '' because JS tries to
-    // evaluate ${pageview} — so we use '\$pageview' everywhere below.
+    // IMPORTANT: All PostHog property names that start with $ must be written
+    // as \$ inside JS template literals to avoid template expression expansion.
+    // e.g. `event = '$pageview'` breaks because JS sees ${pageview} = undefined
     // ─────────────────────────────────────────────────────────────────────────
 
-    // 1. Daily visitor traffic — last 30 days, using toDate() (safe in HogQL)
+    // 1. Daily traffic
     const trafficQuery = `
       SELECT
         toDate(timestamp) as day,
@@ -59,12 +67,12 @@ export async function GET(request: NextRequest) {
         uniq(distinct_id) as visitors
       FROM events
       WHERE event = '\$pageview'
-        AND timestamp > now() - interval 30 day
+        AND timestamp > now() - ${interval}
       GROUP BY day
       ORDER BY day ASC
     `;
 
-    // 2. Top Pages — last 30 days
+    // 2. Top Pages
     const pagesQuery = `
       SELECT
         properties.\$pathname as path,
@@ -72,67 +80,71 @@ export async function GET(request: NextRequest) {
         uniq(distinct_id) as unique_visitors
       FROM events
       WHERE event = '\$pageview'
-        AND timestamp > now() - interval 30 day
+        AND timestamp > now() - ${interval}
       GROUP BY path
       ORDER BY views DESC
       LIMIT 10
     `;
 
-    // 3. Traffic Sources — last 30 days
+    // 3. Traffic Sources
     const sourcesQuery = `
       SELECT
         if(
-          empty(toString(properties.\$referrer_domain)) OR properties.\$referrer_domain = '',
+          empty(toString(properties.\$referrer)) OR properties.\$referrer = '',
           'Direct',
-          toString(properties.\$referrer_domain)
+          if(
+            empty(toString(properties.\$referrer_domain)) OR properties.\$referrer_domain = '',
+            toString(properties.\$referrer),
+            toString(properties.\$referrer_domain)
+          )
         ) as source,
         count() as views,
         uniq(distinct_id) as visitors
       FROM events
       WHERE event = '\$pageview'
-        AND timestamp > now() - interval 30 day
+        AND timestamp > now() - ${interval}
       GROUP BY source
       ORDER BY views DESC
       LIMIT 8
     `;
 
-    // 4. Device breakdown — last 30 days
+    // 4. Device breakdown
     const deviceQuery = `
       SELECT
-        properties.\$device_type as device,
+        coalesce(toString(properties.\$device_type), 'Desktop') as device,
         count() as count
       FROM events
       WHERE event = '\$pageview'
-        AND timestamp > now() - interval 30 day
+        AND timestamp > now() - ${interval}
       GROUP BY device
       ORDER BY count DESC
     `;
 
-    // 5. Summary — total unique visitors + total pageviews — last 30 days
+    // 5. Summary
     const summaryQuery = `
       SELECT
         uniq(distinct_id) as total_visitors,
         countIf(event = '\$pageview') as total_pageviews
       FROM events
-      WHERE timestamp > now() - interval 30 day
+      WHERE timestamp > now() - ${interval}
     `;
 
-    // 6. Country breakdown — last 30 days
+    // 6. Country breakdown
     const countryQuery = `
       SELECT
-        properties.\$geoip_country_name as country,
+        coalesce(toString(properties.\$geoip_country_name), 'Unknown') as country,
         count() as views,
         uniq(distinct_id) as visitors
       FROM events
       WHERE event = '\$pageview'
-        AND timestamp > now() - interval 30 day
+        AND timestamp > now() - ${interval}
         AND notEmpty(toString(properties.\$geoip_country_name))
       GROUP BY country
       ORDER BY views DESC
       LIMIT 8
     `;
 
-    // 7. Hourly activity heatmap — last 7 days (all events, not just pageview)
+    // 7. Hourly heatmap
     const hourlyQuery = `
       SELECT
         toHour(timestamp) as hour,
@@ -140,12 +152,12 @@ export async function GET(request: NextRequest) {
         count() as events
       FROM events
       WHERE event = '\$pageview'
-        AND timestamp > now() - interval 7 day
+        AND timestamp > now() - ${interval}
       GROUP BY hour, dow
       ORDER BY dow, hour
     `;
 
-    // 8. Active users in the last 5 minutes
+    // 8. Active now (last 5 min)
     const activeNowQuery = `
       SELECT uniq(distinct_id) as active
       FROM events
@@ -176,14 +188,13 @@ export async function GET(request: NextRequest) {
     const totalPageviews = summaryRes.results?.[0]?.[1] ?? 0;
     const activeNow      = activeNowRes.results?.[0]?.[0] ?? 0;
 
-    // Normalise device data — PostHog may return null/empty for Desktop
+    // Normalise device data
     const rawDevices: Record<string, number> = {};
     for (const row of (deviceRes.results ?? [])) {
       const type = (row[0] || 'Desktop') as string;
       rawDevices[type] = (rawDevices[type] || 0) + (row[1] as number);
     }
 
-    // Format date labels for the traffic chart: "Feb 27"
     const formatDay = (dateStr: string) => {
       try {
         const d = new Date(dateStr);
