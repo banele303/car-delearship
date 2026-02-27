@@ -18,11 +18,11 @@ const nextConfig = {
       },
     ],
   },
-  // Experimental features
   experimental: {
     serverActions: {
       bodySizeLimit: '6mb',
     },
+    serverExternalPackages: ['@prisma/client', 'prisma'],
   },
   // Add environment variables from .env files
   env: {
@@ -39,8 +39,6 @@ const nextConfig = {
     // Database Configuration - explicitly pass DATABASE_URL to server environment
     DATABASE_URL: process.env.DATABASE_URL || process.env.NEXT_PUBLIC_DATABASE_URL,
   },
-  // External packages configuration
-  serverExternalPackages: ['@prisma/client', 'prisma'],
   // Expose uploaded files from /uploads through a rewrite (NOT for production scale / security hardening)
   async rewrites() {
     return [

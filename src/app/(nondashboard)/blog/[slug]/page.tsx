@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Share2, Clock, ArrowLeft, UserIcon, CalendarIcon } from "lucide-react";
 import { Metadata } from "next";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "@/components/blog/MarkdownRenderer";
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const post = await prisma.post.findUnique({
@@ -114,9 +113,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                 prose-img:rounded-xl prose-img:shadow-lg
                 prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-2 prose-blockquote:pl-4 prose-blockquote:rounded-r
             ">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {post.content}
-                </ReactMarkdown>
+                <MarkdownRenderer content={post.content} />
             </div>
 
             <div className="mt-16 pt-8 border-t flex justify-between items-center">
