@@ -5,8 +5,11 @@ import { PostHogProvider } from 'posthog-js/react'
 if (typeof window !== 'undefined') {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-    person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
-    capture_pageview: false // Disable automatic pageview capturing, as we capture manually
+    // 'always' = track ALL visitors including anonymous ones (was 'identified_only' — that's why everything showed 0)
+    person_profiles: 'always',
+    capture_pageview: false, // We fire $pageview manually via PostHogPageView so we control the URL
+    capture_pageleave: true, // Track when users leave so session duration is accurate
+    autocapture: true,       // Capture clicks, form submissions etc automatically
   })
 }
 
