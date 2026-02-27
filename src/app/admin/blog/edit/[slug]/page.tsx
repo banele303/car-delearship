@@ -35,6 +35,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog";
+import { MarkdownEditor } from "@/components/blog/MarkdownEditor";
 
 const formSchema = z.object({
   title: z.string().min(5, {
@@ -118,41 +119,15 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
         fetchPost();
     }
   }, [params.slug, router, form]);
-
   const handleImageUpload = useCallback(async (file: File) => {
-    if (!file) return;
-
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Please upload a valid image (JPEG, PNG, WebP, or GIF)");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be less than 5MB");
-      return;
-    }
-
-    setIsUploading(true);
-
     try {
-      // Always ensure Amplify is configured before fetching session
       configureAdminAuth();
-      
-      // Force refresh to get a fresh token every time
       const session = await fetchAuthSession({ forceRefresh: true });
       const token = session.tokens?.idToken?.toString();
       
-      console.log('[EditPost] Auth session:', {
-        hasTokens: !!session.tokens,
-        hasIdToken: !!session.tokens?.idToken,
-        tokenLength: token?.length ?? 0,
-      });
-      
       if (!token) {
         toast.error("Authentication required. Please log in again.");
-        setIsUploading(false);
-        return;
+        return "";
       }
 
       const formData = new FormData();
@@ -170,32 +145,40 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
       try {
         data = text ? JSON.parse(text) : {};
       } catch {
-        throw new Error("Server returned an invalid response. The file may be too large.");
+        throw new Error("Server returned an invalid response.");
       }
 
       if (!res.ok) {
-        throw new Error(data.error || data.message || `Failed to upload image (Status: ${res.status})`);
+        throw new Error(data.error || data.message || `Upload failed`);
       }
 
-      form.setValue("coverImage", data.url);
-      setCoverImagePreview(data.url);
-      toast.success("Cover image uploaded successfully!");
+      return data.url;
     } catch (error: any) {
       console.error("Upload error:", error);
-      toast.error(error.message || "Failed to upload image. Please try again.");
-    } finally {
-      setIsUploading(false);
+      toast.error(error.message || "Failed to upload image.");
+      return "";
     }
-  }, [form]);
+  }, []);
+
+  const handleCoverImageUpload = async (file: File) => {
+    setIsUploading(true);
+    const url = await handleImageUpload(file);
+    if (url) {
+      form.setValue("coverImage", url);
+      setCoverImagePreview(url);
+      toast.success("Cover image updated!");
+    }
+    setIsUploading(false);
+  };
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       const file = e.dataTransfer.files?.[0];
-      if (file) handleImageUpload(file);
+      if (file) handleCoverImageUpload(file);
     },
-    [handleImageUpload]
+    [handleCoverImageUpload]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -285,6 +268,17 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
             </p>
             </div>
         </div>
+
+        <div className="flex items-center gap-3">
+            <Button 
+                type="submit" 
+                form="blog-post-form" 
+                disabled={isSubmitting}
+                className="bg-[#00A211] hover:bg-[#008d0f]"
+            >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save Changes
+            </Button>
         
         <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -310,9 +304,10 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
             </AlertDialogContent>
         </AlertDialog>
       </div>
+    </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form id="blog-post-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <div className="grid gap-6 md:grid-cols-3">
             <div className="md:col-span-2 space-y-6">
               <Card>
@@ -363,10 +358,11 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
                       <FormItem>
                         <FormLabel>Content (Markdown supported)</FormLabel>
                         <FormControl>
-                          <Textarea 
+                          <MarkdownEditor 
+                            value={field.value}
+                            onChange={field.onChange}
+                            onImageUpload={handleImageUpload}
                             placeholder="Write your article content here..." 
-                            className="min-h-[400px] font-mono text-sm leading-relaxed" 
-                            {...field} 
                           />
                         </FormControl>
                         <FormMessage />
@@ -526,7 +522,7 @@ export default function EditPostPage({ params }: { params: { slug: string } }) {
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) handleImageUpload(file);
+                      if (file) handleCoverImageUpload(file);
                     }}
                   />
 
