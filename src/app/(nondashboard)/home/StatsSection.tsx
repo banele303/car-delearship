@@ -56,7 +56,7 @@ const StatsSection = () => {
           className="text-center mb-14"
         >
           <h2 className="inline-block text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white relative">
-            <span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-r from-[#00A211] via-[#00b516] to-[#008d0f]">Why Choose Advance Auto Dealership?</span>
+            <span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-r from-[#00A211] via-[#00b516] to-[#008d0f]">Why Choose Advanced Auto Dealership?</span>
             <span className="absolute -inset-1 rounded-lg bg-[#00A211]/5 blur-sm" aria-hidden />
           </h2>
           <p className="mt-4 text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">

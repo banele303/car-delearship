@@ -246,7 +246,7 @@ export default function AdminSignup() {
           <div className="mb-4">
             <Image 
               src="/Advance_Auto_logoo.png" 
-              alt="Advance Auto Logo" 
+              alt="Advanced Auto Logo" 
               width={140} 
               height={48} 
               className="object-contain" 
@@ -384,7 +384,7 @@ export default function AdminSignup() {
           <div className="mt-4 flex justify-center">
             <Image 
               src="/Advance_Auto_logoo.png" 
-              alt="Advance Auto Logo" 
+              alt="Advanced Auto Logo" 
               width={140} 
               height={48} 
               className="opacity-80 dark:opacity-60 object-contain" 

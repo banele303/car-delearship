@@ -21,7 +21,7 @@ export default function AboutUsSection() {
             <div className="relative rounded-3xl overflow-hidden ring-1 ring-emerald-500/10 shadow-xl h-[300px] sm:h-[340px] md:h-[380px] lg:h-[420px] xl:h-[440px]">
               <Image
                 src="/about-image.jpeg"
-                alt="Advance Auto dealership overview"
+                alt="Advanced Auto dealership overview"
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
@@ -40,15 +40,15 @@ export default function AboutUsSection() {
           >
             <h2 id="about-heading" className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(90deg,hsl(var(--primary))_0%,hsl(var(--primary))_100%)]">About Us</h2>
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
-              Advance Auto is a trusted dealership with clients from all corners of the country. Located at 2A Amanda Avenue in Gleneagles - Joburg South, we take pride in selling affordable and quality cars. We are happy to be at your service and look forward to helping you buy your next car with us.
+              Advanced Auto is a trusted dealership with clients from all corners of the country. Located at 2A Amanda Avenue in Gleneagles - Joburg South, we take pride in selling affordable and quality cars. We are happy to be at your service and look forward to helping you buy your next car with us.
             </p>
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
               We understand that mobility is a need and buying a car is one of the biggest commitments. Buying a car with us unlocks and creates opportunities for you. Mobility provides sense of pride, comfort and convenience. It widens our perspective and also gives us memories to cherish forever.
             </p>
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
-              Come to Advance Auto for best service and customer experience!!!
+              Come to Advanced Auto for best service and customer experience!!!
             </p>
-            <p className="font-semibold text-gray-800 dark:text-gray-200 text-lg">Advance Auto<br/>Cars You Can Trust</p>
+            <p className="font-semibold text-gray-800 dark:text-gray-200 text-lg">Advanced Auto<br/>Cars You Can Trust</p>
             {/* Removed stats cards and specific tags per request */}
             <div className="pt-2 flex flex-wrap gap-3 text-xs font-medium">
               {['Transparent Pricing','Flexible Finance','After‑Sale Support'].map(tag => (

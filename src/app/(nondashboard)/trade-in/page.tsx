@@ -570,7 +570,7 @@ export default function TradeInPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-[#00acee]" />
-                <span className="font-semibold">tradein@advanceauto.co.za</span>
+                <span className="font-semibold">tradein@advancedauto.co.za</span>
               </div>
             </div>
           </div>

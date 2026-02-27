@@ -105,7 +105,7 @@ const AdminNavbar = () => {
               <div className="relative">
                 <Image
                   src="/Advance_Auto_logoo.png"
-                  alt="Advance Auto Dealership Logo"
+                  alt="Advanced Auto Dealership Logo"
                   width={160}
                   height={54}
                   className="object-contain h-12 w-auto transition-transform duration-300 group-hover:scale-105"

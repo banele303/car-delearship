@@ -29,7 +29,7 @@ const components = {
     return (
       <View className="mt-4 mb-7">
         <Heading level={3} className="!text-2xl !font-bold">
-            <Image src="/Advance_Auto_logoo.png" alt="Advance Auto Logo" width={150} height={60} className="object-contain" />
+            <Image src="/Advance_Auto_logoo.png" alt="Advanced Auto Logo" width={150} height={60} className="object-contain" />
         </Heading>
         <p className="text-muted-foreground mt-2">
           <span className="font-bold">Welcome!</span> Please sign in to continue

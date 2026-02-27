@@ -1,7 +1,7 @@
 // Centralized site branding & contact configuration
 export const siteConfig = {
   brand: {
-    name: 'Advance Auto',
+    name: 'Advanced Auto',
     tagline: 'Cars You Can Trust',
   },
   contact: {
@@ -9,8 +9,8 @@ export const siteConfig = {
     phoneRaw: '+27680720424',
     whatsappNumberRaw: '+27680720424',
     whatsappMessage: "Hi I'm interested in a vehicle",
-    emailGeneral: 'info@advanceauto.co.za',
-    emailTradeIn: 'tradein@advanceauto.co.za',
+    emailGeneral: 'info@advancedauto.co.za',
+    emailTradeIn: 'tradein@advancedauto.co.za',
     addressLine: '2A Amanda Ave, Gleneagles, Johannesburg South, 2091',
     hours: {
       weekday: '08:00–17:00',

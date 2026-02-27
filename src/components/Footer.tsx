@@ -29,8 +29,8 @@ export default function Footer() {
         <div className="grid gap-12 md:gap-8 md:grid-cols-4">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src="/Advance_Auto_logoo.png" alt="Advance Auto" className="h-10 w-auto" />
-              <span className="text-lg font-semibold text-white">Advance Auto</span>
+              <img src="/Advance_Auto_logoo.png" alt="Advanced Auto" className="h-10 w-auto" />
+              <span className="text-lg font-semibold text-white">Advanced Auto</span>
             </div>
             <p className="text-sm leading-relaxed text-gray-400 max-w-xs">Quality vehicles, transparent service, and a tailored buying experience in Johannesburg South.</p>
           </div>
@@ -49,7 +49,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2"><MapPin size={14} className="mt-0.5" /> 2A Amanda Ave, Gleneagles, Johannesburg South</li>
               <li className="flex items-center gap-2"><Phone size={14} /> <a href="tel:+27680720424" className="hover:text-white">068 072 0424</a></li>
-              <li className="flex items-center gap-2"><Mail size={14} /> <a href="mailto:info@advanceauto.co.za" className="hover:text-white">info@advanceauto.co.za</a></li>
+              <li className="flex items-center gap-2"><Mail size={14} /> <a href="mailto:info@advancedauto.co.za" className="hover:text-white">info@advancedauto.co.za</a></li>
             </ul>
           </div>
             <div>
@@ -62,7 +62,7 @@ export default function Footer() {
             </div>
         </div>
         <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <p>&copy; {year} Advance Auto. All rights reserved.</p>
+          <p>&copy; {year} Advanced Auto. All rights reserved.</p>
          
         </div>
       </div>

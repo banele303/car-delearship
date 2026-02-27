@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 const FeaturedDealer = () => {
   const address = "2A Amanda Ave, Gleneagles, Johannesburg South, 2091";
   const phone = "+27 68 072 0424"; // updated primary contact number
-  const email = "info@advanceauto.co.za"; // placeholder business email
+  const email = "info@advancedauto.co.za"; // placeholder business email
   const hours = [
     { label: "Mon - Fri", value: "08:00 - 17:00" },
     { label: "Saturday", value: "08:00 - 14:00" },
@@ -40,7 +40,7 @@ const FeaturedDealer = () => {
             <MapPin size={14} /> Our Showroom
           </span>
           <h2 className="text-2xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 dark:from-emerald-300 dark:via-green-300 dark:to-emerald-200 md:whitespace-nowrap">
-            Visit Advance Auto Johannesburg South
+            Visit Advanced Auto Johannesburg South
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-gray-600 dark:text-gray-300">
             Your destination for quality vehicles and personal service. Book a test drive, explore financing, or just drop in for a consultation—everything starts at our single flagship location.
@@ -129,7 +129,7 @@ const FeaturedDealer = () => {
             <div className="h-[520px] w-full rounded-2xl overflow-hidden ring-1 ring-gray-200/70 dark:ring-slate-700 shadow-md bg-gray-100 dark:bg-slate-800">
               {/* Simple embed without API key: uses public search-based maps embed */}
               <iframe
-                title="Advance Auto Johannesburg Map"
+                title="Advanced Auto Johannesburg Map"
                 src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
                 className="w-full h-full border-0"
                 loading="lazy"

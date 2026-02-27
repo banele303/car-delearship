@@ -59,7 +59,7 @@ export default function CreatePostPage() {
       content: "",
       coverImage: "",
       published: false,
-      authorName: "Advance Auto Team",
+      authorName: "Advanced Auto Team",
       tags: "",
     },
   });

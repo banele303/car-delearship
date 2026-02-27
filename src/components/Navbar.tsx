@@ -62,7 +62,7 @@ export default function Navbar() {
       <Link href="/" className="flex items-center gap-2" aria-label={`${siteConfig.brand.name} Home`}>
             <Image
               src="/Advance_Auto_logoo.png"
-        alt={`${siteConfig.brand.name} Logo`}
+        alt="Advanced Auto Logo"
               width={220}
               height={80}
               priority
