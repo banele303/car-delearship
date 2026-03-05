@@ -7,6 +7,15 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { configureAdminAuth, fetchAuthSession } from "../adminAuth";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface GalleryItem {
   id: number;
@@ -25,6 +34,8 @@ export default function AdminGalleryPage() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("2025");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -100,15 +111,16 @@ export default function AdminGalleryPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this image?")) return;
+  const handleDelete = async () => {
+    if (!deleteId) return;
 
+    setIsDeleting(true);
     try {
       configureAdminAuth();
       const session = await fetchAuthSession({ forceRefresh: true });
       const token = session.tokens?.idToken?.toString();
 
-      const res = await fetch(`/api/gallery/${id}`, {
+      const res = await fetch(`/api/gallery/${deleteId}`, {
         method: "DELETE",
         headers: token ? {
           'Authorization': `Bearer ${token}`
@@ -116,7 +128,7 @@ export default function AdminGalleryPage() {
       });
 
       if (res.ok) {
-        setItems(items.filter((item) => item.id !== id));
+        setItems(items.filter((item) => item.id !== deleteId));
         toast.success("Image deleted");
       } else {
         toast.error("Failed to delete image");
@@ -124,6 +136,9 @@ export default function AdminGalleryPage() {
     } catch (error) {
       console.error(error);
       toast.error("An error occurred while deleting");
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -173,7 +188,7 @@ export default function AdminGalleryPage() {
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3">
                 <div className="flex justify-end">
                   <button
-                    onClick={() => handleDelete(item.id)}
+                    onClick={() => setDeleteId(item.id)}
                     className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -269,6 +284,35 @@ export default function AdminGalleryPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the image from your gallery and storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
