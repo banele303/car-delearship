@@ -94,6 +94,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
     { icon: CreditCard, label: "Financing", href: "/admin/financing" },
     { icon: Building, label: "Dealerships", href: "/admin/dealerships" },
     { icon: FileText, label: "Blog", href: "/admin/blog" },
+    { icon: LayoutDashboard, label: "Gallery", href: "/admin/gallery" },
   ];
   
   // Bottom links (Settings & Notifications) removed per request

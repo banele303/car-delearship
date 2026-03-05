@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,21 +11,6 @@ interface GalleryImage { src: string; alt: string; category: string; label?: str
 
 // Dynamically build gallery from public images that start with IMG-2025
 // (Build-time evaluation; Next.js serves /public as root path)
-const allStaticImports = [
-  // keep a couple fallback brand/showroom images if needed
-  { src: "/hero-1.jpg", alt: "Hero", category: "showroom", label: "Showroom" },
-];
-
-// NOTE: We cannot read filesystem at runtime on client; so we hardcode pattern list.
-// For simplicity, we include discovered IMG-2025 files manually (could be generated via a script).
-const imgPrefix = 'IMG-2025';
-const generated: GalleryImage[] = [
-  // List truncated to pattern; add all found names
-  "IMG-20250823-WA0000.jpg","IMG-20250823-WA0002.jpg","IMG-20250823-WA0003.jpg","IMG-20250823-WA0004.jpg","IMG-20250823-WA0005.jpg","IMG-20250823-WA0006.jpg","IMG-20250823-WA0007.jpg","IMG-20250823-WA0008.jpg","IMG-20250823-WA0009.jpg","IMG-20250823-WA0010.jpg","IMG-20250823-WA0011.jpg","IMG-20250823-WA0012.jpg","IMG-20250823-WA0013.jpg","IMG-20250823-WA0014.jpg","IMG-20250823-WA0015.jpg","IMG-20250823-WA0016.jpg","IMG-20250823-WA0017.jpg","IMG-20250823-WA0018.jpg","IMG-20250823-WA0019.jpg","IMG-20250823-WA0020.jpg","IMG-20250823-WA0021.jpg","IMG-20250823-WA0022.jpg","IMG-20250823-WA0023.jpg","IMG-20250823-WA0024.jpg","IMG-20250823-WA0025.jpg","IMG-20250823-WA0026.jpg","IMG-20250823-WA0027.jpg","IMG-20250823-WA0028.jpg","IMG-20250823-WA0029.jpg","IMG-20250823-WA0030.jpg","IMG-20250823-WA0031.jpg","IMG-20250823-WA0032.jpg","IMG-20250823-WA0033.jpg","IMG-20250823-WA0034.jpg","IMG-20250823-WA0035.jpg","IMG-20250823-WA0036.jpg","IMG-20250823-WA0037.jpg","IMG-20250823-WA0038.jpg","IMG-20250823-WA0039.jpg","IMG-20250823-WA0040.jpg","IMG-20250823-WA0041.jpg","IMG-20250823-WA0042.jpg","IMG-20250823-WA0043.jpg","IMG-20250823-WA0044.jpg","IMG-20250823-WA0045.jpg","IMG-20250823-WA0046.jpg","IMG-20250823-WA0047.jpg","IMG-20250823-WA0048.jpg","IMG-20250823-WA0049.jpg","IMG-20250823-WA0050.jpg","IMG-20250823-WA0051.jpg","IMG-20250823-WA0052.jpg","IMG-20250823-WA0053.jpg","IMG-20250823-WA0054.jpg","IMG-20250823-WA0055.jpg","IMG-20250823-WA0056.jpg","IMG-20250823-WA0057.jpg","IMG-20250823-WA0058.jpg","IMG-20250823-WA0059.jpg","IMG-20250823-WA0060.jpg","IMG-20250823-WA0061.jpg","IMG-20250823-WA0062.jpg","IMG-20250823-WA0063.jpg","IMG-20250823-WA0064.jpg",
-].map(name => ({ src: `/${name}`, alt: name, category: '2025' }));
-
-const images: GalleryImage[] = [...generated, ...allStaticImports];
-
 // Derive categories dynamically (excluding duplicates) + counts
 const deriveCategories = (imgs: GalleryImage[]) => {
   const counts: Record<string, number> = {};
@@ -38,15 +23,42 @@ const deriveCategories = (imgs: GalleryImage[]) => {
 interface GallerySectionProps { compact?: boolean; initialCategory?: string; }
 
 export default function GallerySection({ compact=false, initialCategory='all' }: GallerySectionProps) {
+  const [images, setImages] = useState<GalleryImage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [layout, setLayout] = useState<'grid'|'masonry'>('masonry');
   const [autoPlay, setAutoPlay] = useState(true);
-  const categories = deriveCategories(images);
   const [page, setPage] = useState(1);
   const pageSize = 24;
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    async function fetchGallery() {
+      try {
+        const res = await fetch('/api/gallery');
+        if (res.ok) {
+          const data = await res.json();
+          // Map DB schema to component's GalleryImage interface
+          const mapped = data.map((item: any) => ({
+            src: item.url,
+            alt: item.title || "Gallery Image",
+            category: item.category || "showroom",
+            label: item.title
+          }));
+          setImages(mapped);
+        }
+      } catch (error) {
+        console.error("Failed to fetch gallery:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchGallery();
+  }, []);
+
+  const categories = deriveCategories(images);
 
   const categoryFiltered = activeCategory === 'all' ? images : images.filter(i => i.category === activeCategory);
   const searched = categoryFiltered.filter(i => i.alt.toLowerCase().includes(search.toLowerCase()) || (i.label||'').toLowerCase().includes(search.toLowerCase()));
@@ -126,7 +138,12 @@ export default function GallerySection({ compact=false, initialCategory='all' }:
           )}
         </div>
 
-  <motion.div layout className={cn(layout==='masonry' ? 'columns-2 md:columns-3 lg:columns-4 gap-4 [column-fill:balance]' : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4') }>
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-[hsl(var(--primary))]" />
+          </div>
+        ) : (
+          <motion.div layout className={cn(layout==='masonry' ? 'columns-2 md:columns-3 lg:columns-4 gap-4 [column-fill:balance]' : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4') }>
           <AnimatePresence>
             {filtered.map((img, i) => (
               <motion.div
@@ -156,6 +173,7 @@ export default function GallerySection({ compact=false, initialCategory='all' }:
             ))}
           </AnimatePresence>
         </motion.div>
+        )}
 
         {filtered.length === 0 && (
           <p className="text-center text-slate-500 dark:text-slate-400 mt-12">No images match your filter.</p>

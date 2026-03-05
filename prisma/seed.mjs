@@ -122,6 +122,49 @@ async function main() {
     }
   }
 
+  console.log('Seeding gallery images...');
+  const galleryImages = [
+    "IMG-20250823-WA0000.jpg", "IMG-20250823-WA0002.jpg", "IMG-20250823-WA0003.jpg",
+    "IMG-20250823-WA0004.jpg", "IMG-20250823-WA0005.jpg", "IMG-20250823-WA0006.jpg",
+    "IMG-20250823-WA0007.jpg", "IMG-20250823-WA0008.jpg", "IMG-20250823-WA0009.jpg",
+    "IMG-20250823-WA0010.jpg", "IMG-20250823-WA0011.jpg", "IMG-20250823-WA0012.jpg",
+    "IMG-20250823-WA0013.jpg", "IMG-20250823-WA0014.jpg", "IMG-20250823-WA0015.jpg",
+    "IMG-20250823-WA0016.jpg", "IMG-20250823-WA0017.jpg", "IMG-20250823-WA0018.jpg",
+    "IMG-20250823-WA0019.jpg", "IMG-20250823-WA0020.jpg", "IMG-20250823-WA0021.jpg",
+    "IMG-20250823-WA0022.jpg", "IMG-20250823-WA0023.jpg", "IMG-20250823-WA0024.jpg",
+    "IMG-20250823-WA0025.jpg", "IMG-20250823-WA0026.jpg", "IMG-20250823-WA0027.jpg",
+    "IMG-20250823-WA0028.jpg", "IMG-20250823-WA0029.jpg", "IMG-20250823-WA0030.jpg",
+    "IMG-20250823-WA0031.jpg", "IMG-20250823-WA0032.jpg", "IMG-20250823-WA0033.jpg",
+    "IMG-20250823-WA0034.jpg", "IMG-20250823-WA0035.jpg", "IMG-20250823-WA0036.jpg",
+    "IMG-20250823-WA0037.jpg", "IMG-20250823-WA0038.jpg", "IMG-20250823-WA0039.jpg",
+    "IMG-20250823-WA0040.jpg", "IMG-20250823-WA0041.jpg", "IMG-20250823-WA0042.jpg",
+    "IMG-20250823-WA0043.jpg", "IMG-20250823-WA0044.jpg", "IMG-20250823-WA0045.jpg",
+    "IMG-20250823-WA0046.jpg", "IMG-20250823-WA0047.jpg", "IMG-20250823-WA0048.jpg",
+    "IMG-20250823-WA0049.jpg", "IMG-20250823-WA0050.jpg", "IMG-20250823-WA0051.jpg",
+    "IMG-20250823-WA0052.jpg", "IMG-20250823-WA0053.jpg", "IMG-20250823-WA0054.jpg",
+    "IMG-20250823-WA0055.jpg", "IMG-20250823-WA0056.jpg", "IMG-20250823-WA0057.jpg",
+    "IMG-20250823-WA0058.jpg", "IMG-20250823-WA0059.jpg", "IMG-20250823-WA0060.jpg",
+    "IMG-20250823-WA0061.jpg", "IMG-20250823-WA0062.jpg", "IMG-20250823-WA0063.jpg",
+    "IMG-20250823-WA0064.jpg", "hero-1.jpg"
+  ];
+
+  for (const name of galleryImages) {
+    const url = name.startsWith('http') ? name : `/${name}`;
+    try {
+      await prisma.gallery.upsert({
+        where: { url },
+        create: {
+          url,
+          title: name,
+          category: name.includes('IMG-2025') ? '2025' : 'showroom'
+        },
+        update: {}
+      });
+    } catch (e) {
+      console.error(`Failed to upsert gallery image ${name}:`, e.message);
+    }
+  }
+
   console.log('Seeding complete.');
 }
 
