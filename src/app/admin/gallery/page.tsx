@@ -6,6 +6,7 @@ import { Plus, Trash2, Loader2, ImageIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { configureAdminAuth, fetchAuthSession } from "../adminAuth";
 
 interface GalleryItem {
   id: number;
@@ -69,14 +70,16 @@ export default function AdminGalleryPage() {
     formData.append("category", category);
 
     try {
-      const token = localStorage.getItem('token'); // or however you store the token
+      configureAdminAuth();
+      const session = await fetchAuthSession({ forceRefresh: true });
+      const token = session.tokens?.idToken?.toString();
+
       const res = await fetch("/api/gallery", {
         method: "POST",
         body: formData,
-        headers: {
-          // If needed, add authorization header here
-          // 'Authorization': `Bearer ${token}`
-        }
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
       });
 
       if (res.ok) {
@@ -101,8 +104,15 @@ export default function AdminGalleryPage() {
     if (!confirm("Are you sure you want to delete this image?")) return;
 
     try {
+      configureAdminAuth();
+      const session = await fetchAuthSession({ forceRefresh: true });
+      const token = session.tokens?.idToken?.toString();
+
       const res = await fetch(`/api/gallery/${id}`, {
         method: "DELETE",
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
       });
 
       if (res.ok) {
