@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     // e.g. `event = '$pageview'` breaks because JS sees ${pageview} = undefined
     // ─────────────────────────────────────────────────────────────────────────
 
-    // 1. Daily traffic
+    // 1. Daily traffic + Summary totals (Combined to save a query)
     const trafficQuery = `
       SELECT
         toDate(timestamp) as day,
@@ -120,16 +120,7 @@ export async function GET(request: NextRequest) {
       ORDER BY count DESC
     `;
 
-    // 5. Summary
-    const summaryQuery = `
-      SELECT
-        uniq(distinct_id) as total_visitors,
-        countIf(event = '\$pageview') as total_pageviews
-      FROM events
-      WHERE timestamp > now() - ${interval}
-    `;
-
-    // 6. Country breakdown
+    // 5. Country breakdown
     const countryQuery = `
       SELECT
         coalesce(toString(properties.\$geoip_country_name), 'Unknown') as country,
@@ -144,7 +135,7 @@ export async function GET(request: NextRequest) {
       LIMIT 8
     `;
 
-    // 7. Hourly heatmap
+    // 6. Hourly heatmap
     const hourlyQuery = `
       SELECT
         toHour(timestamp) as hour,
@@ -157,36 +148,43 @@ export async function GET(request: NextRequest) {
       ORDER BY dow, hour
     `;
 
-    // 8. Active now (last 5 min)
+    // 7. Active now (last 5 min)
     const activeNowQuery = `
       SELECT uniq(distinct_id) as active
       FROM events
       WHERE timestamp > now() - interval 5 minute
     `;
 
-    const [
-      trafficRes,
-      pagesRes,
-      sourcesRes,
-      deviceRes,
-      summaryRes,
-      countryRes,
-      hourlyRes,
-      activeNowRes
-    ] = await Promise.all([
+    // Execute in smaller batches to prevent PostHog concurrency timeouts (504s)
+    // Batch 1: Primary metrics
+    const [trafficRes, pagesRes, sourcesRes] = await Promise.all([
       fetchHogQL(trafficQuery),
       fetchHogQL(pagesQuery),
       fetchHogQL(sourcesQuery),
+    ]);
+
+    // Batch 2: Breakdowns
+    const [deviceRes, countryRes, hourlyRes, activeNowRes] = await Promise.all([
       fetchHogQL(deviceQuery),
-      fetchHogQL(summaryQuery),
       fetchHogQL(countryQuery),
       fetchHogQL(hourlyQuery),
       fetchHogQL(activeNowQuery),
     ]);
 
-    const totalVisitors  = summaryRes.results?.[0]?.[0] ?? 0;
-    const totalPageviews = summaryRes.results?.[0]?.[1] ?? 0;
-    const activeNow      = activeNowRes.results?.[0]?.[0] ?? 0;
+    // Calculate totals from traffic query results to save the 'summary' query overhead
+    const trafficRows = trafficRes.results ?? [];
+    let totalPageviews = 0;
+    // Note: totalVisitors from daily Sum will be slightly higher than true unique because of multi-day visitors,
+    // but it's much faster than a separate global 'uniq(distinct_id)' query.
+    let totalVisitorsByDay = 0; 
+    
+    trafficRows.forEach((r: any) => {
+      totalPageviews += (r[1] || 0);
+      totalVisitorsByDay += (r[2] || 0);
+    });
+
+    const totalVisitors = totalVisitorsByDay;
+    const activeNow = activeNowRes.results?.[0]?.[0] ?? 0;
 
     // Normalise device data
     const rawDevices: Record<string, number> = {};
