@@ -46,59 +46,69 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header Image Background (if exists) or Default */}
-      <div className="relative h-[400px] w-full bg-muted overflow-hidden">
-        {post.coverImage ? (
-             <img 
-                src={post.coverImage} 
-                alt={post.title} 
-                className="w-full h-full object-cover"
-             />
-        ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20" />
-        )}
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
-        
-        <div className="absolute inset-0 flex flex-col justify-end container mx-auto px-4 md:px-6 pb-12">
-            <Button variant="outline" size="sm" asChild className="w-fit mb-6 text-white border-white/40 hover:bg-white/10 hover:text-white">
-                <Link href="/blog" className="flex items-center gap-2">
-                    <ArrowLeft className="w-4 h-4" /> Back to Articles
-                </Link>
-            </Button>
-            
-            <div className="space-y-4 max-w-4xl">
-                <div className="flex flex-wrap gap-2 mb-4">
-                    {post.tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="bg-white/20 text-white hover:bg-white/30 border-none">
-                            {tag}
-                        </Badge>
-                    ))}
-                </div>
-                <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
-                    {post.title}
-                </h1>
+      {/* Title & Metadata Header */}
+      <div className="pt-28 pb-24 bg-slate-50 dark:bg-slate-900/50 border-b">
+        <div className="container mx-auto px-4 md:px-6">
+            <div className="max-w-4xl mx-auto">
+                <Button variant="ghost" size="sm" asChild className="mb-8 -ml-2 text-muted-foreground hover:text-primary transition-colors">
+                    <Link href="/blog" className="flex items-center gap-2">
+                        <ArrowLeft className="w-4 h-4" /> Back to Articles
+                    </Link>
+                </Button>
                 
-                <div className="flex flex-wrap items-center gap-6 text-white/90 text-sm md:text-base pt-2">
-                    <div className="flex items-center gap-2">
-                        <UserIcon className="w-5 h-5 opacity-80" />
-                        <span className="font-medium">{post.authorName || 'Advance Auto Team'}</span>
+                <div className="space-y-6">
+                    <div className="flex flex-wrap gap-2">
+                        {post.tags.map(tag => (
+                            <Badge key={tag} variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1">
+                                {tag}
+                            </Badge>
+                        ))}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <CalendarIcon className="w-5 h-5 opacity-80" />
-                        <span>{formattedDate}</span>
-                    </div>
-                     <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 opacity-80" />
-                        <span>{readTime} min read</span>
+                    <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-slate-900 dark:text-white">
+                        {post.title}
+                    </h1>
+                    
+                    <div className="flex flex-wrap items-center gap-6 text-muted-foreground text-sm md:text-base pt-6 border-t border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 bg-primary/10 rounded-full">
+                                <UserIcon className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="font-semibold text-slate-900 dark:text-slate-200">{post.authorName || 'Advance Auto Team'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CalendarIcon className="w-4 h-4 opacity-70" />
+                            <span>{formattedDate}</span>
+                        </div>
+                         <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 opacity-70" />
+                            <span>{readTime} min read</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
       </div>
 
+      {/* Featured Image - Contained & Centered */}
+      <div className="container mx-auto px-4 md:px-6 -mt-12 relative z-10">
+        <div className="max-w-5xl mx-auto">
+            <div className="relative aspect-video md:aspect-[21/9] rounded-3xl overflow-hidden shadow-2xl border-8 border-white dark:border-slate-950 bg-muted">
+                {post.coverImage ? (
+                     <img 
+                        src={post.coverImage} 
+                        alt={post.title} 
+                        className="w-full h-full object-cover"
+                     />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10" />
+                )}
+            </div>
+        </div>
+      </div>
+
       {/* Content Container */}
-      <article className="container mx-auto px-4 md:px-6 -mt-8 relative z-10">
-        <div className="bg-card rounded-xl shadow-xl p-8 md:p-12 max-w-4xl border mx-auto">
+      <article className="container mx-auto px-4 md:px-6 pt-16">
+        <div className="bg-card rounded-2xl shadow-xl p-8 md:p-12 lg:p-14 max-w-4xl border mx-auto">
              
              {post.excerpt && (
                  <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed mb-10 font-light border-l-4 border-primary pl-6 py-2 italic">
