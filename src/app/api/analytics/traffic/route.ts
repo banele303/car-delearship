@@ -155,24 +155,15 @@ export async function GET(request: NextRequest) {
       WHERE timestamp > now() - interval 5 minute
     `;
 
-    // PostHog enforces a max concurrency of 3 queries per team.
-    // Execute in batches of ≤3 to stay within that limit.
-
-    // Batch 1 (3 queries): Core traffic data
-    const [trafficRes, pagesRes, sourcesRes] = await Promise.all([
-      fetchHogQL(trafficQuery),
-      fetchHogQL(pagesQuery),
-      fetchHogQL(sourcesQuery),
-    ]);
-
-    // Batch 2 (3 queries): Breakdown dimensions
-    const [deviceRes, countryRes, hourlyRes] = await Promise.all([
-      fetchHogQL(deviceQuery),
-      fetchHogQL(countryQuery),
-      fetchHogQL(hourlyQuery),
-    ]);
-
-    // Batch 3 (1 query): Real-time
+    // PostHog enforces a max concurrency of 3 queries per team, shared with
+    // the browser SDK (autocapture, $pageview, etc.). Run queries fully
+    // sequentially to guarantee we never hit the limit.
+    const trafficRes = await fetchHogQL(trafficQuery);
+    const pagesRes = await fetchHogQL(pagesQuery);
+    const sourcesRes = await fetchHogQL(sourcesQuery);
+    const deviceRes = await fetchHogQL(deviceQuery);
+    const countryRes = await fetchHogQL(countryQuery);
+    const hourlyRes = await fetchHogQL(hourlyQuery);
     const activeNowRes = await fetchHogQL(activeNowQuery);
 
     // Calculate totals from traffic query results to save the 'summary' query overhead
