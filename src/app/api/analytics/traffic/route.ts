@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         count() as pageviews,
         uniq(distinct_id) as visitors
       FROM events
-      WHERE event = '\\$pageview'
+      WHERE event = '\$pageview'
         AND timestamp > now() - ${interval}
       GROUP BY day
       ORDER BY day ASC
@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
     // 2. Top Pages (simple group-by on pathname)
     const pagesQuery = `
       SELECT
-        properties.\\$pathname as path,
+        properties.\$pathname as path,
         count() as views
       FROM events
-      WHERE event = '\\$pageview'
+      WHERE event = '\$pageview'
         AND timestamp > now() - ${interval}
       GROUP BY path
       ORDER BY views DESC
@@ -78,10 +78,10 @@ export async function GET(request: NextRequest) {
     // 3. Device breakdown (lightweight)
     const deviceQuery = `
       SELECT
-        coalesce(toString(properties.\\$device_type), 'Desktop') as device,
+        coalesce(toString(properties.\$device_type), 'Desktop') as device,
         count() as count
       FROM events
-      WHERE event = '\\$pageview'
+      WHERE event = '\$pageview'
         AND timestamp > now() - ${interval}
       GROUP BY device
       ORDER BY count DESC
