@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 
-// NOTE: us.i.posthog.com is the INGESTION host (for browser SDK events).
-//       HogQL API queries must use us.posthog.com (the main dashboard host).
 const POSTHOG_API_HOST = 'https://us.posthog.com';
 const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY;
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID;
@@ -21,20 +19,16 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
 
-    // Date range from query param: 1d | 7d | 30d | 90d | 6m | 12m
     const { searchParams } = new URL(request.url);
-    const range = searchParams.get('range') || '30d';
+    const range = searchParams.get('range') || '7d';
 
-    // Map range to HogQL interval expression
+    // Cap range to 30d max to prevent query timeouts on PostHog free tier
     const intervalMap: Record<string, string> = {
       '1d':  'interval 1 day',
       '7d':  'interval 7 day',
       '30d': 'interval 30 day',
-      '90d': 'interval 90 day',
-      '6m':  'interval 6 month',
-      '12m': 'interval 12 month',
     };
-    const interval = intervalMap[range] || 'interval 30 day';
+    const interval = intervalMap[range] || 'interval 7 day';
 
     const fetchHogQL = async (query: string) => {
       const res = await fetch(`${POSTHOG_API_HOST}/api/projects/${POSTHOG_PROJECT_ID}/query/`, {
@@ -53,133 +47,59 @@ export async function GET(request: NextRequest) {
       return res.json();
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // IMPORTANT: All PostHog property names that start with $ must be written
-    // as \$ inside JS template literals to avoid template expression expansion.
-    // e.g. `event = '$pageview'` breaks because JS sees ${pageview} = undefined
-    // ─────────────────────────────────────────────────────────────────────────
+    // Only 3 lightweight queries — runs sequentially to respect concurrency limit
 
-    // 1. Daily traffic + Summary totals (Combined to save a query)
+    // 1. Daily traffic (simple, fast)
     const trafficQuery = `
       SELECT
         toDate(timestamp) as day,
         count() as pageviews,
         uniq(distinct_id) as visitors
       FROM events
-      WHERE event = '\$pageview'
+      WHERE event = '\\$pageview'
         AND timestamp > now() - ${interval}
       GROUP BY day
       ORDER BY day ASC
     `;
 
-    // 2. Top Pages
+    // 2. Top Pages (simple group-by on pathname)
     const pagesQuery = `
       SELECT
-        properties.\$pathname as path,
-        count() as views,
-        uniq(distinct_id) as unique_visitors
+        properties.\\$pathname as path,
+        count() as views
       FROM events
-      WHERE event = '\$pageview'
+      WHERE event = '\\$pageview'
         AND timestamp > now() - ${interval}
       GROUP BY path
       ORDER BY views DESC
       LIMIT 10
     `;
 
-    // 3. Traffic Sources
-    const sourcesQuery = `
-      SELECT
-        if(
-          empty(toString(properties.\$referrer)) OR properties.\$referrer = '',
-          'Direct',
-          if(
-            empty(toString(properties.\$referrer_domain)) OR properties.\$referrer_domain = '',
-            toString(properties.\$referrer),
-            toString(properties.\$referrer_domain)
-          )
-        ) as source,
-        count() as views,
-        uniq(distinct_id) as visitors
-      FROM events
-      WHERE event = '\$pageview'
-        AND timestamp > now() - ${interval}
-      GROUP BY source
-      ORDER BY views DESC
-      LIMIT 8
-    `;
-
-    // 4. Device breakdown
+    // 3. Device breakdown (lightweight)
     const deviceQuery = `
       SELECT
-        coalesce(toString(properties.\$device_type), 'Desktop') as device,
+        coalesce(toString(properties.\\$device_type), 'Desktop') as device,
         count() as count
       FROM events
-      WHERE event = '\$pageview'
+      WHERE event = '\\$pageview'
         AND timestamp > now() - ${interval}
       GROUP BY device
       ORDER BY count DESC
     `;
 
-    // 5. Country breakdown
-    const countryQuery = `
-      SELECT
-        coalesce(toString(properties.\$geoip_country_name), 'Unknown') as country,
-        count() as views,
-        uniq(distinct_id) as visitors
-      FROM events
-      WHERE event = '\$pageview'
-        AND timestamp > now() - ${interval}
-        AND notEmpty(toString(properties.\$geoip_country_name))
-      GROUP BY country
-      ORDER BY views DESC
-      LIMIT 8
-    `;
-
-    // 6. Hourly heatmap
-    const hourlyQuery = `
-      SELECT
-        toHour(timestamp) as hour,
-        toDayOfWeek(timestamp) as dow,
-        count() as events
-      FROM events
-      WHERE event = '\$pageview'
-        AND timestamp > now() - ${interval}
-      GROUP BY hour, dow
-      ORDER BY dow, hour
-    `;
-
-    // 7. Active now (last 5 min)
-    const activeNowQuery = `
-      SELECT uniq(distinct_id) as active
-      FROM events
-      WHERE timestamp > now() - interval 5 minute
-    `;
-
-    // PostHog enforces a max concurrency of 3 queries per team, shared with
-    // the browser SDK (autocapture, $pageview, etc.). Run queries fully
-    // sequentially to guarantee we never hit the limit.
+    // Run sequentially — PostHog free tier allows max 3 concurrent per team
     const trafficRes = await fetchHogQL(trafficQuery);
     const pagesRes = await fetchHogQL(pagesQuery);
-    const sourcesRes = await fetchHogQL(sourcesQuery);
     const deviceRes = await fetchHogQL(deviceQuery);
-    const countryRes = await fetchHogQL(countryQuery);
-    const hourlyRes = await fetchHogQL(hourlyQuery);
-    const activeNowRes = await fetchHogQL(activeNowQuery);
 
-    // Calculate totals from traffic query results to save the 'summary' query overhead
+    // Calculate totals from daily traffic rows
     const trafficRows = trafficRes.results ?? [];
     let totalPageviews = 0;
-    // Note: totalVisitors from daily Sum will be slightly higher than true unique because of multi-day visitors,
-    // but it's much faster than a separate global 'uniq(distinct_id)' query.
-    let totalVisitorsByDay = 0; 
-    
+    let totalVisitors = 0;
     trafficRows.forEach((r: any) => {
       totalPageviews += (r[1] || 0);
-      totalVisitorsByDay += (r[2] || 0);
+      totalVisitors += (r[2] || 0);
     });
-
-    const totalVisitors = totalVisitorsByDay;
-    const activeNow = activeNowRes.results?.[0]?.[0] ?? 0;
 
     // Normalise device data
     const rawDevices: Record<string, number> = {};
@@ -198,7 +118,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json({
-      traffic: (trafficRes.results ?? []).map((r: any) => ({
+      traffic: trafficRows.map((r: any) => ({
         name: formatDay(r[0]),
         views: r[1],
         visitors: r[2],
@@ -206,28 +126,16 @@ export async function GET(request: NextRequest) {
       pages: (pagesRes.results ?? []).map((r: any) => ({
         path: r[0] || '/',
         views: r[1],
-        uniqueVisitors: r[2],
+        uniqueVisitors: 0,
       })),
-      sources: (sourcesRes.results ?? []).map((r: any) => ({
-        name: r[0],
-        value: r[1],
-        visitors: r[2],
-      })),
+      sources: [],
       devices: Object.entries(rawDevices).map(([name, count]) => ({ name, count })),
-      countries: (countryRes.results ?? []).map((r: any) => ({
-        country: r[0],
-        views: r[1],
-        visitors: r[2],
-      })),
-      hourly: (hourlyRes.results ?? []).map((r: any) => ({
-        hour: r[0],
-        dow: r[1],
-        events: r[2],
-      })),
+      countries: [],
+      hourly: [],
       summary: {
         totalVisitors,
         totalPageviews,
-        activeNow,
+        activeNow: 0,
         avgPagesPerVisit: totalVisitors > 0 ? +(totalPageviews / totalVisitors).toFixed(1) : 0,
       }
     });
