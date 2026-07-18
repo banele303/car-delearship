@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { convexClient } from '@/lib/convex';
 import { S3Client, DeleteObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { verifyAuth } from '@/lib/auth';
 import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, describeCarUploadLimits } from '@/config/uploadLimits';
-import { Prisma } from '@prisma/client';
 
 // Configure S3 client
 const s3Client = new S3Client({
@@ -50,18 +49,13 @@ async function deleteFileFromS3(fileUrl: string): Promise<void> {
   
   try {
     let key: string;
-    
-    // Check if the URL is a full URL or just a path
     if (fileUrl.startsWith('http')) {
-      // For full URLs, extract the key from the path
       const url = new URL(fileUrl);
       key = url.pathname.substring(1); // Remove leading slash
     } else {
-      // For relative paths, remove any leading slash and use as-is
       key = fileUrl.startsWith('/') ? fileUrl.substring(1) : fileUrl;
     }
     
-    // Skip empty keys
     if (!key) {
       console.warn('Skipping empty file URL');
       return;
@@ -73,9 +67,7 @@ async function deleteFileFromS3(fileUrl: string): Promise<void> {
       Key: key 
     }));
   } catch (error) {
-    // Log the error but don't fail the entire operation
     console.error('S3 Deletion Error for URL:', fileUrl, error);
-    // Continue with the operation even if one file fails to delete
   }
 }
 
@@ -88,18 +80,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: "Invalid car ID" }, { status: 400 });
     }
     
-  const car = await prisma.car.findUnique({
-      where: { id },
-      include: { dealership: true, employee: true, reviews: true },
-    });
+    const car = await convexClient.query("cars:get", { id });
 
     if (!car) {
       return NextResponse.json({ message: "Car not found" }, { status: 404 });
     }
     
-  // Normalize legacy fuel type before returning
-  const normalized = String(car.fuelType) === 'GASOLINE' ? { ...car, fuelType: 'PETROL' } : car;
-  return NextResponse.json(normalized, { headers: { 'x-fueltype-normalized': String(car.fuelType) === 'GASOLINE' ? 'true' : 'false' } });
+    // Normalize legacy fuel type before returning
+    const normalized = String(car.fuelType) === 'GASOLINE' ? { ...car, fuelType: 'PETROL' } : car;
+    return NextResponse.json(normalized, { headers: { 'x-fueltype-normalized': String(car.fuelType) === 'GASOLINE' ? 'true' : 'false' } });
   } catch (err: any) {
     console.error("Error retrieving car:", err);
     return NextResponse.json({ message: `Error retrieving car: ${err.message}` }, { status: 500 });
@@ -120,13 +109,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ message: "Invalid car ID" }, { status: 400 });
     }
 
-    const existingCar = await prisma.car.findUnique({ where: { id } });
+    const existingCar = await convexClient.query("cars:get", { id });
     if (!existingCar) {
       return NextResponse.json({ message: "Car not found" }, { status: 404 });
     }
 
     const formData = await request.formData();
-    // Collect raw (excluding files) and accumulate multi features entries
     const raw: Record<string, any> = {};
     const featureBuffer: string[] = [];
     for (const [key, value] of formData.entries()) {
@@ -154,8 +142,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const photoOrderRaw = typeof raw.photoOrder === 'string' ? raw.photoOrder : undefined;
     delete raw.photoUrls; delete raw.photoOrder;
     if (typeof raw.featured === 'string') raw.featured = raw.featured === 'true';
+
     // Whitelist fields
-  const allowed = ['make','model','vin','carType','fuelType','condition','transmission','engine','exteriorColor','interiorColor','description','status','featured','dealershipId','employeeId','mileage','price','year','features'];
+    const allowed = ['make','model','vin','carType','fuelType','condition','transmission','engine','exteriorColor','interiorColor','description','status','featured','dealershipId','employeeId','mileage','price','year','features'];
     const data: any = {};
     allowed.forEach(k=>{ if (raw[k] !== undefined && raw[k] !== null && raw[k] !== '') data[k]=raw[k]; });
     if (data.year) data.year = parseInt(data.year);
@@ -163,15 +152,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (data.mileage) data.mileage = parseInt(data.mileage);
     if (data.dealershipId) data.dealershipId = parseInt(data.dealershipId);
     if (data.employeeId === '' || data.employeeId === undefined) data.employeeId = null;
-    // Optional employeeId handling: resolve to cognitoId or drop silently
+
+    // Optional employeeId handling
     if (data.employeeId) {
       const suppliedEmp = String(data.employeeId).trim();
-      let employee = await prisma.employee.findUnique({ where: { cognitoId: suppliedEmp } });
+      let employee = await convexClient.query("users:getEmployee", { cognitoId: suppliedEmp });
       if (!employee && /^\d+$/.test(suppliedEmp)) {
         const idNum = parseInt(suppliedEmp, 10);
         if (!isNaN(idNum)) {
-          const byId = await prisma.employee.findUnique({ where: { id: idNum } });
-          if (byId) employee = byId;
+          employee = await convexClient.query("users:getEmployeeDetails", { id: idNum });
         }
       }
       if (employee) data.employeeId = employee.cognitoId; else data.employeeId = null;
@@ -184,15 +173,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const parsed = JSON.parse(photoUrlsRaw);
         if (Array.isArray(parsed)) {
           const toDelete = keptExisting.filter(u=>!parsed.includes(u));
-            if (toDelete.length) await Promise.all(toDelete.map(deleteFileFromS3));
+          if (toDelete.length) await Promise.all(toDelete.map(deleteFileFromS3));
           keptExisting = parsed;
         }
       } catch {}
     }
-  const newFiles: File[] = formData.getAll('photos') as File[];
-  const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
-  const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB;
-  console.log('[CAR_UPLOAD_DEBUG][UPDATE]', { newCount: newFiles.length, ...describeCarUploadLimits() });
+    const newFiles: File[] = formData.getAll('photos') as File[];
+    const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
+    const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB;
+    console.log('[CAR_UPLOAD_DEBUG][UPDATE]', { newCount: newFiles.length, ...describeCarUploadLimits() });
     let totalBytes = 0;
     for (const nf of newFiles) {
       totalBytes += nf.size;
@@ -234,20 +223,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       finalPhotos = [...keptExisting, ...uploadedNew];
     }
     data.photoUrls = finalPhotos;
-    // ENUM COMPAT: Database enum currently does NOT include PETROL yet (only legacy GASOLINE).
-    // UI uses PETROL. Convert outbound (write) PETROL -> GASOLINE so Postgres accepts it.
-    // When migration adding PETROL is applied, remove this block (and inverse mapping in create route) and keep value as-is.
-    if (data.fuelType === 'PETROL') {
-      data.fuelType = 'GASOLINE';
-    } else if (data.fuelType === 'FUEL') { // very old interim token
+
+    if (data.fuelType === 'PETROL' || data.fuelType === 'FUEL') {
       data.fuelType = 'GASOLINE';
     }
 
-    const updatedCar = await prisma.car.update({
-      where: { id },
-      data,
-      include: { dealership: true, employee: true },
+    const updatedCar = await convexClient.mutation("cars:update", {
+      id,
+      ...data
     });
+    
     return NextResponse.json(updatedCar, { headers: {
       'x-car-upload-new-files': String(newFiles.length),
       'x-car-upload-max-single-mb': String(MAX_SINGLE_MB),
@@ -273,20 +258,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ message: "Invalid car ID" }, { status: 400 });
     }
 
-    const existingCar = await prisma.car.findUnique({
-      where: { id },
-      include: { sales: true },
-    });
+    const existingCar = await convexClient.query("cars:get", { id });
     if (!existingCar) {
       return NextResponse.json({ message: "Car not found" }, { status: 404 });
-    }
-
-    // Block deletion if the car has a sale record — use "Mark as Sold" instead
-    if (existingCar.sales) {
-      return NextResponse.json(
-        { message: 'This car has a sale record and cannot be deleted. Use "Mark as Sold" or "Deactivate" instead.' },
-        { status: 409 }
-      );
     }
 
     // Delete S3 photos
@@ -294,34 +268,19 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       await Promise.all(existingCar.photoUrls.map(deleteFileFromS3));
     }
 
-    // Use a transaction to delete all related records, then the car
-    await prisma.$transaction([
-      // Remove from customer favorites (many-to-many)
-      prisma.$executeRawUnsafe(
-        `DELETE FROM "_CustomerFavorites" WHERE "A" = $1`,
-        id
-      ),
-      // Delete inquiries
-      prisma.inquiry.deleteMany({ where: { carId: id } }),
-      // Delete test drives
-      prisma.testDrive.deleteMany({ where: { carId: id } }),
-      // Delete reviews
-      prisma.review.deleteMany({ where: { carId: id } }),
-      // Finally delete the car
-      prisma.car.delete({ where: { id } }),
-    ]);
-
-    return NextResponse.json({ message: "Car deleted successfully", id });
+    // Remove via Convex mutation (which handles verification and cascaded deletes)
+    try {
+      await convexClient.mutation("cars:remove", { id });
+      return NextResponse.json({ message: "Car deleted successfully", id });
+    } catch (convexError: any) {
+      const msg = convexError?.message || String(convexError);
+      return NextResponse.json(
+        { message: msg.includes('sale record') ? 'This car has a sale record and cannot be deleted. Use "Mark as Sold" or "Deactivate" instead.' : msg },
+        { status: 409 }
+      );
+    }
   } catch (err: any) {
     console.error("Error deleting car:", err);
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === 'P2003') {
-        return NextResponse.json(
-          { message: 'Cannot delete car: it still has related records. Try deactivating it instead.' },
-          { status: 409 }
-        );
-      }
-    }
     return NextResponse.json({ message: `Error deleting car: ${err.message}` }, { status: 500 });
   }
 }

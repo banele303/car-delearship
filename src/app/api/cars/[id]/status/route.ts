@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { convexClient } from '@/lib/convex';
 
 const VALID_STATUSES = ['AVAILABLE', 'SOLD', 'RESERVED', 'PENDING', 'MAINTENANCE', 'INACTIVE'];
 
@@ -26,15 +26,15 @@ export async function PATCH(
     }
 
     // Verify car exists
-    const car = await prisma.car.findUnique({ where: { id: carId } });
+    const car = await convexClient.query("cars:get", { id: carId });
     if (!car) {
       return NextResponse.json({ message: 'Car not found' }, { status: 404 });
     }
 
-    // Update the status
-    const updated = await prisma.car.update({
-      where: { id: carId },
-      data: { status: status as any },
+    // Update the status in Convex
+    const updated = await convexClient.mutation("cars:update", {
+      id: carId,
+      status: status
     });
 
     return NextResponse.json({

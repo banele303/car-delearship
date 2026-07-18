@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { convexClient } from "@/lib/convex";
 import { uploadToS3 } from "@/lib/s3";
 import { CAR_UPLOAD_MAX_FILES, CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, describeCarUploadLimits } from "@/config/uploadLimits";
 
-// Add a GET handler to retrieve all cars
+// Add a GET handler to retrieve all cars from Convex
 export async function GET(req: NextRequest) {
   const started = Date.now();
   const { searchParams } = new URL(req.url);
-  const query: any = {};
   const takeParam = searchParams.get('limit');
   const featuredParam = searchParams.get('featured');
   const orderParam = searchParams.get('order');
@@ -15,61 +14,36 @@ export async function GET(req: NextRequest) {
   const statusParam = searchParams.get('status'); // filter by specific status
   const orderDir = orderParam === 'asc' ? 'asc' : 'desc';
   const take = takeParam ? Number(takeParam) : undefined;
+
   if (take !== undefined && (isNaN(take) || take <= 0)) {
     return NextResponse.json({ message: 'Invalid limit parameter' }, { status: 400 });
   }
-  if (featuredParam === 'true') query.featured = true;
-
-  // Status filtering: by default only show AVAILABLE cars to public users
-  // Admin pages pass ?showAll=true to see everything
-  if (statusParam) {
-    query.status = statusParam;
-  } else if (!showAll) {
-    query.status = 'AVAILABLE';
-  }
 
   try {
-    const cars = await prisma.car.findMany({
-      where: query,
-      include: { dealership: true },
-      take,
-      orderBy: { updatedAt: orderDir },
+    const cars = await convexClient.query("cars:list", {
+      limit: take,
+      featured: featuredParam === 'true' ? true : undefined,
+      status: statusParam || undefined,
+      showAll: showAll,
     });
-    // Normalize legacy enum values (GASOLINE -> PETROL for display) without mutating DB
-  const normalized = cars.map(c => (String(c.fuelType) === 'GASOLINE' ? { ...c, fuelType: 'PETROL' } : c));
-    return NextResponse.json(normalized, { headers: { 'x-query-time': String(Date.now() - started), 'x-fueltype-normalized': 'true' } });
+
+    // If order direction is ascending, sort in ascending order (default from Convex query is descending)
+    if (orderParam === 'asc') {
+      cars.sort((a: any, b: any) => a.updatedAt.localeCompare(b.updatedAt));
+    }
+
+    // Normalize legacy enum values (GASOLINE -> PETROL for display)
+    const normalized = cars.map((c: any) => (String(c.fuelType) === 'GASOLINE' ? { ...c, fuelType: 'PETROL' } : c));
+
+    return NextResponse.json(normalized, {
+      headers: {
+        'x-query-time': String(Date.now() - started),
+        'x-fueltype-normalized': 'true'
+      }
+    });
   } catch (error: any) {
-    // Attempt a fallback if failure might be due to schema drift (e.g. missing featured column)
-    const msg = error?.message || String(error);
-    let fallbackData = null;
-    let fallbackTried = false;
-    if (query.featured) {
-      try {
-        fallbackTried = true;
-        const { featured, ...rest } = query;
-        fallbackData = await prisma.car.findMany({
-          where: rest,
-          include: { dealership: true },
-          take,
-          orderBy: { updatedAt: orderDir },
-        });
-      } catch {}
-    }
-    const code = error?.code;
-    console.error('Error fetching cars', { message: msg, code, stack: error?.stack, query, fallbackTried });
-    if (fallbackData) {
-      return NextResponse.json(fallbackData, { headers: { 'x-fallback': 'true' } });
-    }
-    if (code === 'P1001') {
-      return NextResponse.json({ message: 'Database unreachable (P1001). Check DATABASE_URL / network.' }, { status: 500 });
-    }
-    if (code === 'P2021') {
-      return NextResponse.json({ message: 'Table not found (P2021). Run migrations.' }, { status: 500 });
-    }
-    if (code === 'P2022') {
-      return NextResponse.json({ message: 'Column not found (P2022). Migrate & regenerate Prisma client.' }, { status: 500 });
-    }
-    return NextResponse.json({ message: 'Failed to fetch cars', error: msg, code }, { status: 500 });
+    console.error('Error fetching cars from Convex:', error);
+    return NextResponse.json({ message: 'Failed to fetch cars', error: error?.message || String(error) }, { status: 500 });
   }
 }
 
@@ -118,22 +92,24 @@ export async function POST(req: NextRequest) {
         seen.add(k); return true;
       });
     }
-    // Enum migration: accept legacy GASOLINE or interim FUEL and map to GASOLINE (temporarily, until PETROL migration is applied)
+
+    // Normalize fuelType for Convex schema
     if (carData.fuelType === 'PETROL' || carData.fuelType === 'FUEL') {
-      carData.fuelType = 'GASOLINE'; // Use GASOLINE until migration adds PETROL to database enum
+      carData.fuelType = 'GASOLINE';
     }
     
-    // Ensure fuel type is valid for database enum
+    // Ensure fuel type is valid for enum
     const validFuelTypes = ['GASOLINE', 'DIESEL', 'HYBRID', 'ELECTRIC', 'PLUG_IN_HYBRID', 'HYDROGEN'];
     if (!validFuelTypes.includes(carData.fuelType)) {
       console.warn('[CAR_CREATE_DEBUG] Invalid fuelType:', carData.fuelType, 'defaulting to GASOLINE');
       carData.fuelType = 'GASOLINE';
     }
-  const photos = formData.getAll('photos') as File[];
-  const MAX_FILES = CAR_UPLOAD_MAX_FILES;
-  const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
-  const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB;
-  console.log('[CAR_UPLOAD_DEBUG][CREATE] photos:', photos.length, describeCarUploadLimits());
+
+    const photos = formData.getAll('photos') as File[];
+    const MAX_FILES = CAR_UPLOAD_MAX_FILES;
+    const MAX_SINGLE_MB = CAR_UPLOAD_SINGLE_MAX_MB;
+    const MAX_TOTAL_MB = CAR_UPLOAD_TOTAL_MAX_MB;
+    console.log('[CAR_UPLOAD_DEBUG][CREATE] photos:', photos.length, describeCarUploadLimits());
     if (photos.length > MAX_FILES) {
       return NextResponse.json({ message: `Too many photos: ${photos.length} > ${MAX_FILES}` }, { status: 400 });
     }
@@ -162,63 +138,88 @@ export async function POST(req: NextRequest) {
     if (typeof carData.featured === 'string') {
       carData.featured = carData.featured === 'true';
     }
+
+    // Verify Dealership in Convex
     if (carData.dealershipId) {
       if (isNaN(carData.dealershipId)) {
         return NextResponse.json({ message: 'Invalid dealershipId supplied.' }, { status: 400 });
       }
-      const dealershipExists = await prisma.dealership.findUnique({ where: { id: carData.dealershipId } });
+      const dealershipExists = await convexClient.query("dealerships:get", { id: carData.dealershipId });
       if (!dealershipExists) {
         return NextResponse.json({ message: `Dealership ${carData.dealershipId} not found.` }, { status: 404 });
       }
     } else {
       delete carData.dealershipId;
     }
-    // Handle employeeId optionally: attempt to resolve; if not found just omit instead of error.
+
+    // Resolve employeeId in Convex
     if (carData.employeeId) {
       const suppliedEmp = String(carData.employeeId).trim();
-      let employee = await prisma.employee.findUnique({ where: { cognitoId: suppliedEmp } });
+      let employee = await convexClient.query("users:getEmployee", { cognitoId: suppliedEmp });
       if (!employee && /^\d+$/.test(suppliedEmp)) {
-        // If numeric, try matching by internal numeric id then map to cognitoId
         const idNum = parseInt(suppliedEmp, 10);
         if (!isNaN(idNum)) {
-          const byId = await prisma.employee.findUnique({ where: { id: idNum } });
-          if (byId) employee = byId;
+          employee = await convexClient.query("users:getEmployeeDetails", { id: idNum });
         }
       }
       if (employee) {
-        carData.employeeId = employee.cognitoId; // ensure referencing cognitoId FK
+        carData.employeeId = employee.cognitoId;
       } else {
-        delete carData.employeeId; // make optional silently
+        delete carData.employeeId;
       }
     } else if (carData.employeeId === '') {
       delete carData.employeeId;
     }
-    // Auto-generate VIN if not provided (17-char alphanumeric excluding I,O,Q)
+
+    // Auto-generate VIN if not provided
     if (!carData.vin) {
       const alphabet = 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789';
       let gen = '';
-      for (let i=0;i<17;i++) gen += alphabet[Math.floor(Math.random()*alphabet.length)];
+      for (let i = 0; i < 17; i++) gen += alphabet[Math.floor(Math.random() * alphabet.length)];
       carData.vin = gen;
     }
     
-    // Provide default for interiorColor if not specified (since it was removed from form but still required in schema)
     if (!carData.interiorColor) {
       carData.interiorColor = 'Not specified';
     }
+
     try {
-      const newCar = await prisma.car.create({ data: carData as any });
+      const newCar = await convexClient.mutation("cars:create", {
+        vin: carData.vin,
+        make: carData.make,
+        model: carData.model,
+        year: carData.year,
+        price: carData.price,
+        mileage: carData.mileage,
+        condition: carData.condition,
+        carType: carData.carType,
+        fuelType: carData.fuelType,
+        transmission: carData.transmission,
+        engine: carData.engine,
+        exteriorColor: carData.exteriorColor,
+        interiorColor: carData.interiorColor,
+        description: carData.description,
+        features: carData.features || [],
+        photoUrls: carData.photoUrls || [],
+        status: carData.status || "AVAILABLE",
+        featured: carData.featured || false,
+        dealershipId: carData.dealershipId || 1,
+        employeeId: carData.employeeId || null,
+      });
+
       return NextResponse.json(newCar, { status: 201, headers: {
         'x-car-upload-files': String(photos.length),
         'x-car-upload-total-mb': totalMb.toFixed(2),
         'x-car-upload-max-single-mb': String(MAX_SINGLE_MB),
         'x-car-upload-max-total-mb': String(MAX_TOTAL_MB)
       }});
-    } catch (prismaError: any) {
-      if (prismaError.code === 'P2002' && prismaError.meta?.target?.includes('vin')) {
+    } catch (convexError: any) {
+      const msg = convexError?.message || String(convexError);
+      if (msg.includes('already exists')) {
         return NextResponse.json({ message: 'A car with this VIN already exists. Please use a unique VIN.' }, { status: 409 });
       }
-      console.error(prismaError);
-      return NextResponse.json({ message: 'Failed to create car.', error: prismaError.message }, { status: 500 });
+      console.error(convexError);
+      return NextResponse.json({ message: 'Failed to create car in Convex.', error: msg }, { status: 500 });
     }
   } catch (error) {
     console.error(error);

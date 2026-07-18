@@ -22,8 +22,9 @@ import type { Application, Lease, Manager, Payment, Property, Room, Tenant } fro
 // Import the Cognito User type if available, or define a minimal structure
 import type { ExtendedAuthUser as CognitoAuthUser } from '@/types/cognito';
 // Import RTK Query types
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
+import { createApi } from "@reduxjs/toolkit/query/react"
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
+import { ConvexClient } from "convex/browser";
 import type { TagDescription } from '@reduxjs/toolkit/query';
 import { toast } from 'sonner';
 import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
@@ -57,125 +58,305 @@ type CacheTagType = "Applications" | "Employees" | "Customers" | "Cars" | "CarDe
 
 
 export const api = createApi({
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE_URL,
-    timeout: 60000, // Increase timeout to 60 seconds
-    prepareHeaders: async (headers) => {
+  baseQuery: (() => {
+    const convexClient = new ConvexClient(process.env.NEXT_PUBLIC_CONVEX_URL || "");
+
+    async function uploadFileToConvex(file: File): Promise<string> {
+      const uploadUrl = await convexClient.mutation("files:generateUploadUrl", {});
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await response.json();
+      const publicUrl = (await convexClient.query("files:getUrl", { storageId })) as string;
+      return publicUrl;
+    }
+
+    return async (args: any, _api: any, _extraOptions: any) => {
+      let url = "";
+      let method = "GET";
+      let params: any = undefined;
+      let body: any = undefined;
+
+      if (typeof args === "string") {
+        url = args;
+      } else if (args && typeof args === "object") {
+        url = args.url || "";
+        method = args.method || "GET";
+        params = args.params;
+        body = args.body;
+      }
+
+      const path = url.replace(/^\/+|\/+$/g, "");
+
       try {
-        const session = await fetchAuthSession();
-        const idToken = session.tokens?.idToken?.toString();
-        if (idToken) {
-          headers.set("Authorization", `Bearer ${idToken}`);
-        }
-      } catch (error) {
-        // Silently handle auth errors - this allows non-authenticated users to access public endpoints
-        // User not authenticated, continuing as guest
-      }
-      return headers;
-    },
-    // Add response handling to properly handle non-JSON responses
-    validateStatus: (response, body) => {
-      if (response.status === 404) {
-        // Return empty array for 404s on list endpoints
-        if (response.url.includes('/rooms')) {
-          return true;
-        }
-      }
-      return response.status >= 200 && response.status < 300;
-    },
-    // Add custom response handling with retry logic
-    async fetchFn(input, init) {
-      const maxRetries = 3;
-      let retries = 0;
-      let lastError;
+        let data: any;
 
-      while (retries < maxRetries) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-          const response = await fetch(input, {
-            ...init,
-            signal: controller.signal
+        // --- CARS ENDPOINTS ---
+        if (path === "cars" && method === "GET") {
+          data = await convexClient.query("cars:list", {
+            limit: params?.limit ? parseInt(params.limit) : undefined,
+            featured: params?.featured === "true" || params?.featured === true ? true : undefined,
+            status: params?.status,
           });
+        } else if (path.match(/^cars\/\d+$/) && method === "GET") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.query("cars:get", { id });
+        } else if (path === "cars" && method === "POST") {
+          const fields: any = {};
+          const photoUrls: string[] = [];
 
-          clearTimeout(timeoutId);
-
-          // If upstream rejected due to payload too large, synthesize friendly JSON
-          if (response.status === 413) {
-            return new Response(JSON.stringify({
-              error: true,
-              status: 413,
-              message: 'Upload too large. Reduce number/size of images or compress before retrying.',
-              hint: 'Try fewer images at once or upload in smaller batches.'
-            }), { status: 413, headers: response.headers });
+          if (body instanceof FormData) {
+            for (const [key, value] of body.entries()) {
+              if (key === "photos" && value instanceof File) {
+                const url = await uploadFileToConvex(value);
+                photoUrls.push(url);
+              } else if (["price", "mileage", "year", "dealershipId"].includes(key)) {
+                fields[key] = Number(value);
+              } else if (key === "features") {
+                try {
+                  fields[key] = JSON.parse(value as string);
+                } catch {
+                  fields[key] = (value as string).split(",").map(f => f.trim());
+                }
+              } else {
+                fields[key] = value;
+              }
+            }
+          } else {
+            Object.assign(fields, body);
           }
-          // Clone the response before reading it
-          const clonedResponse = response.clone();
+          
+          fields.photoUrls = photoUrls;
+          data = await convexClient.mutation("cars:create", fields);
+        } else if (path.match(/^cars\/\d+$/) && method === "PUT") {
+          const id = parseInt(path.split("/")[1]);
+          const fields: any = {};
+          const photoUrls: string[] = [];
 
-          try {
-            // Prefer JSON but fall back to text without throwing parse errors
-            const contentType = response.headers.get('content-type') || '';
-            if (contentType.includes('application/json')) {
-              const data = await response.json();
-              return new Response(JSON.stringify(data), {
-                status: response.status,
-                statusText: response.statusText,
-                headers: response.headers
-              });
-            } else {
-              const text = await response.text();
-              // Attempt a secondary JSON parse (some APIs mislabel)
-              try {
-                const parsed = JSON.parse(text);
-                return new Response(JSON.stringify(parsed), {
-                  status: response.status,
-                  statusText: response.statusText,
-                  headers: response.headers
-                });
-              } catch {
-                // Wrap plain text in a JSON envelope so RTK Query doesn't choke
-                return new Response(JSON.stringify({ raw: text }), {
-                  status: response.status,
-                  statusText: response.statusText,
-                  headers: response.headers
+          if (body instanceof FormData) {
+            for (const [key, value] of body.entries()) {
+              if (key === "photos" && value instanceof File) {
+                const url = await uploadFileToConvex(value);
+                photoUrls.push(url);
+              } else if (["price", "mileage", "year", "dealershipId"].includes(key)) {
+                fields[key] = Number(value);
+              } else if (key === "features") {
+                try {
+                  fields[key] = JSON.parse(value as string);
+                } catch {
+                  fields[key] = (value as string).split(",").map(f => f.trim());
+                }
+              } else {
+                fields[key] = value;
+              }
+            }
+          } else {
+            Object.assign(fields, body);
+          }
+
+          if (photoUrls.length > 0) {
+            fields.photoUrls = photoUrls;
+          }
+          
+          data = await convexClient.mutation("cars:update", { id, ...fields });
+        } else if (path.match(/^cars\/\d+$/) && method === "DELETE") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("cars:remove", { id });
+
+        // --- DEALERSHIPS ENDPOINTS ---
+        } else if (path === "dealerships" && method === "GET") {
+          data = await convexClient.query("dealerships:list");
+        } else if (path.match(/^dealerships\/\d+$/) && method === "GET") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.query("dealerships:get", { id });
+
+        // --- USERS / CUSTOMERS / EMPLOYEES ENDPOINTS ---
+        } else if (path.startsWith("employees") && method === "GET") {
+          const idPart = path.split("/")[1];
+          if (!idPart) {
+            data = await convexClient.query("users:getAllEmployees");
+          } else if (idPart.match(/^\d+$/)) {
+            data = await convexClient.query("users:getEmployeeDetails", { id: parseInt(idPart) });
+          } else {
+            data = await convexClient.query("users:getEmployee", { cognitoId: idPart });
+          }
+        } else if (path.startsWith("customers") && method === "GET") {
+          const idPart = path.split("/")[1];
+          if (!idPart) {
+            data = await convexClient.query("users:getAllCustomers");
+          } else if (idPart.match(/^\d+$/)) {
+            data = await convexClient.query("users:getCustomerDetails", { id: parseInt(idPart) });
+          } else if (path.endsWith("/favorites")) {
+            const cognitoId = path.split("/")[1];
+            data = await convexClient.query("users:getCurrentFavorites", { cognitoId });
+          } else {
+            data = await convexClient.query("users:getCustomer", { cognitoId: idPart });
+          }
+        } else if (path === "employees" && method === "POST") {
+          const payload = typeof body === "string" ? JSON.parse(body) : body;
+          data = await convexClient.mutation("users:getAuthUser", {
+            cognitoId: payload.cognitoId,
+            email: payload.email,
+            name: payload.name,
+            role: "employee",
+            phoneNumber: payload.phoneNumber,
+          });
+        } else if (path === "customers" && method === "POST") {
+          const payload = typeof body === "string" ? JSON.parse(body) : body;
+          data = await convexClient.mutation("users:getAuthUser", {
+            cognitoId: payload.cognitoId,
+            email: payload.email,
+            name: payload.name,
+            role: "customer",
+            phoneNumber: payload.phoneNumber,
+          });
+        } else if (path.startsWith("customers/") && path.includes("/favorites/") && method === "POST") {
+          const parts = path.split("/");
+          const cognitoId = parts[1];
+          const carId = parseInt(parts[3]);
+          data = await convexClient.mutation("users:addFavoriteCar", { cognitoId, carId });
+        } else if (path.startsWith("customers/") && path.includes("/favorites/") && method === "DELETE") {
+          const parts = path.split("/");
+          const cognitoId = parts[1];
+          const carId = parseInt(parts[3]);
+          data = await convexClient.mutation("users:removeFavoriteCar", { cognitoId, carId });
+        } else if (path.startsWith("customers/") && method === "PUT") {
+          const cognitoId = path.split("/")[1];
+          data = await convexClient.mutation("users:updateCustomerSettings", { cognitoId, ...body });
+        } else if (path.startsWith("employees/") && method === "PUT") {
+          const cognitoId = path.split("/")[1];
+          data = await convexClient.mutation("users:updateEmployeeSettings", { cognitoId, ...body });
+        } else if (path.startsWith("employees/") && path.endsWith("/status") && method === "PUT") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("users:updateEmployeeStatus", { id, status: body.status });
+        } else if (path.startsWith("employees/") && method === "DELETE") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("users:deleteEmployee", { id });
+
+        // --- SALES / TRANSACTIONS ENDPOINTS ---
+        } else if (path === "sales" && method === "GET") {
+          data = await convexClient.query("transactions:getSales", {
+            customerId: params?.customerId,
+            employeeId: params?.employeeId,
+            carId: params?.carId ? parseInt(params.carId) : undefined,
+            dealershipId: params?.dealershipId ? parseInt(params.dealershipId) : undefined,
+          });
+        } else if (path === "sales" && method === "POST") {
+          data = await convexClient.mutation("transactions:createSale", body);
+        } else if (path === "test-drives" && method === "GET") {
+          data = await convexClient.query("transactions:getTestDrives");
+        } else if (path === "test-drives" && method === "POST") {
+          data = await convexClient.mutation("transactions:createTestDrive", {
+            carId: body.carId,
+            customerId: body.customerId,
+            scheduledDate: body.scheduledDate,
+            dealershipId: body.dealershipId,
+            notes: body.notes,
+          });
+        } else if (path === "inquiries" && method === "GET") {
+          data = await convexClient.query("transactions:getInquiries", {
+            customerId: params?.customerId,
+          });
+        } else if (path.match(/^inquiries\/\d+$/) && method === "GET") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.query("transactions:getInquiry", { id });
+        } else if (path === "inquiries" && method === "POST") {
+          data = await convexClient.mutation("transactions:createInquiry", body);
+        } else if (path.match(/^inquiries\/\d+$/) && method === "PUT") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("transactions:updateInquiry", { id, ...body });
+        } else if (path.match(/^inquiries\/\d+$/) && method === "DELETE") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("transactions:deleteInquiry", { id });
+
+        // --- FINANCING ENDPOINTS ---
+        } else if (path === "financing-applications" && method === "GET") {
+          data = await convexClient.query("financing:getFinancingApplications", {
+            customerId: params?.customerId,
+          });
+        } else if (path.match(/^financing-applications\/\d+$/) && method === "GET") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.query("financing:getFinancingApplication", { id });
+        } else if (path === "financing-applications" && method === "POST") {
+          data = await convexClient.mutation("financing:createFinancingApplication", body);
+        } else if (path.match(/^financing-applications\/\d+$/) && method === "PUT") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("financing:updateFinancingApplication", { id, ...body });
+        } else if (path.match(/^financing-applications\/\d+$/) && method === "DELETE") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("financing:deleteFinancingApplication", { id });
+        } else if ((path === "financing-uploads" || path === "uploads/financing") && method === "POST") {
+          const uploadedFiles = [];
+          if (body instanceof FormData) {
+            for (const [key, value] of body.entries()) {
+              if (value instanceof File) {
+                const url = await uploadFileToConvex(value);
+                uploadedFiles.push({
+                  originalName: value.name,
+                  storedName: url.split("/").pop(),
+                  size: value.size,
+                  type: value.type,
+                  url: url,
+                  storage: "convex"
                 });
               }
             }
-          } catch (e) {
-            if (response.status === 404 && response.url.includes('/rooms')) {
-              return new Response(JSON.stringify([]), {
-                status: 200,
-                statusText: 'OK',
-                headers: response.headers
-              });
+          }
+          data = { files: uploadedFiles };
+
+        // --- REVIEWS ENDPOINTS ---
+        } else if (path === "reviews" && method === "GET") {
+          data = await convexClient.query("reviews:getReviews", {
+            carId: params?.carId ? parseInt(params.carId) : undefined,
+          });
+        } else if (path.match(/^reviews\/\d+$/) && method === "GET") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.query("reviews:getReview", { id });
+        } else if (path === "reviews" && method === "POST") {
+          data = await convexClient.mutation("reviews:createReview", body);
+        } else if (path.match(/^reviews\/\d+$/) && method === "PATCH") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("reviews:updateReview", { id, ...body });
+        } else if (path.match(/^reviews\/\d+$/) && method === "DELETE") {
+          const id = parseInt(path.split("/")[1]);
+          data = await convexClient.mutation("reviews:deleteReview", id);
+
+        // --- BLOG POSTS & GALLERY ENDPOINTS ---
+        } else if (path === "posts" && method === "GET") {
+          data = await convexClient.query("blogs:list", {
+            limit: params?.limit ? parseInt(params.limit) : undefined,
+            publishedOnly: params?.published === "true" || params?.published === true ? true : undefined,
+          });
+        } else if (path === "gallery" && method === "GET") {
+          data = await convexClient.query("gallery:list");
+        } else if ((path === "presign-uploads" || path === "uploads/presign") && method === "POST") {
+          let fileUrl = "";
+          if (body instanceof FormData) {
+            const file = body.get("file") as File | null;
+            if (file) {
+              fileUrl = await uploadFileToConvex(file);
             }
-            const fallbackTxt = await clonedResponse.text().catch(()=> '');
-            return new Response(JSON.stringify({ error: true, status: response.status, body: fallbackTxt.slice(0,500) }), {
-              status: response.status,
-              statusText: response.statusText,
-              headers: response.headers
-            });
           }
-        } catch (error) {
-          lastError = error;
-          retries++;
-          // API request failed, retry attempt
-
-          if (retries >= maxRetries) {
-            throw error;
-          }
-
-          // Exponential backoff: 1s, 2s, 4s, etc.
-          const delay = Math.min(1000 * Math.pow(2, retries - 1), 10000);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          data = { url: fileUrl };
+        } else {
+          console.warn(`Unmapped API call in convexBaseQuery: ${path} [${method}]`);
+          return { error: { status: 404, data: `Endpoint ${path} not found in Convex bridge` } };
         }
-      }
 
-      // This should never be reached due to the throw in the loop, but TypeScript needs it
-      throw lastError;
-    }
-  }),
+        return { data };
+      } catch (error: any) {
+        console.error("Convex baseQuery error:", error);
+        return {
+          error: {
+            status: 500,
+            data: error.message || "An error occurred calling Convex backend",
+          },
+        };
+      }
+    };
+  })(),
   reducerPath: "api",
   tagTypes: ["Employees", "Customers", "Cars", "CarDetails", "Sales", "TestDrives", "FinancingApplications", "Applications", "Admins", "CustomerDashboard", "CustomerFavorites", "Properties", "PropertyDetails", "Leases", "Payments", "Rooms", "Managers", "Tenants", "Dealerships", "DealershipDetails", "Inquiries", "Reviews"],
   endpoints: (build) => ({
