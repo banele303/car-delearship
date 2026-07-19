@@ -87,7 +87,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
     
     // Normalize legacy fuel type before returning
-    const normalized = String(car.fuelType) === 'GASOLINE' ? { ...car, fuelType: 'PETROL' } : car;
+    let normalized = String(car.fuelType) === 'GASOLINE' ? { ...car, fuelType: 'PETROL' } : car;
+
+    // Resolve Convex storage IDs to actual URLs
+    if (normalized.photoUrls?.length) {
+      const resolved = await Promise.all(
+        normalized.photoUrls.map(async (id: string) => {
+          if (id.startsWith("http://") || id.startsWith("https://")) return id;
+          try {
+            const url = await convexClient.query("files:getUrl", { storageId: id });
+            return url || "/placeholder.jpg";
+          } catch { return "/placeholder.jpg"; }
+        })
+      );
+      normalized = { ...normalized, photoUrls: resolved };
+    }
+
     return NextResponse.json(normalized, { headers: { 'x-fueltype-normalized': String(car.fuelType) === 'GASOLINE' ? 'true' : 'false' } });
   } catch (err: any) {
     console.error("Error retrieving car:", err);
