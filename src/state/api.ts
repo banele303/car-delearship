@@ -88,7 +88,8 @@ export const api = createApi({
         body = args.body;
       }
 
-      const path = url.replace(/^\/+|\/+$/g, "");
+      const rawPath = url.replace(/^\/+|\/+$/g, "");
+      const path = rawPath.startsWith("admin/") ? rawPath.substring(6) : rawPath;
 
       try {
         let data: any;
