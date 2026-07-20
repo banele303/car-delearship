@@ -12,6 +12,12 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "frugal-zebra-890.convex.cloud",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "*.amazonaws.com",
         port: "",
         pathname: "/**",
