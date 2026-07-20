@@ -1,8 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { useMutation } from "convex/react"
-import { api } from "@/../convex/_generated/api"
+import { convexClient } from "@/lib/convex"
 
 type AuthUser = { id: string; email: string; name: string; role: string } | null
 
@@ -26,54 +25,42 @@ export function useConvexAuth() {
   return useContext(AuthContext)
 }
 
-export default function ConvexAuthProvider({ children }: { children: React.ReactNode }) {
+export function ConvexAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser>(null)
   const [loading, setLoading] = useState(true)
-  const signInMutation = useMutation(api.auth.signIn)
-  const signUpMutation = useMutation(api.auth.signUp)
-  const signOutMutation = useMutation(api.auth.signOut)
 
   // Check stored token on mount
   useEffect(() => {
-    const stored = localStorage.getItem("convex_token")
-    if (stored) {
-      try {
-        fetch("/api/auth/me", {
-          headers: { authorization: `Bearer ${stored}` },
-        })
-          .then((r) => (r.ok ? r.json() : null))
-          .then((data) => {
-            if (data?.user) setUser(data.user)
-          })
-          .finally(() => setLoading(false))
-      } catch {
-        setLoading(false)
-      }
+    const token = localStorage.getItem("convex_token")
+    if (token) {
+      convexClient
+        .query("auth:getCurrentUser", { token })
+        .then((u) => { if (u) setUser(u as AuthUser) })
+        .finally(() => setLoading(false))
     } else {
       setLoading(false)
     }
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const result = await signInMutation({ email, password })
+    const result: any = await convexClient.mutation("auth:signIn", { email, password })
     localStorage.setItem("convex_token", result.token)
     setUser(result.user as AuthUser)
-  }, [signInMutation])
+  }, [])
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
-    await signUpMutation({ email, password, name })
-    // Auto sign-in after signup
-    const result = await signInMutation({ email, password })
+    await convexClient.mutation("auth:signUp", { email, password, name })
+    const result: any = await convexClient.mutation("auth:signIn", { email, password })
     localStorage.setItem("convex_token", result.token)
     setUser(result.user as AuthUser)
-  }, [signUpMutation, signInMutation])
+  }, [])
 
   const signOut = useCallback(() => {
     const token = localStorage.getItem("convex_token")
-    if (token) signOutMutation({ token })
+    if (token) convexClient.mutation("auth:signOut", { token })
     localStorage.removeItem("convex_token")
     setUser(null)
-  }, [signOutMutation])
+  }, [])
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
@@ -81,3 +68,5 @@ export default function ConvexAuthProvider({ children }: { children: React.React
     </AuthContext.Provider>
   )
 }
+
+export default ConvexAuthProvider
