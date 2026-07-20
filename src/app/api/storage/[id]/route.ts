@@ -1,8 +1,6 @@
-// Proxies Convex storage images with correct Content-Type so browsers can render them
-// The frontend should use /api/storage/STORAGE_ID instead of Convex's direct URL
-
 import { NextRequest, NextResponse } from "next/server"
-import { convexClient } from "@/lib/convex"
+
+const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud"
 
 export async function GET(
   _req: NextRequest,
@@ -11,32 +9,47 @@ export async function GET(
   const { id } = await params
 
   try {
-    // 1. Get the real URL from Convex
-    const url = await convexClient.query("files:getUrl", { storageId: id })
-    if (!url || typeof url !== "string") {
+    // Step 1: Resolve storage ID to CDN URL via Convex HTTP API
+    const queryResp = await fetch(`${CONVEX_URL}/api/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: "files:getUrl",
+        args: { storageId: id },
+      }),
+    })
+    const queryData = await queryResp.json()
+    const imgUrl = queryData.value || queryData.result
+
+    if (!imgUrl || typeof imgUrl !== "string") {
+      console.error("getUrl returned:", JSON.stringify(queryData))
       return NextResponse.json({ error: "Not found" }, { status: 404 })
     }
 
-    // 2. Fetch the image data
-    const resp = await fetch(url)
-    const buffer = Buffer.from(await resp.arrayBuffer())
+    // Step 2: Fetch the image
+    const imgResp = await fetch(imgUrl)
+    if (!imgResp.ok) {
+      return NextResponse.json({ error: "Fetch failed" }, { status: 502 })
+    }
 
-    // 3. Determine content type (Convex wraps in multipart, so guess from first bytes)
-    const contentType = buffer[0] === 0xff && buffer[1] === 0xd8
-      ? "image/jpeg"
-      : buffer[0] === 0x89 && buffer[1] === 0x50
-        ? "image/png"
-        : buffer[0] === 0x52 && buffer[1] === 0x49
-          ? "image/webp"
-          : "image/jpeg"
+    // Step 3: Get raw bytes
+    const arrayBuffer = await imgResp.arrayBuffer()
+    const bytes = new Uint8Array(arrayBuffer)
 
-    return new NextResponse(buffer, {
+    // Step 4: Detect content type from magic bytes
+    let contentType = "image/jpeg"
+    if (bytes[0] === 0x89 && bytes[1] === 0x50) contentType = "image/png"
+    else if (bytes[0] === 0x52 && bytes[1] === 0x49) contentType = "image/webp"
+
+    return new NextResponse(bytes, {
       headers: {
         "Content-Type": contentType,
+        "Content-Length": String(bytes.length),
         "Cache-Control": "public, max-age=86400",
       },
     })
-  } catch {
+  } catch (err) {
+    console.error("Storage proxy error:", err)
     return NextResponse.json({ error: "Failed" }, { status: 500 })
   }
 }
