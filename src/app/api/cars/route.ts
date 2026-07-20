@@ -171,11 +171,11 @@ export async function POST(req: NextRequest) {
     // Resolve employeeId in Convex
     if (carData.employeeId) {
       const suppliedEmp = String(carData.employeeId).trim();
-      let employee = await convexClient.query("users:getEmployee", { cognitoId: suppliedEmp });
+      let employee = await (convexClient as any).query("users:getEmployee", { cognitoId: suppliedEmp });
       if (!employee && /^\d+$/.test(suppliedEmp)) {
         const idNum = parseInt(suppliedEmp, 10);
         if (!isNaN(idNum)) {
-          employee = await convexClient.query("users:getEmployeeDetails", { id: idNum });
+          employee = await (convexClient as any).query("users:getEmployeeDetails", { id: idNum });
         }
       }
       if (employee) {
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const newCar = await convexClient.mutation("cars:create", {
+      const newCar = await (convexClient as any).mutation("cars:create", {
         vin: carData.vin,
         make: carData.make,
         model: carData.model,

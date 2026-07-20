@@ -385,7 +385,7 @@ export const api = createApi({
                       phoneNumber: adminData.phoneNumber || '',
                     },
                     userRole: "admin",
-                  }
+                  } as unknown as AppUser
                 };
               }
             } catch (e) {
@@ -495,7 +495,7 @@ export const api = createApi({
                 // Convert email name to proper case (e.g., john.doe -> John Doe)
                 adminName = emailName
                   .replace(/\./g, ' ')
-                  .replace(/\b\w/g, c => c.toUpperCase());
+                  .replace(/\b\w/g, (c: string) => c.toUpperCase());
               }
                
               // If we still don't have a name, use a generic one

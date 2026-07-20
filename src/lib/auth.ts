@@ -23,7 +23,7 @@ export async function verifyAuth(
   }
 
   try {
-    const user = await convexClient.query("auth:getCurrentUser", { token })
+    const user = await (convexClient as any).query("auth:getCurrentUser", { token })
 
     if (!user) {
       return { isAuthenticated: false, message: "Invalid or expired token" }
