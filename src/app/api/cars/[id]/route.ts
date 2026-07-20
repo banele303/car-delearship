@@ -184,7 +184,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       try {
         const parsed = JSON.parse(photoUrlsRaw);
         if (Array.isArray(parsed)) {
-          const toDelete = keptExisting.filter(u=>!parsed.includes(u));
+          const toDelete = keptExisting.filter((u: string) => !parsed.includes(u));
           if (toDelete.length) await Promise.all(toDelete.map(deleteFileFromS3));
           keptExisting = parsed;
         }
@@ -227,8 +227,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
               if (!isNaN(idx) && uploadedNew[idx]) finalPhotos.push(uploadedNew[idx]);
             }
           });
-          uploadedNew.forEach(u=>{ if (!finalPhotos.includes(u)) finalPhotos.push(u); });
-          keptExisting.forEach(u=>{ if (!finalPhotos.includes(u)) finalPhotos.push(u); });
+          uploadedNew.forEach((u: string) => { if (!finalPhotos.includes(u)) finalPhotos.push(u); });
+          keptExisting.forEach((u: string) => { if (!finalPhotos.includes(u)) finalPhotos.push(u); });
         } else finalPhotos = [...keptExisting, ...uploadedNew];
       } catch { finalPhotos = [...keptExisting, ...uploadedNew]; }
     } else {

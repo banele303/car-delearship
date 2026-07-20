@@ -6,4 +6,4 @@ if (!convexUrl) {
   console.warn("WARNING: NEXT_PUBLIC_CONVEX_URL is not set in environment variables.");
 }
 
-export const convexClient = new ConvexHttpClient(convexUrl || "");
+export const convexClient: any = new ConvexHttpClient(convexUrl || "");
