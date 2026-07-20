@@ -1,239 +1,57 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signUp, confirmSignUp, autoSignIn } from "aws-amplify/auth";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Lock, Mail, User, Check } from "lucide-react";
-import { configureAdminAuth } from "../admin/adminAuth";
-
-
+import { registerAdmin, ALLOWED_ADMIN_EMAILS } from "../admin/adminAuth";
 
 export default function AdminSignup() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("alexsouthflow@gmail.com");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showVerification, setShowVerification] = useState(false);
   const router = useRouter();
-  
-  
-  useEffect(() => {
-    configureAdminAuth();
-    
-    
-    const params = new URLSearchParams(window.location.search);
-    const emailParam = params.get('email');
-    const needsVerification = params.get('needsVerification');
-    
-    if (emailParam && needsVerification === 'true') {
-      setEmail(emailParam);
-      setShowVerification(true);
-      toast.info("Please enter the verification code sent to your email");
-    }
-  }, []);
 
-  
-  const validatePassword = (password: string) => {
-    const errors = [];
-    
-    if (password.length < 8) {
-      errors.push("Password must be at least 8 characters long");
-    }
-    
-    if (!/[0-9]/.test(password)) {
-      errors.push("Password must include at least one number");
-    }
-    
-    if (!/[A-Z]/.test(password)) {
-      errors.push("Password must include at least one uppercase letter");
-    }
-    
-    if (!/[a-z]/.test(password)) {
-      errors.push("Password must include at least one lowercase letter");
-    }
-    
-    if (!/[^A-Za-z0-9]/.test(password)) {
-      errors.push("Password must include at least one special character");
-    }
-    
-    return errors;
-  };
-  
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password || !confirmPassword || !name) {
       toast.error("Please fill in all fields");
       return;
     }
-    
+
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
-    
-    
-    const passwordErrors = validatePassword(password);
-    if (passwordErrors.length > 0) {
-      
-      passwordErrors.forEach(error => toast.error(error));
+
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
-      
-      
-      const timestamp = Date.now();
-      const uniqueUsername = `admin_${timestamp}`;
-      
-      
-      const signUpResult = await signUp({
-        username: uniqueUsername,
-        password,
-        options: {
-          userAttributes: {
-            email,
-            name,
-            
-            'custom:role': 'admin'
-          },
-          
-          autoSignIn: true
-        }
-      });
-      
-      
-      console.log("Admin signup details:", {
-        username: uniqueUsername,
-        email,
-        role: 'admin',
-        autoSignIn: true
-      });
-      
-      console.log("Sign up result:", signUpResult);
-      
-      
-      setUsername(uniqueUsername);
-      
-      
-      if (signUpResult.isSignUpComplete) {
-        
-        toast.success("Admin account created successfully");
-        router.push("/admin");
+      const result = await registerAdmin(name, email, password);
+
+      if (result.success) {
+        toast.success(result.message || "Admin account registered successfully");
+        setTimeout(() => {
+          window.location.href = "/admin";
+        }, 300);
       } else {
-        
-        if (signUpResult.nextStep && signUpResult.nextStep.signUpStep === "CONFIRM_SIGN_UP") {
-          setShowVerification(true);
-          
-          
-          const destination = signUpResult.nextStep.codeDeliveryDetails?.destination;
-          if (destination) {
-            toast.success(`Verification code sent to ${destination}. Please check your email.`);
-          } else {
-            toast.success("Please check your email for a verification code");
-          }
-        } else {
-          
-          toast.info("Please complete the signup process");
-          setShowVerification(true);
-        }
+        toast.error(result.message || "Registration failed");
       }
     } catch (error: any) {
       console.error("Admin signup error:", error);
-      
-      
-      if (error.name === "UsernameExistsException") {
-        toast.error("An account with this email already exists");
-      } else if (error.name === "InvalidPasswordException") {
-        
-        if (error.message) {
-          toast.error(error.message);
-        } else {
-          toast.error("Password does not meet requirements");
-        }
-      } else if (error.name === "InvalidParameterException") {
-        if (error.message.includes("email")) {
-          toast.error("Please provide a valid email address");
-        } else {
-          toast.error(error.message);
-        }
-      } else if (error.name === "LimitExceededException") {
-        toast.error("Too many attempts. Please try again later");
-      } else {
-        toast.error(error.message || "Failed to create account. Please try again.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  
-  const handleVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!verificationCode) {
-      toast.error("Please enter the verification code");
-      return;
-    }
-    
-    if (!username) {
-      toast.error("Session expired. Please try signing up again.");
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      
-      const confirmResult = await confirmSignUp({
-        username: username,
-        confirmationCode: verificationCode
-      });
-      
-      console.log("Confirm result:", confirmResult);
-      
-      if (confirmResult.isSignUpComplete) {
-        
-        try {
-          const signInResult = await autoSignIn();
-          if (signInResult.isSignedIn) {
-            toast.success("Admin account verified and logged in successfully");
-            
-            
-            localStorage.setItem('isAdminAuthenticated', 'true');
-            
-            
-            router.replace("/admin");
-            return;
-          }
-        } catch (autoSignInError) {
-          console.log("Auto sign-in failed, redirecting to login", autoSignInError);
-        }
-        
-        
-        toast.success("Account verified! Please log in");
-        router.push("/admin-login");
-      }
-    } catch (error: any) {
-      console.error("Verification error:", error);
-      
-      if (error.name === "CodeMismatchException") {
-        toast.error("Invalid verification code");
-      } else if (error.name === "ExpiredCodeException") {
-        toast.error("Verification code has expired. Please request a new one");
-      } else {
-        toast.error(error.message || "Failed to verify account. Please try again.");
-      }
+      toast.error(error.message || "Failed to create admin account");
     } finally {
       setIsLoading(false);
     }
@@ -252,144 +70,119 @@ export default function AdminSignup() {
               className="object-contain" 
             />
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Admin Registration</CardTitle>
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-2xl font-bold text-center">Admin Registration</CardTitle>
+          </div>
           <CardDescription className="text-center">
-            Create a new administrator account
+            Register an authorized admin account
           </CardDescription>
         </CardHeader>
-        
-        {!showVerification ? (
-          <form onSubmit={handleSignup}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Full Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Admin Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Check className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm Password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="mt-4">
-              <Button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    Creating Account...
-                  </>
-                ) : (
-                  "Create Admin Account"
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        ) : (
-          <form onSubmit={handleVerification}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-                  We&apos;ve sent a verification code to your email. Please enter it below.
-                </p>
+
+        <form onSubmit={handleSignup}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Full Name
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
-                  id="verificationCode"
+                  id="name"
                   type="text"
-                  placeholder="Verification Code"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="pl-10"
                   required
                 />
               </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-2">
-              <Button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    Verifying...
-                  </>
-                ) : (
-                  "Verify Account"
-                )}
-              </Button>
-              <Button 
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => router.push("/admin-login")}
-              >
-                Back to Login
-              </Button>
-            </CardFooter>
-          </form>
-        )}
-        
-        <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400">
-          <p>Already have an admin account? <a href="/admin-login" className="text-blue-600 hover:underline">Login</a></p>
-          <div className="mt-4 flex justify-center">
-            <Image 
-              src="/Advance_Auto_logoo.png" 
-              alt="Advance Auto Logo" 
-              width={140} 
-              height={48} 
-              className="opacity-80 dark:opacity-60 object-contain" 
-            />
-          </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Admin Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="alexsouthflow@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Check className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 space-y-1">
+              <p className="font-semibold">Authorized Admin Emails:</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {ALLOWED_ADMIN_EMAILS.map((addr) => (
+                  <li key={addr} className="font-mono">{addr}</li>
+                ))}
+              </ul>
+            </div>
+          </CardContent>
+
+          <CardFooter className="mt-2 flex flex-col space-y-3">
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 shadow-md font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Registering...
+                </>
+              ) : (
+                "Create Admin Account"
+              )}
+            </Button>
+          </CardFooter>
+        </form>
+
+        <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          <p>Already registered? <a href="/admin-login" className="text-blue-600 hover:underline font-medium">Log in here</a></p>
         </div>
       </Card>
     </div>

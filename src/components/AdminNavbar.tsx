@@ -7,7 +7,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useGetAuthUserQuery } from "@/state/api"
 import { usePathname, useRouter } from "next/navigation"
-import { signOut } from "aws-amplify/auth"
+import { logoutAdmin } from "@/app/admin/adminAuth"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import {
   Settings,
@@ -53,7 +53,7 @@ const AdminNavbar = () => {
 
   const handleSignOut = async () => {
     setIsLoading(true)
-    await signOut()
+    await logoutAdmin()
     window.location.href = "/admin-login"
   }
 

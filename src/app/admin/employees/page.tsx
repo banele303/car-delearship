@@ -19,7 +19,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fetchAuthSession } from "aws-amplify/auth";
 import { CheckCircle, XCircle, AlertTriangle, Ban, Search, Plus, User } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { toast } from "sonner";

@@ -363,13 +363,49 @@ export const api = createApi({
     // --- Use the new AppUser type ---
     getAuthUser: build.query<AppUser, void>({
       queryFn: async (_, _queryApi, _extraoptions, fetchWithBQ) => {
+        // Check local admin authentication first (for alexsouthflow@gmail.com and alexsouthflow2@gmail.com)
+        if (typeof window !== 'undefined') {
+          const adminDataStr = localStorage.getItem('admin_auth_state');
+          if (adminDataStr) {
+            try {
+              const adminData = JSON.parse(adminDataStr);
+              if (adminData && adminData.email && (
+                adminData.email.toLowerCase() === 'alexsouthflow@gmail.com' ||
+                adminData.email.toLowerCase() === 'alexsouthflow2@gmail.com' ||
+                adminData.role === 'admin'
+              )) {
+                return {
+                  data: {
+                    cognitoInfo: { userId: String(adminData.id || adminData.cognitoId || 'admin'), username: adminData.email },
+                    userInfo: {
+                      id: adminData.id || 1,
+                      cognitoId: adminData.cognitoId || String(adminData.id || 1),
+                      name: adminData.name || 'Admin User',
+                      email: adminData.email,
+                      phoneNumber: adminData.phoneNumber || '',
+                    },
+                    userRole: "admin",
+                  }
+                };
+              }
+            } catch (e) {
+              // Fallback to standard flow if JSON parse fails
+            }
+          }
+        }
+
         // Define userDetailsResponse at the highest scope so it's accessible throughout the function
         let userDetailsResponse: any = { error: { status: 500, error: "Initialization error" } };
         
         try {
           let cognitoUser: CognitoAuthUser | undefined;
           
-          const session = await fetchAuthSession();
+          let session: any = null;
+          try {
+            session = await fetchAuthSession();
+          } catch (e) {
+            // session fetch failed
+          }
           // Auth session fetched
           
           // Check if we have a valid session with tokens before attempting to get current user

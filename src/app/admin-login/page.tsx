@@ -2,36 +2,25 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, confirmSignIn, signOut, fetchAuthSession } from "aws-amplify/auth";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Lock, Mail } from "lucide-react";
-import { configureAdminAuth } from "../admin/adminAuth";
-
-
-
+import { loginAsAdmin, checkAdminAuth, ALLOWED_ADMIN_EMAILS } from "../admin/adminAuth";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("alexsouthflow@gmail.com");
   const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showNewPasswordField, setShowNewPasswordField] = useState(false);
   const router = useRouter();
-  
-  
+
   useEffect(() => {
-    configureAdminAuth();
-    
-    
     const searchParams = new URLSearchParams(window.location.search);
     const fromPath = searchParams.get('from') || '/admin';
     const errorParam = searchParams.get('error');
-    
-    
+
     if (errorParam) {
       if (errorParam === 'auth') {
         toast.error("Authentication required for admin area");
@@ -41,131 +30,50 @@ export default function AdminLogin() {
         toast.error("You don't have admin privileges");
       }
     }
-    
-    
+
     const checkAuth = async () => {
       try {
-        
-        const { checkAdminAuth } = await import('../admin/adminAuth');
         const { isAuthenticated } = await checkAdminAuth();
-        
-        
         if (isAuthenticated) {
           console.log("✅ Already authenticated as admin, redirecting to:", fromPath);
           router.replace(fromPath);
         }
       } catch (error) {
-        
-        console.log("❌ Not authenticated as admin", error);
+        console.log("Not authenticated as admin", error);
       }
     };
-    
+
     checkAuth();
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error("Please enter both email and password");
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
-      
-      const { loginAsAdmin } = await import('../admin/adminAuth');
-      
-      
       const result = await loginAsAdmin(email, password);
-      
+
       if (result.success) {
-        
         const searchParams = new URLSearchParams(window.location.search);
         const fromPath = searchParams.get('from') || '/admin';
-        
-        
+
         toast.success(result.message || "Admin login successful");
-        
-        
-        try {
-          const session = await fetchAuthSession();
-          const token = session.tokens?.idToken?.toString();
-          
-          if (token) {
-            
-            await fetch('/api/admin/set-auth-cookie', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token })
-            });
-            
-            console.log("✅ Admin auth cookie set successfully");
-          }
-        } catch (cookieError) {
-          console.error('❌ Failed to set admin auth cookie:', cookieError);
-        }
-        
-        
-        console.log("✅ Admin login successful - redirecting to:", {
-          destination: fromPath,
-        });
-        
-        
+
         setTimeout(() => {
-          
           window.location.href = fromPath;
         }, 300);
-        return;
-      } 
-      else {
-        
+      } else {
         toast.error(result.message || "Login failed");
-        console.error("❌ Admin login failed:", result.message);
-        
-        
-        if (result.message?.includes("password")) {
-          setShowNewPasswordField(true);
-        } else {
-          toast.error("Login failed");
-        }
       }
     } catch (error: any) {
       console.error("Admin login error:", error);
       toast.error(error.message || "An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleNewPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newPassword) {
-      toast.error("Please enter a new password");
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      
-      const confirmResult = await confirmSignIn({
-        challengeResponse: newPassword
-      });
-      
-      console.log("Confirm sign in result:", confirmResult);
-      
-      if (confirmResult.isSignedIn) {
-        toast.success("Password updated and login successful");
-        router.push("/admin");
-      } else {
-        toast.error("Failed to update password");
-      }
-    } catch (error) {
-      console.error("Password update error:", error);
-      toast.error("Failed to update password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -184,114 +92,83 @@ export default function AdminLogin() {
               className="object-contain" 
             />
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Admin Access</CardTitle>
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-2xl font-bold text-center">Admin Access</CardTitle>
+          </div>
           <CardDescription className="text-center">
-            Secure login for system administrators only
+            Secure login for authorized administrators only
           </CardDescription>
         </CardHeader>
-        {!showNewPasswordField ? (
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+        
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Admin Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="alexsouthflow@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
 
-              <div className="space-y-2">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Admin Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Admin Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="mt-4">
-              <Button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    Authenticating...
-                  </>
-                ) : (
-                  "Access Admin Dashboard"
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        ) : (
-          <form onSubmit={handleNewPasswordSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-                  You need to set a new password for your admin account.
-                </p>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    placeholder="New Password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="mt-4">
-              <Button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    Updating Password...
-                  </>
-                ) : (
-                  "Set New Password"
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        )}
-        <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400">
-          <p>This page is for authorized administrators only.</p>
-          <p className="mt-2">
-            Need an admin account? <a href="/admin-signup" className="text-blue-600 hover:underline">Register here</a>
-          </p>
-          <div className="mt-4 flex justify-center">
-            <Image 
-              src="/Advance_Auto_logoo.png" 
-              alt="Advance Auto Logo" 
-              width={140} 
-              height={48} 
-              className="opacity-80 dark:opacity-60 object-contain" 
-            />
-          </div>
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 space-y-1">
+              <p className="font-semibold">Authorized Admin Emails:</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {ALLOWED_ADMIN_EMAILS.map((addr) => (
+                  <li key={addr} className="font-mono">{addr}</li>
+                ))}
+              </ul>
+            </div>
+          </CardContent>
+          
+          <CardFooter className="mt-2 flex flex-col space-y-3">
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 shadow-md font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Authenticating...
+                </>
+              ) : (
+                "Access Admin Dashboard"
+              )}
+            </Button>
+          </CardFooter>
+        </form>
+
+        <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          <p>Need access? Register your authorized admin email <a href="/admin-signup" className="text-blue-600 hover:underline font-medium">here</a>.</p>
         </div>
       </Card>
     </div>

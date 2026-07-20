@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { fetchAuthSession } from 'aws-amplify/auth';
 import { 
   Card, 
   CardContent, 

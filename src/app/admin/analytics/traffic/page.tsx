@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchAuthSession } from 'aws-amplify/auth';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
