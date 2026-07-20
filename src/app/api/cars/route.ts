@@ -35,24 +35,21 @@ export async function GET(req: NextRequest) {
     // Normalize legacy enum values (GASOLINE -> PETROL for display)
     const normalized = cars.map((c: any) => (String(c.fuelType) === 'GASOLINE' ? { ...c, fuelType: 'PETROL' } : c));
 
-    // Resolve Convex storage IDs to actual image URLs
+    // Resolve Convex storage IDs to actual image URLs via local proxy
     const withUrls = await Promise.all(
       normalized.map(async (car: any) => {
-        if (!car.photoUrls?.length) return car;
+        if (!car.photoUrls?.length) return car
         const resolved = await Promise.all(
           car.photoUrls.map(async (id: string) => {
-            if (id.startsWith("http://") || id.startsWith("https://")) return id;
-            try {
-              const url = await convexClient.query("files:getUrl", { storageId: id });
-              return url || "/placeholder.jpg";
-            } catch {
-              return "/placeholder.jpg";
-            }
+            // Already an HTTP URL — keep as-is
+            if (id.startsWith("http://") || id.startsWith("https://")) return id
+            // Convex storage ID — proxy through our endpoint
+            return `/api/storage/${id}`
           })
-        );
-        return { ...car, photoUrls: resolved };
+        )
+        return { ...car, photoUrls: resolved }
       })
-    );
+    )
 
     return NextResponse.json(withUrls, {
       headers: {
