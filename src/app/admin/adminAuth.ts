@@ -15,6 +15,31 @@ const ADMIN_STORAGE_KEY = 'admin_auth_state';
 const ADMIN_TOKEN_KEY = 'admin_id_token';
 
 /**
+ * Compatibility helper for legacy pages querying auth session
+ */
+export async function fetchAuthSession() {
+  if (typeof window === 'undefined') return { tokens: undefined };
+  const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+  const adminState = getAdminAuthState();
+
+  if (!token || !adminState) return { tokens: undefined };
+
+  return {
+    tokens: {
+      idToken: {
+        toString: () => token,
+        payload: {
+          exp: Math.floor(Date.now() / 1000) + 86400,
+          'custom:role': 'admin',
+          email: adminState.email || 'alexsouthflow@gmail.com',
+          name: adminState.name || 'Admin User',
+        }
+      }
+    }
+  };
+}
+
+/**
  * Check if an email address is an authorized admin email
  */
 export function isAllowedAdminEmail(email: string): boolean {
