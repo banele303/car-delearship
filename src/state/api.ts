@@ -59,7 +59,7 @@ type CacheTagType = "Applications" | "Employees" | "Customers" | "Cars" | "CarDe
 
 export const api = createApi({
   baseQuery: (() => {
-    const convexClient = new ConvexClient(process.env.NEXT_PUBLIC_CONVEX_URL || "");
+    const convexClient: any = new ConvexClient(process.env.NEXT_PUBLIC_CONVEX_URL || "");
 
     async function uploadFileToConvex(file: File): Promise<string> {
       const uploadUrl = await convexClient.mutation("files:generateUploadUrl", {});
