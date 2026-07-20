@@ -10,6 +10,7 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { resolveCarImageUrl } from "@/utils/imageUrl"
 
 interface PropertyCardProps {
   property: {
@@ -54,12 +55,11 @@ function PropertyCard({
 }: PropertyCardProps) {
   
   const [imgSrc, setImgSrc] = useState<string>(
-    
-    property.images && property.images.length > 0 ? property.images[0] :
-    
-    property.photoUrls && property.photoUrls.length > 0 ? property.photoUrls[0] :
-    
-    "/placeholder.jpg"
+    resolveCarImageUrl(
+      property.images && property.images.length > 0 ? property.images[0] :
+      property.photoUrls && property.photoUrls.length > 0 ? property.photoUrls[0] :
+      "/placeholder.jpg"
+    )
   )
   const [isHovered, setIsHovered] = useState(false)
   const [imgError, setImgError] = useState(false)

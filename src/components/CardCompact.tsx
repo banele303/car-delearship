@@ -8,6 +8,7 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { resolveCarImageUrl } from "@/utils/imageUrl"
 
 interface PropertyCardCompactProps {
   property: {
@@ -48,12 +49,11 @@ export default function PropertyCardCompact({
 }: PropertyCardCompactProps) {
   
   const [imgSrc, setImgSrc] = useState(
-    
-    property.images && property.images.length > 0 ? property.images[0] :
-    
-    property.photoUrls && property.photoUrls.length > 0 ? property.photoUrls[0] :
-    
-    "/placeholder.svg?height=300&width=300"
+    resolveCarImageUrl(
+      property.images && property.images.length > 0 ? property.images[0] :
+      property.photoUrls && property.photoUrls.length > 0 ? property.photoUrls[0] :
+      "/placeholder.svg?height=300&width=300"
+    )
   )
   const [isHovered, setIsHovered] = useState(false)
 
