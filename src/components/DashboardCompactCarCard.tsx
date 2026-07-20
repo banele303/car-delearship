@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useRouter } from 'next/navigation'
+import { resolveCarImageUrl } from "@/utils/imageUrl"
 
 interface CarCardCompactProps { 
   car: { 
@@ -43,7 +44,7 @@ export default function DashboardCompactCarCard({
   showFavoriteButton = true,
   carLink, 
 }: CarCardCompactProps) { 
-  const [imgSrc, setImgSrc] = useState(car.photoUrls?.[0] || "/placeholder.svg?height=300&width=300")
+  const [imgSrc, setImgSrc] = useState(resolveCarImageUrl(car.photoUrls?.[0]) || "/placeholder.svg?height=300&width=300")
   const [isHovered, setIsHovered] = useState(false)
   const router = useRouter()
   const targetHref = carLink || `/cars/${car.id}`

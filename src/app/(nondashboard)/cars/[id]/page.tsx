@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ReserveCarForm from "@/components/forms/ReserveCarForm";
 import { useConvexAuth } from "@/components/ConvexAuthProvider";
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 
 // Narrow type for car to include optional dealership (API returns it via include)
 interface CarWithRelations {
@@ -41,7 +42,10 @@ const CarDetailPage = () => {
   // Fetch a small list of recent cars (excluding current) for the bottom section
   const { data: recentCars } = useGetCarsQuery({ limit: 8 });
   // Derive photos only after car is available (fallback to placeholder)
-  const photos = car?.photoUrls && car.photoUrls.length > 0 ? car.photoUrls : ["/placeholder.jpg"];
+  // resolveCarImageUrl handles both raw Convex storage IDs and real HTTPS URLs
+  const photos = car?.photoUrls && car.photoUrls.length > 0
+    ? car.photoUrls.map(resolveCarImageUrl)
+    : ["/placeholder.jpg"];
 
   const goPrev = useCallback(() => {
     if (!photos.length) return;

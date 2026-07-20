@@ -10,9 +10,24 @@ const nextConfig = {
   images: {
     unoptimized: true, // Bypass Next.js image optimizer to avoid 402 responses
     remotePatterns: [
+      // Convex API endpoint
       {
         protocol: "https",
         hostname: "frugal-zebra-890.convex.cloud",
+        port: "",
+        pathname: "/**",
+      },
+      // Convex File Storage CDN (where uploaded files are actually served from)
+      {
+        protocol: "https",
+        hostname: "*.convex.cloud",
+        port: "",
+        pathname: "/**",
+      },
+      // Convex site/functions domain
+      {
+        protocol: "https",
+        hostname: "*.convex.site",
         port: "",
         pathname: "/**",
       },

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Car, Calendar, Fuel, Gauge, Heart, Eye, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 
 interface CarCardProps {
   id: number;
@@ -82,7 +83,7 @@ const CarCard: React.FC<CarCardProps> = ({
       
       <div className="relative h-48 overflow-hidden rounded-t-2xl">
         <Image
-          src={photoUrls[0] || "/placeholder.jpg"}
+          src={resolveCarImageUrl(photoUrls[0]) || "/placeholder.jpg"}
           alt={`${year} ${make} ${model}`}
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-300"

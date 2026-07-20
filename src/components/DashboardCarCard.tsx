@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 
 interface CarCardProps { 
   car: { 
@@ -59,7 +60,7 @@ export default function CarCardDashboard({
   carLink, 
   onDelete,
 }: CarCardProps) { 
-  const [imgSrc, setImgSrc] = useState(car.photoUrls?.[0]);
+  const [imgSrc, setImgSrc] = useState(resolveCarImageUrl(car.photoUrls?.[0]));
 
   const [isHovered, setIsHovered] = useState(false);
   const router = useRouter();

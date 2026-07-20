@@ -2,6 +2,7 @@ import { Mail, MapPin, PhoneCall } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
 import { Inquiry } from "@/types/prismaTypes";
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 
 interface InquiryCardProps {
   inquiry: Inquiry & {
@@ -22,7 +23,7 @@ const InquiryCard = ({
   children,
 }: InquiryCardProps) => {
   const [imgSrc, setImgSrc] = useState(
-    inquiry.car.photoUrls?.[0] || "/placeholder.jpg"
+    resolveCarImageUrl(inquiry.car.photoUrls?.[0]) || "/placeholder.jpg"
   );
 
   const statusColor =

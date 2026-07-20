@@ -8,6 +8,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useRouter } from 'next/navigation'
+import { resolveCarImageUrl } from "@/utils/imageUrl"
 
 interface ModernCarCardProps {
   car: {
@@ -64,7 +65,7 @@ function ModernCarCard({
   showActions = false,
   userRole = null,
 }: ModernCarCardProps) {
-  const [imgSrc, setImgSrc] = useState<string>(car.photoUrls?.[0] || "/placeholder.jpg")
+  const [imgSrc, setImgSrc] = useState<string>(resolveCarImageUrl(car.photoUrls?.[0]) || "/placeholder.jpg")
   const [isHovered, setIsHovered] = useState(false)
   const [imgError, setImgError] = useState(false)
   const router = useRouter()
