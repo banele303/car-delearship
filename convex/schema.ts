@@ -264,4 +264,24 @@ export default defineSchema({
   })
   .index("by_numeric_id", ["id"])
   .index("by_url", ["url"]),
-});
+
+  // ── Convex Auth Tables ──
+  authUsers: defineTable({
+    email: v.string(),
+    passwordHash: v.string(),
+    name: v.string(),
+    role: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+  .index("by_email", ["email"]),
+
+  authSessions: defineTable({
+    userId: v.id("authUsers"),
+    token: v.string(),
+    createdAt: v.string(),
+    expiresAt: v.string(),
+  })
+  .index("by_token", ["token"])
+  .index("by_userId", ["userId"]),
+  });
