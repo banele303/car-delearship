@@ -12,7 +12,7 @@ import { useGetCarQuery, useAddFavoriteCarMutation, useRemoveFavoriteCarMutation
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ReserveCarForm from "@/components/forms/ReserveCarForm";
-import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useConvexAuth } from "@/components/ConvexAuthProvider";
 
 // Narrow type for car to include optional dealership (API returns it via include)
 interface CarWithRelations {
@@ -77,8 +77,8 @@ const CarDetailPage = () => {
   
   const [addFavorite] = useAddFavoriteCarMutation();
   const [removeFavorite] = useRemoveFavoriteCarMutation();
-  const { user } = useAuthenticator((context) => [context.user]);
-  const cognitoId = (user as any)?.userId || (user as any)?.username || null;
+  const { user } = useConvexAuth()
+  const userId = user?.id || null;
 
   const formatPrice = (price: number) => `R ${price.toLocaleString()}`;
   const [showNumber, setShowNumber] = useState(false);

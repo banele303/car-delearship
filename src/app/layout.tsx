@@ -21,7 +21,7 @@ const outfit = Outfit({
   weight: ['400', '500', '600', '700'],
   variable: '--font-outfit',
 });
-import "@aws-amplify/ui-react/styles.css";
+import "./globals.css";
 import Providers from "./providers";
 import ConditionalFloatingWhatsApp from "@/components/ConditionalFloatingWhatsApp";
 import ConditionalFooter from "@/components/ConditionalFooter";

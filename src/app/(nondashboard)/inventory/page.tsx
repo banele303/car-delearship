@@ -12,7 +12,7 @@ import CarCard from "@/components/CarCard";
 import { useGetCarsQuery, useAddFavoriteCarMutation, useRemoveFavoriteCarMutation } from "@/state/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useConvexAuth } from "@/components/ConvexAuthProvider";
 import { toast } from "sonner";
 import { CarCardSkeleton } from "@/components/ui/skeletons";
 import Image from "next/image";
@@ -134,8 +134,8 @@ const InventoryContent = () => {
     return `R ${price.toLocaleString()}`;
   };
 
-  const { user } = useAuthenticator((ctx)=>[ctx.user]);
-  const cognitoId = (user as any)?.userId || (user as any)?.username || null;
+  const { user } = useConvexAuth();
+  const userId = user?.id || null;
 
   const handleFavoriteToggle = async (carId: number) => {
     try {
