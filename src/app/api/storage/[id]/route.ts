@@ -24,21 +24,24 @@ function extractJpeg(bytes: Uint8Array): Uint8Array | null {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
-  const { id } = await params
+  // Support both Next.js 14 sync params and Next.js 15 async params
+  const resolvedParams = await params
+  const id = resolvedParams.id
 
   try {
-    // The id might be:
-    //   - a raw Convex storage ID (old: "kg2xAbc..." or UUID "857f9ead-...")
-    //   - a full Convex storage URL encoded as the param
     let imgUrl: string
 
     if (id.startsWith("http")) {
-      // Already a full URL
+      // 1. Full URL passed (e.g. encoded URL)
       imgUrl = decodeURIComponent(id)
+    } else if (/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id)) {
+      // 2. UUID passed directly — this is already the storage path on Convex!
+      // e.g. /api/storage/857f9ead-7be2-40e4-8052-2c8d5da49bbb
+      imgUrl = `${CONVEX_URL}/api/storage/${id}`
     } else {
-      // Resolve storage ID -> real Convex CDN URL via files:getUrl
+      // 3. Legacy Convex storage ID (e.g. "kg2xAbc...") — resolve via files:getUrl
       const queryResp = await fetch(`${CONVEX_URL}/api/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,7 +54,7 @@ export async function GET(
       }
     }
 
-    // Fetch from Convex CDN (returns multipart/form-data wrapping the image)
+    // Fetch from Convex CDN (Convex returns multipart/form-data wrapping the image)
     const imgResp = await fetch(imgUrl)
     if (!imgResp.ok) {
       return NextResponse.json({ error: `Fetch failed: ${imgResp.status}` }, { status: 502 })
