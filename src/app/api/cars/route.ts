@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
         if (!car.photoUrls?.length) return car
         const resolved = await Promise.all(
           car.photoUrls.map(async (id: string) => {
-            // Already an HTTP URL — keep as-is
-            if (id.startsWith("http://") || id.startsWith("https://")) return id
+          // Already an HTTP URL or a public path — keep as-is
+            if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) return id
             // Convex storage ID — proxy through our endpoint
             return `/api/storage/${id}`
           })

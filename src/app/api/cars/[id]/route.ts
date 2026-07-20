@@ -93,7 +93,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (normalized.photoUrls?.length) {
       const resolved = await Promise.all(
         normalized.photoUrls.map(async (id: string) => {
-          if (id.startsWith("http://") || id.startsWith("https://")) return id
+          if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) return id
           return `/api/storage/${id}`
         })
       )
