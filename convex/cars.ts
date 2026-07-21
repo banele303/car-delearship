@@ -11,26 +11,22 @@ export const list = query({
     employeeId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let carsQuery = ctx.db.query("cars");
+    let cars = await ctx.db.query("cars").collect();
 
-    // Apply indexes or filters
     if (args.featured !== undefined) {
-      carsQuery = carsQuery.withIndex("by_featured", q => q.eq("featured", args.featured));
-    } else if (args.status !== undefined) {
-      carsQuery = carsQuery.withIndex("by_status", q => q.eq("status", args.status));
-    } else if (args.employeeId !== undefined) {
-      carsQuery = carsQuery.withIndex("by_employeeId", q => q.eq("employeeId", args.employeeId));
+      cars = cars.filter(c => c.featured === args.featured);
     }
-
-    let cars = await carsQuery.collect();
-
-    // Secondary filtering
+    if (args.status !== undefined) {
+      cars = cars.filter(c => c.status === args.status);
+    } else if (!args.showAll) {
+      // Default: only return AVAILABLE or RESERVED cars unless showAll is true
+      cars = cars.filter(c => c.status === "AVAILABLE" || c.status === "RESERVED");
+    }
+    if (args.employeeId !== undefined) {
+      cars = cars.filter(c => c.employeeId === args.employeeId);
+    }
     if (args.dealershipId !== undefined) {
       cars = cars.filter(c => c.dealershipId === args.dealershipId);
-    }
-    if (args.employeeId !== undefined && args.status === undefined) {
-      // If filtering by employeeId, we don't index status first, so secondary filter
-      cars = cars.filter(c => c.employeeId === args.employeeId);
     }
 
     if (args.status === undefined && !args.showAll && args.employeeId === undefined) {

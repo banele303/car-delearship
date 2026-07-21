@@ -83,8 +83,6 @@ const CarDetailPage = () => {
   
   const [addFavorite] = useAddFavoriteCarMutation();
   const [removeFavorite] = useRemoveFavoriteCarMutation();
-  const { user } = useConvexAuth()
-  const userId = user?.id || null;
 
   const formatPrice = (price: number) => `R ${price.toLocaleString()}`;
   const [showNumber, setShowNumber] = useState(false);
