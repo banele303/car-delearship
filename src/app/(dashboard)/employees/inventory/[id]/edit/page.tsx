@@ -43,6 +43,7 @@ import { useGetCarQuery, useUpdateCarMutation, useDeleteCarMutation } from "@/st
 import { batchCompress } from '@/lib/imageCompression';
 import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, CAR_UPLOAD_MAX_FILES } from '@/config/uploadLimits';
 import { CreateFormFieldt } from "@/components/CreateFormFieldT";
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 
 
 import { Progress } from "@/components/ui/progress";
@@ -584,7 +585,7 @@ export default function EditCarPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                             {currentCarPhotos.map((url, index) => (
                             <div key={url} className="relative aspect-video bg-muted dark:bg-gray-700 rounded-md group overflow-hidden shadow">
-                                <Image src={url} alt={`Car Photo ${index + 1}`} layout="fill" objectFit="cover" />
+                                <Image src={resolveCarImageUrl(url)} alt={`Car Photo ${index + 1}`} layout="fill" objectFit="cover" unoptimized />
                                 <UIButton type="button" variant="secondary" size="icon"
                                     onClick={() => toggleCarPhotoForDelete(url)}
                                     className={`absolute top-1.5 right-1.5 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-all duration-150

@@ -27,15 +27,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Normalize legacy fuel type before returning
     let normalized = String(car.fuelType) === 'GASOLINE' ? { ...car, fuelType: 'PETROL' } : car;
 
-    // Resolve Convex storage IDs via local proxy
+    // Resolve Convex storage IDs to full HTTPS CDN URLs
     if (normalized.photoUrls?.length) {
-      const resolved = await Promise.all(
-        normalized.photoUrls.map(async (id: string) => {
-          if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) return id
-          return `/api/storage/${id}`
-        })
-      )
-      normalized = { ...normalized, photoUrls: resolved }
+      const convexCloudUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
+      const resolved = normalized.photoUrls.map((id: string) => {
+        if (id.startsWith("http://") || id.startsWith("https://")) return id;
+        if (id.startsWith("/")) return `${convexCloudUrl}${id}`;
+        return `${convexCloudUrl}/api/storage/${id}`;
+      });
+      normalized = { ...normalized, photoUrls: resolved };
     }
 
     return NextResponse.json(normalized, { headers: { 'x-fueltype-normalized': String(car.fuelType) === 'GASOLINE' ? 'true' : 'false' } });
@@ -117,14 +117,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Existing photos kept
-    let keptExisting = existingCar.photoUrls || [];
+    let keptExisting: string[] = existingCar.photoUrls || [];
     if (photoUrlsRaw) {
       try {
         const parsed = JSON.parse(photoUrlsRaw);
-        if (Array.isArray(parsed)) {
-          const toDelete = keptExisting.filter((u: string) => !parsed.includes(u));
-          if (toDelete.length) await Promise.all(toDelete.map(deleteFileFromS3));
-          keptExisting = parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const convexCloudUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
+          keptExisting = parsed.map((url: string) => {
+            if (url.startsWith("http://") || url.startsWith("https://")) return url;
+            if (url.startsWith("/")) return `${convexCloudUrl}${url}`;
+            return `${convexCloudUrl}/api/storage/${url}`;
+          });
         }
       } catch {}
     }
@@ -152,25 +155,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         return uploadToConvex(f);
       }));
     }
-    let finalPhotos: string[] = [];
-    if (photoOrderRaw) {
-      try {
-        const order: string[] = JSON.parse(photoOrderRaw);
-        if (Array.isArray(order) && order.length) {
-          order.forEach(tok => {
-            if (keptExisting.includes(tok)) finalPhotos.push(tok);
-            else if (/^__new_\d+__$/.test(tok)) {
-              const idx = parseInt(tok.replace(/__new_|__/g,''));
-              if (!isNaN(idx) && uploadedNew[idx]) finalPhotos.push(uploadedNew[idx]);
-            }
-          });
-          uploadedNew.forEach((u: string) => { if (!finalPhotos.includes(u)) finalPhotos.push(u); });
-          keptExisting.forEach((u: string) => { if (!finalPhotos.includes(u)) finalPhotos.push(u); });
-        } else finalPhotos = [...keptExisting, ...uploadedNew];
-      } catch { finalPhotos = [...keptExisting, ...uploadedNew]; }
-    } else {
-      finalPhotos = [...keptExisting, ...uploadedNew];
-    }
+
+    const finalPhotos = [...keptExisting, ...uploadedNew];
     data.photoUrls = finalPhotos;
 
     if (data.fuelType === 'PETROL' || data.fuelType === 'FUEL') {

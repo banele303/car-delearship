@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { FormSkeleton } from "@/components/ui/skeletons";
 import Image from "next/image";
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 
 interface Car {
   id: number;
@@ -150,8 +151,8 @@ export default function EditCarPage({ params }: PageProps) {
       }
       const carData = await response.json();
       setCar(carData);
-  const existing = (carData.photoUrls || []).map((url: string, idx: number) => ({ id: `ex-${idx}-${url}`, source: 'existing' as const, url }));
-  setItems(existing);
+      const existing = (carData.photoUrls || []).map((url: string, idx: number) => ({ id: `ex-${idx}-${url}`, source: 'existing' as const, url: resolveCarImageUrl(url) }));
+      setItems(existing);
       
   setFormData({
         make: carData.make,
@@ -751,7 +752,7 @@ export default function EditCarPage({ params }: PageProps) {
                        onDragOver={onDragOver}
                        onDrop={(e)=>onDrop(e,index)}
                        className={`group relative h-20 w-20 rounded-md overflow-hidden border ${index===0 ? 'ring-2 ring-blue-500 border-blue-400' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-800`}> 
-                    <Image src={item.url} alt={`Img ${index}`} width={80} height={80} className="h-full w-full object-cover pointer-events-none select-none" />
+                    <Image src={resolveCarImageUrl(item.url)} alt={`Img ${index}`} width={80} height={80} unoptimized className="h-full w-full object-cover pointer-events-none select-none" />
                     <div className="absolute inset-0 flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="flex justify-between">
                         <button type="button" onClick={()=>removeImage(item.id)} className="bg-red-500/80 hover:bg-red-600 text-white px-1 rounded-br text-[10px]">Del</button>
