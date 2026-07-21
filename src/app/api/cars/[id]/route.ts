@@ -8,18 +8,6 @@ import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, describeCarUploadLim
 async function deleteFileFromS3(fileUrl: string): Promise<void> {
   // Convex storage manages files automatically
 }
-      return;
-    }
-    
-    console.log(`Deleting S3 object with key: ${key}`);
-    await s3Client.send(new DeleteObjectCommand({ 
-      Bucket: process.env.AWS_BUCKET_NAME, 
-      Key: key 
-    }));
-  } catch (error) {
-    console.error('S3 Deletion Error for URL:', fileUrl, error);
-  }
-}
 
 // GET a specific car by ID
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
