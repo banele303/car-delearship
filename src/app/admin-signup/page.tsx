@@ -153,14 +153,6 @@ export default function AdminSignup() {
               </div>
             </div>
 
-            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 space-y-1">
-              <p className="font-semibold">Authorized Admin Emails:</p>
-              <ul className="list-disc pl-4 space-y-0.5">
-                {ALLOWED_ADMIN_EMAILS.map((addr) => (
-                  <li key={addr} className="font-mono">{addr}</li>
-                ))}
-              </ul>
-            </div>
           </CardContent>
 
           <CardFooter className="mt-2 flex flex-col space-y-3">
