@@ -9,6 +9,7 @@ const convex = new ConvexHttpClient(CONVEX_URL);
 export const ALLOWED_ADMIN_EMAILS = [
   "alexsouthflow@gmail.com",
   "alexsouthflow2@gmail.com",
+  "advanceautott@gmail.com",
 ];
 
 const ADMIN_STORAGE_KEY = 'admin_auth_state';

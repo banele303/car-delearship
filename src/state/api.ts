@@ -373,6 +373,7 @@ export const api = createApi({
               if (adminData && adminData.email && (
                 adminData.email.toLowerCase() === 'alexsouthflow@gmail.com' ||
                 adminData.email.toLowerCase() === 'alexsouthflow2@gmail.com' ||
+                adminData.email.toLowerCase() === 'advanceautott@gmail.com' ||
                 adminData.role === 'admin'
               )) {
                 return {
