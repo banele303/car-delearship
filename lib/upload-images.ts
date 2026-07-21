@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { convexClient } from "@/lib/convex";
 
 // This server action uploads car images to Convex storage properly

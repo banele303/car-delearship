@@ -5,7 +5,7 @@ import { query, mutation } from "./_generated/server";
 async function recalculateCarRating(ctx: any, carId: number) {
   const reviews = await ctx.db
     .query("reviews")
-    .withIndex("by_carId", q => q.eq("carId", carId))
+    .withIndex("by_carId", (q: any) => q.eq("carId", carId))
     .collect();
 
   const count = reviews.length;
@@ -15,7 +15,7 @@ async function recalculateCarRating(ctx: any, carId: number) {
 
   const car = await ctx.db
     .query("cars")
-    .withIndex("by_numeric_id", q => q.eq("id", carId))
+    .withIndex("by_numeric_id", (q: any) => q.eq("id", carId))
     .first();
 
   if (car) {

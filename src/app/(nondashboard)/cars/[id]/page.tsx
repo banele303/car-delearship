@@ -29,6 +29,8 @@ const CONTACT_NUMBER_RAW = "0680720424"; // sanitized digits for links
 const CarDetailPage = () => {
   const params = useParams();
   const router = useRouter();
+  const { user } = useConvexAuth();
+  const cognitoId = user?.id || null;
   const carId = parseInt(params.id as string);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);

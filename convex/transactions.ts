@@ -149,7 +149,7 @@ export const getTestDrives = query({
         const employee = td.employeeId 
           ? await ctx.db
               .query("employees")
-              .withIndex("by_cognitoId", q => q.eq("cognitoId", td.employeeId))
+              .withIndex("by_cognitoId", q => q.eq("cognitoId", td.employeeId!))
               .first()
           : null;
 
@@ -245,7 +245,7 @@ export const getInquiries = query({
         const employee = inq.employeeId
           ? await ctx.db
               .query("employees")
-              .withIndex("by_cognitoId", q => q.eq("cognitoId", inq.employeeId))
+              .withIndex("by_cognitoId", q => q.eq("cognitoId", inq.employeeId!))
               .first()
           : null;
 
