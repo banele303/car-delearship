@@ -2,18 +2,26 @@
  * Resolves a car photo URL to something renderable by Next.js <Image>.
  *
  * URL formats handled:
- *   1. Direct HTTPS/HTTP URL (including Convex CDN storage URLs like
+ *   1. Local blob: or data: URLs (e.g. "blob:https://...")
+ *      → used as-is for instant browser previews
+ *
+ *   2. Direct HTTPS/HTTP URL (including Convex CDN storage URLs like
  *      "https://frugal-zebra-890.convex.cloud/api/storage/..."):
  *      → used directly by <Image>
  *
- *   2. Relative URL (e.g. "/placeholder.jpg"):
+ *   3. Relative URL (e.g. "/placeholder.jpg"):
  *      → used as-is
  *
- *   3. Raw Convex storage ID (legacy "kg2..."):
+ *   4. Raw Convex storage ID (legacy "kg2..."):
  *      → proxied via /api/storage/ID
  */
 export function resolveCarImageUrl(url: string | null | undefined): string {
   if (!url) return "/placeholder.jpg";
+
+  // Local Blob URL or Data URL — return as-is for browser previews
+  if (url.startsWith("blob:") || url.startsWith("data:")) {
+    return url;
+  }
 
   // Relative URL — use as-is (e.g. /placeholder.jpg)
   if (url.startsWith("/")) return url;

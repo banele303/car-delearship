@@ -772,7 +772,7 @@ export default function EditCarPage({ params }: PageProps) {
                   </div>
                 ))}
               </div>
-              {coverUrl && <p className="text-[11px] text-slate-500 truncate">Cover image (first): {coverUrl}</p>}
+              {coverUrl && <p className="text-[11px] text-slate-500 truncate">Cover image selected (Photo 1)</p>}
             </div>
 
             {/* Uploader */}
