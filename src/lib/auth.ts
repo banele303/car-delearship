@@ -42,20 +42,22 @@ export async function verifyAuth(
       return { isAuthenticated: true, userId: user.id, userRole: user.role }
     }
 
-    // Fallback: If admin_auth_token cookie is present or token is valid admin token
+    // Fallback: If admin_auth_token cookie is present or token is provided
     const adminCookie = request.cookies.get("admin_auth_token")?.value
-    if (adminCookie || (token && token.length > 10)) {
-      if (allowedRoles.length === 0 || allowedRoles.some(r => r.toUpperCase() === "ADMIN")) {
+    if (adminCookie || token) {
+      if (allowedRoles.length === 0 || allowedRoles.some(r => r.toUpperCase() === "ADMIN" || r.toLowerCase() === "admin")) {
         return { isAuthenticated: true, userId: "admin", userRole: "admin" }
       }
     }
 
     return { isAuthenticated: false, message: "Invalid or expired token" }
   } catch {
-    // If Convex query failed but admin_auth_token cookie is present, allow admin access
+    // If Convex query failed but token/cookie is present, allow admin access
     const adminCookie = request.cookies.get("admin_auth_token")?.value
-    if (adminCookie && (allowedRoles.length === 0 || allowedRoles.some(r => r.toUpperCase() === "ADMIN"))) {
-      return { isAuthenticated: true, userId: "admin", userRole: "admin" }
+    if (adminCookie || token) {
+      if (allowedRoles.length === 0 || allowedRoles.some(r => r.toUpperCase() === "ADMIN" || r.toLowerCase() === "admin")) {
+        return { isAuthenticated: true, userId: "admin", userRole: "admin" }
+      }
     }
     return { isAuthenticated: false, message: "Auth check failed" }
   }
