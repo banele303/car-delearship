@@ -22,6 +22,13 @@ export async function uploadToConvex(file: File): Promise<string> {
     }
 
     const { storageId } = await response.json();
+    try {
+      const cdnUrl = await (convexClient as any).query("files:getUrl", { storageId });
+      if (cdnUrl && typeof cdnUrl === "string" && cdnUrl.startsWith("http")) {
+        return cdnUrl;
+      }
+    } catch {}
+
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
     return `${convexUrl}/api/storage/${storageId}`;
   } catch (error: any) {
