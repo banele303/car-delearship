@@ -5,6 +5,21 @@ const POSTHOG_API_HOST = 'https://us.posthog.com';
 const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY;
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID;
 
+const isDashboardPath = (path: string) => {
+  const p = (path || '').toLowerCase().trim();
+  return p.startsWith('/admin') ||
+         p.startsWith('/dashboard') ||
+         p.startsWith('/employees') ||
+         p.startsWith('/employee') ||
+         p.startsWith('/customers') ||
+         p.startsWith('/customer') ||
+         p.startsWith('/account') ||
+         p.startsWith('/user') ||
+         p.startsWith('/signin') ||
+         p.startsWith('/signup') ||
+         p.startsWith('/admin-login');
+};
+
 export async function GET(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request, ["ADMIN", "SALES_MANAGER"]);
@@ -30,6 +45,22 @@ export async function GET(request: NextRequest) {
     };
     const interval = intervalMap[range] || 'interval 7 day';
 
+    const excludeDashboardClause = `
+      AND NOT (
+        properties.$pathname LIKE '/admin%' OR
+        properties.$pathname LIKE '/dashboard%' OR
+        properties.$pathname LIKE '/employees%' OR
+        properties.$pathname LIKE '/employee%' OR
+        properties.$pathname LIKE '/customers%' OR
+        properties.$pathname LIKE '/customer%' OR
+        properties.$pathname LIKE '/account%' OR
+        properties.$pathname LIKE '/user%' OR
+        properties.$pathname LIKE '/signin%' OR
+        properties.$pathname LIKE '/signup%' OR
+        properties.$pathname LIKE '/admin-login%'
+      )
+    `;
+
     const fetchHogQL = async (query: string) => {
       const res = await fetch(`${POSTHOG_API_HOST}/api/projects/${POSTHOG_PROJECT_ID}/query/`, {
         method: 'POST',
@@ -47,9 +78,7 @@ export async function GET(request: NextRequest) {
       return res.json();
     };
 
-    // Only 3 lightweight queries — runs sequentially to respect concurrency limit
-
-    // 1. Daily traffic (simple, fast)
+    // 1. Daily traffic (excluding admin/dashboard internal pages)
     const trafficQuery = `
       SELECT
         toDate(timestamp) as day,
@@ -58,11 +87,12 @@ export async function GET(request: NextRequest) {
       FROM events
       WHERE event = '\$pageview'
         AND timestamp > now() - ${interval}
+        ${excludeDashboardClause}
       GROUP BY day
       ORDER BY day ASC
     `;
 
-    // 2. Top Pages (simple group-by on pathname)
+    // 2. Top Public Pages (excluding admin/dashboard internal pages)
     const pagesQuery = `
       SELECT
         properties.\$pathname as path,
@@ -70,12 +100,13 @@ export async function GET(request: NextRequest) {
       FROM events
       WHERE event = '\$pageview'
         AND timestamp > now() - ${interval}
+        ${excludeDashboardClause}
       GROUP BY path
       ORDER BY views DESC
-      LIMIT 10
+      LIMIT 20
     `;
 
-    // 3. Device breakdown (lightweight)
+    // 3. Device breakdown (excluding admin/dashboard internal pages)
     const deviceQuery = `
       SELECT
         coalesce(toString(properties.\$device_type), 'Desktop') as device,
@@ -83,6 +114,7 @@ export async function GET(request: NextRequest) {
       FROM events
       WHERE event = '\$pageview'
         AND timestamp > now() - ${interval}
+        ${excludeDashboardClause}
       GROUP BY device
       ORDER BY count DESC
     `;
@@ -100,6 +132,16 @@ export async function GET(request: NextRequest) {
       totalPageviews += (r[1] || 0);
       totalVisitors += (r[2] || 0);
     });
+
+    // Filter pages to ensure no dashboard or admin paths pass through
+    const filteredPages = (pagesRes.results ?? [])
+      .map((r: any) => ({
+        path: r[0] || '/',
+        views: r[1] || 0,
+        uniqueVisitors: 0,
+      }))
+      .filter((p: any) => !isDashboardPath(p.path))
+      .slice(0, 10);
 
     // Normalise device data
     const rawDevices: Record<string, number> = {};
@@ -123,11 +165,7 @@ export async function GET(request: NextRequest) {
         views: r[1],
         visitors: r[2],
       })),
-      pages: (pagesRes.results ?? []).map((r: any) => ({
-        path: r[0] || '/',
-        views: r[1],
-        uniqueVisitors: 0,
-      })),
+      pages: filteredPages,
       sources: [],
       devices: Object.entries(rawDevices).map(([name, count]) => ({ name, count })),
       countries: [],

@@ -199,7 +199,23 @@ export default function TrafficAnalyticsPage() {
   // Derived data
   const trafficData  = useMemo(() => data?.traffic  ?? [], [data]);
   const sourceData   = useMemo(() => data?.sources  ?? [], [data]);
-  const topPages     = useMemo(() => data?.pages    ?? [], [data]);
+  const topPages     = useMemo(() => {
+    const raw = data?.pages ?? [];
+    return raw.filter(p => {
+      const path = (p.path || '').toLowerCase();
+      return !path.startsWith('/admin') &&
+             !path.startsWith('/dashboard') &&
+             !path.startsWith('/employees') &&
+             !path.startsWith('/employee') &&
+             !path.startsWith('/customers') &&
+             !path.startsWith('/customer') &&
+             !path.startsWith('/account') &&
+             !path.startsWith('/user') &&
+             !path.startsWith('/signin') &&
+             !path.startsWith('/signup') &&
+             !path.startsWith('/admin-login');
+    });
+  }, [data]);
   const countryData  = useMemo(() => data?.countries ?? [], [data]);
 
   const deviceData = useMemo(() => {
