@@ -30,7 +30,9 @@ export async function GET(
   const resolvedParams = await params
   const id = resolvedParams.id
 
-  try {
+  if (!id || id.startsWith("blob:") || id.startsWith("data:")) {
+    return NextResponse.json({ error: "Invalid storage ID" }, { status: 404 })
+  }
     let imgUrl: string
 
     if (id.startsWith("http")) {

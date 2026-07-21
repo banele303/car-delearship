@@ -117,17 +117,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Existing photos kept
-    let keptExisting: string[] = existingCar.photoUrls || [];
+    let keptExisting: string[] = (existingCar.photoUrls || []).filter((u: string) => typeof u === 'string' && !u.startsWith('blob:') && !u.startsWith('data:'));
     if (photoUrlsRaw) {
       try {
         const parsed = JSON.parse(photoUrlsRaw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const convexCloudUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
-          keptExisting = parsed.map((url: string) => {
-            if (url.startsWith("http://") || url.startsWith("https://")) return url;
-            if (url.startsWith("/")) return `${convexCloudUrl}${url}`;
-            return `${convexCloudUrl}/api/storage/${url}`;
-          });
+          const validParsed = parsed.filter((u: any) => typeof u === 'string' && !u.startsWith('blob:') && !u.startsWith('data:'));
+          if (validParsed.length > 0) {
+            const convexCloudUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
+            keptExisting = validParsed.map((url: string) => {
+              if (url.startsWith("http://") || url.startsWith("https://")) return url;
+              if (url.startsWith("/")) return `${convexCloudUrl}${url}`;
+              return `${convexCloudUrl}/api/storage/${url}`;
+            });
+          }
         }
       } catch {}
     }
@@ -156,7 +159,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }));
     }
 
-    const finalPhotos = [...keptExisting, ...uploadedNew];
+    const finalPhotos = [...keptExisting, ...uploadedNew].filter((u: string) => typeof u === 'string' && !u.startsWith('blob:') && !u.startsWith('data:'));
     data.photoUrls = finalPhotos;
 
     if (data.fuelType === 'PETROL' || data.fuelType === 'FUEL') {

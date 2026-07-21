@@ -350,10 +350,14 @@ export default function EditCarPage({ params }: PageProps) {
       const finalOrderedUrls: string[] = [];
       for (const entry of intendedOrder) {
         if (entry.source === 'existing') {
-          if (!removedExisting.has(entry.url)) finalOrderedUrls.push(entry.url);
+          if (!removedExisting.has(entry.url) && !entry.url.startsWith('blob:') && !entry.url.startsWith('data:')) {
+            finalOrderedUrls.push(entry.url);
+          }
         } else if (entry.source === 'new') {
           const remoteUrl = uploadedUrlMap.get(entry.id);
-            if (remoteUrl) finalOrderedUrls.push(remoteUrl);
+          if (remoteUrl && !remoteUrl.startsWith('blob:') && !remoteUrl.startsWith('data:')) {
+            finalOrderedUrls.push(remoteUrl);
+          }
         }
       }
 

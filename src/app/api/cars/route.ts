@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
     const featureBuffer: string[] = [];
     for (const [key, value] of formData.entries()) {
       if (key === 'photos') continue;
+      if (key === 'photoUrls') continue;
+      if (key === 'photoOrder') continue;
       if (key === 'vin') continue; // ignore client-sent vin (we will generate)
       if (key === 'interiorColor') continue; // interiorColor no longer collected
       if (key === 'features') {
@@ -150,7 +152,7 @@ export async function POST(req: NextRequest) {
         console.error('S3 upload error:', err);
       }
     }
-    carData.photoUrls = photoUrls;
+    carData.photoUrls = photoUrls.filter(u => typeof u === 'string' && !u.startsWith('blob:') && !u.startsWith('data:'));
     if (typeof carData.featured === 'string') {
       carData.featured = carData.featured === 'true';
     }
