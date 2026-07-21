@@ -1,9 +1,7 @@
 // Centralized (non-env) upload limits for car photos.
-// Tuned for up to 34 high-resolution car photos.
-// After client-side WebP compression each image is typically 150–600 KB,
-// so 34 images ≈ 5–20 MB total → very manageable for S3 one-at-a-time uploads.
+// Tuned for up to 30 high-resolution car photos uploaded to Convex Storage.
 
-export const CAR_UPLOAD_MAX_FILES: number = 34;       // max number of photos per car
+export const CAR_UPLOAD_MAX_FILES: number = 30;       // max number of photos per car (up to 30)
 export const CAR_UPLOAD_SINGLE_MAX_MB: number = 10;    // single file limit in MB (after compression)
 export const CAR_UPLOAD_TOTAL_MAX_MB: number = 200;    // total batch limit in MB (generous safety net)
 

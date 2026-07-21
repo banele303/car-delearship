@@ -1,63 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { convexClient } from '@/lib/convex';
-import { S3Client, DeleteObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
-import { Upload } from '@aws-sdk/lib-storage';
 import { verifyAuth } from '@/lib/auth';
+import { uploadToConvex } from '@/lib/s3';
 import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, describeCarUploadLimits } from '@/config/uploadLimits';
 
-// Configure S3 client
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'eu-north-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
-
-// Helper to upload a file to S3
-async function uploadFileToS3(file: Buffer, originalName: string, mimeType: string): Promise<string> {
-  if (!process.env.AWS_BUCKET_NAME || !process.env.AWS_REGION) {
-    throw new Error("S3 bucket name or region is not configured.");
-  }
-  const uniquePrefix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-  const safeFileName = originalName.replace(/[^a-zA-Z0-9.-]/g, '');
-  const key = `cars/${uniquePrefix}-${safeFileName}`;
-  
-  const params = {
-    Bucket: process.env.AWS_BUCKET_NAME,
-    Key: key,
-    Body: file,
-    ContentType: mimeType,
-    ACL: ObjectCannedACL.public_read,
-  };
-
-  try {
-    const upload = new Upload({ client: s3Client, params });
-    await upload.done();
-    return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-  } catch (error) {
-    console.error('S3 Upload Error:', error);
-    throw new Error(`Failed to upload file to S3: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-// Helper to delete a file from S3
+// Helper to delete a file (no-op for Convex storage)
 async function deleteFileFromS3(fileUrl: string): Promise<void> {
-  if (!process.env.AWS_BUCKET_NAME) {
-    throw new Error("S3 bucket name is not configured.");
-  }
-  
-  try {
-    let key: string;
-    if (fileUrl.startsWith('http')) {
-      const url = new URL(fileUrl);
-      key = url.pathname.substring(1); // Remove leading slash
-    } else {
-      key = fileUrl.startsWith('/') ? fileUrl.substring(1) : fileUrl;
-    }
-    
-    if (!key) {
-      console.warn('Skipping empty file URL');
+  // Convex storage manages files automatically
+}
       return;
     }
     
@@ -211,8 +161,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     let uploadedNew: string[] = [];
     if (newFiles.length) {
       uploadedNew = await Promise.all(newFiles.map(async f => {
-        const buf = await f.arrayBuffer();
-        return uploadFileToS3(Buffer.from(buf), f.name, f.type);
+        return uploadToConvex(f);
       }));
     }
     let finalPhotos: string[] = [];
