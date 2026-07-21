@@ -10,50 +10,66 @@ export const getSales = query({
     dealershipId: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    let sales = await ctx.db.query("sales").collect();
+    try {
+      let sales = await ctx.db.query("sales").collect();
 
-    if (args.customerId !== undefined) {
-      sales = sales.filter(s => s.customerId === args.customerId);
-    }
-    if (args.employeeId !== undefined) {
-      sales = sales.filter(s => s.employeeId === args.employeeId);
-    }
-    if (args.carId !== undefined) {
-      sales = sales.filter(s => s.carId === args.carId);
-    }
-    if (args.dealershipId !== undefined) {
-      sales = sales.filter(s => s.dealershipId === args.dealershipId);
-    }
+      if (args.customerId !== undefined && args.customerId !== null) {
+        sales = sales.filter(s => s.customerId === args.customerId);
+      }
+      if (args.employeeId !== undefined && args.employeeId !== null) {
+        sales = sales.filter(s => s.employeeId === args.employeeId);
+      }
+      if (args.carId !== undefined && args.carId !== null) {
+        sales = sales.filter(s => s.carId === args.carId);
+      }
+      if (args.dealershipId !== undefined && args.dealershipId !== null) {
+        sales = sales.filter(s => s.dealershipId === args.dealershipId);
+      }
 
-    const salesWithRelations = [];
-    for (const sale of sales) {
-      const car = await ctx.db
-        .query("cars")
-        .withIndex("by_numeric_id", q => q.eq("id", sale.carId))
-        .first();
-      const customer = await ctx.db
-        .query("customers")
-        .withIndex("by_cognitoId", q => q.eq("cognitoId", sale.customerId))
-        .first();
-      const employee = await ctx.db
-        .query("employees")
-        .withIndex("by_cognitoId", q => q.eq("cognitoId", sale.employeeId))
-        .first();
-      const dealership = await ctx.db
-        .query("dealerships")
-        .withIndex("by_numeric_id", q => q.eq("id", sale.dealershipId))
-        .first();
+      const salesWithRelations = [];
+      for (const sale of sales) {
+        const car = (sale.carId !== undefined && sale.carId !== null)
+          ? await ctx.db
+              .query("cars")
+              .withIndex("by_numeric_id", q => q.eq("id", sale.carId))
+              .first()
+          : null;
 
-      salesWithRelations.push({
-        ...sale,
-        car,
-        customer,
-        employee,
-        dealership,
-      });
+        const customer = sale.customerId
+          ? await ctx.db
+              .query("customers")
+              .withIndex("by_cognitoId", q => q.eq("cognitoId", sale.customerId))
+              .first()
+          : null;
+
+        const employee = sale.employeeId
+          ? await ctx.db
+              .query("employees")
+              .withIndex("by_cognitoId", q => q.eq("cognitoId", sale.employeeId))
+              .first()
+          : null;
+
+        const dealership = (sale.dealershipId !== undefined && sale.dealershipId !== null)
+          ? await ctx.db
+              .query("dealerships")
+              .withIndex("by_numeric_id", q => q.eq("id", sale.dealershipId))
+              .first()
+          : null;
+
+        salesWithRelations.push({
+          ...sale,
+          car,
+          customer,
+          employee,
+          dealership,
+        });
+      }
+
+      return salesWithRelations;
+    } catch (err) {
+      console.error("Error in getSales query:", err);
+      return [];
     }
-
-    return salesWithRelations;
   },
 });
 
@@ -104,38 +120,52 @@ export const createSale = mutation({
 export const getTestDrives = query({
   args: {},
   handler: async (ctx) => {
-    const testDrives = await ctx.db.query("testDrives").collect();
-    
-    const withRelations = [];
-    for (const td of testDrives) {
-      const car = await ctx.db
-        .query("cars")
-        .withIndex("by_numeric_id", q => q.eq("id", td.carId))
-        .first();
-      const customer = await ctx.db
-        .query("customers")
-        .withIndex("by_cognitoId", q => q.eq("cognitoId", td.customerId))
-        .first();
-      const dealership = await ctx.db
-        .query("dealerships")
-        .withIndex("by_numeric_id", q => q.eq("id", td.dealershipId))
-        .first();
-      const employee = td.employeeId 
-        ? await ctx.db
-            .query("employees")
-            .withIndex("by_cognitoId", q => q.eq("cognitoId", td.employeeId!))
-            .first()
-        : null;
+    try {
+      const testDrives = await ctx.db.query("testDrives").collect();
+      
+      const withRelations = [];
+      for (const td of testDrives) {
+        const car = (td.carId !== undefined && td.carId !== null)
+          ? await ctx.db
+              .query("cars")
+              .withIndex("by_numeric_id", q => q.eq("id", td.carId))
+              .first()
+          : null;
 
-      withRelations.push({
-        ...td,
-        car,
-        customer,
-        dealership,
-        employee,
-      });
+        const customer = td.customerId
+          ? await ctx.db
+              .query("customers")
+              .withIndex("by_cognitoId", q => q.eq("cognitoId", td.customerId))
+              .first()
+          : null;
+
+        const dealership = (td.dealershipId !== undefined && td.dealershipId !== null)
+          ? await ctx.db
+              .query("dealerships")
+              .withIndex("by_numeric_id", q => q.eq("id", td.dealershipId))
+              .first()
+          : null;
+
+        const employee = td.employeeId 
+          ? await ctx.db
+              .query("employees")
+              .withIndex("by_cognitoId", q => q.eq("cognitoId", td.employeeId))
+              .first()
+          : null;
+
+        withRelations.push({
+          ...td,
+          car,
+          customer,
+          dealership,
+          employee,
+        });
+      }
+      return withRelations;
+    } catch (err) {
+      console.error("Error in getTestDrives query:", err);
+      return [];
     }
-    return withRelations;
   },
 });
 
@@ -182,53 +212,71 @@ export const getInquiries = query({
     customerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let inquiries = await ctx.db.query("inquiries").collect();
-    
-    if (args.customerId !== undefined) {
-      inquiries = inquiries.filter(i => i.customerId === args.customerId);
+    try {
+      let inquiries = await ctx.db.query("inquiries").collect();
+      
+      if (args.customerId !== undefined && args.customerId !== null) {
+        inquiries = inquiries.filter(i => i.customerId === args.customerId);
+      }
+
+      const withRelations = [];
+      for (const inq of inquiries) {
+        const car = (inq.carId !== undefined && inq.carId !== null)
+          ? await ctx.db
+              .query("cars")
+              .withIndex("by_numeric_id", q => q.eq("id", inq.carId))
+              .first()
+          : null;
+
+        const customer = inq.customerId
+          ? await ctx.db
+              .query("customers")
+              .withIndex("by_cognitoId", q => q.eq("cognitoId", inq.customerId))
+              .first()
+          : null;
+
+        const dealership = (inq.dealershipId !== undefined && inq.dealershipId !== null)
+          ? await ctx.db
+              .query("dealerships")
+              .withIndex("by_numeric_id", q => q.eq("id", inq.dealershipId))
+              .first()
+          : null;
+
+        const employee = inq.employeeId
+          ? await ctx.db
+              .query("employees")
+              .withIndex("by_cognitoId", q => q.eq("cognitoId", inq.employeeId))
+              .first()
+          : null;
+
+        withRelations.push({
+          ...inq,
+          car,
+          customer,
+          dealership,
+          employee,
+        });
+      }
+
+      return withRelations;
+    } catch (err) {
+      console.error("Error in getInquiries query:", err);
+      return [];
     }
-
-    const withRelations = [];
-    for (const inq of inquiries) {
-      const car = await ctx.db
-        .query("cars")
-        .withIndex("by_numeric_id", q => q.eq("id", inq.carId))
-        .first();
-      const customer = await ctx.db
-        .query("customers")
-        .withIndex("by_cognitoId", q => q.eq("cognitoId", inq.customerId))
-        .first();
-      const dealership = await ctx.db
-        .query("dealerships")
-        .withIndex("by_numeric_id", q => q.eq("id", inq.dealershipId))
-        .first();
-      const employee = inq.employeeId
-        ? await ctx.db
-            .query("employees")
-            .withIndex("by_cognitoId", q => q.eq("cognitoId", inq.employeeId!))
-            .first()
-        : null;
-
-      withRelations.push({
-        ...inq,
-        car,
-        customer,
-        dealership,
-        employee,
-      });
-    }
-
-    return withRelations;
   },
 });
 
 export const getInquiry = query({
   args: { id: v.number() },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("inquiries")
-      .withIndex("by_numeric_id", q => q.eq("id", args.id))
-      .first();
+    try {
+      return await ctx.db
+        .query("inquiries")
+        .withIndex("by_numeric_id", q => q.eq("id", args.id))
+        .first();
+    } catch {
+      return null;
+    }
   },
 });
 
