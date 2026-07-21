@@ -136,6 +136,7 @@ const InventoryContent = () => {
 
   const { user } = useConvexAuth();
   const userId = user?.id || null;
+  const cognitoId = userId;
 
   const handleFavoriteToggle = async (carId: number) => {
     try {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { fetchAuthSession } from '@/app/admin/adminAuth';
 import { useRouter } from 'next/navigation';
 import { 
   Card, 

@@ -17,7 +17,7 @@ const ADMIN_TOKEN_KEY = 'admin_id_token';
 /**
  * Compatibility helper for legacy pages querying auth session
  */
-export async function fetchAuthSession() {
+export async function fetchAuthSession(_options?: any) {
   if (typeof window === 'undefined') return { tokens: undefined };
   const token = localStorage.getItem(ADMIN_TOKEN_KEY);
   const adminState = getAdminAuthState();

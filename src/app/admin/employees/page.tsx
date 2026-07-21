@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { CheckCircle, XCircle, AlertTriangle, Ban, Search, Plus, User } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { toast } from "sonner";
+import { fetchAuthSession } from "../adminAuth";
 
 export default function EmployeesPage() { 
   const searchParams = useSearchParams();
